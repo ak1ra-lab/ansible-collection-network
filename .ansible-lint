@@ -1,0 +1,24 @@
+---
+# ansible-lint configuration
+# https://ansible.readthedocs.io/projects/lint/configuring/
+#
+# Run with:  ansible-lint
+
+profile: production
+
+exclude_paths:
+  - .venv/
+  - .git/
+  - dist/
+
+warn_list: []
+
+skip_list:
+  - name[casing]
+
+kinds:
+  - tasks: "roles/*/tasks/*.yaml"
+  - handlers: "roles/*/handlers/*.yaml"
+  - vars: "roles/*/vars/*.yaml"
+  - defaults: "roles/*/defaults/*.yaml"
+  - meta: "roles/*/meta/*.yaml"

@@ -1,0 +1,14 @@
+---
+# defaults file for ak1ra_lab.network.flow_offload
+
+# Master switch - disabled by default (opt-in role).
+flow_offload_enabled: false
+
+# Interfaces bound to the flowtable.  Defaults to auto-detection of common
+# exit/bridge interfaces (eth*, enp*, ens*, enx*, br*); override to pin.
+flow_offload_interfaces: >-
+  {{
+    ansible_facts.interfaces
+    | select('ansible.builtin.match', '^(eth|en[psx]|br)')
+    | sort | unique | list
+  }}

@@ -1,0 +1,15 @@
+---
+# handlers file for ak1ra_lab.network.tproxy
+- name: systemctl daemon-reload
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: systemctl restart nftables.service
+  ansible.builtin.systemd_service:
+    name: nftables.service
+    state: restarted
+
+- name: restart tproxy-routing.service
+  ansible.builtin.systemd_service:
+    name: tproxy-routing.service
+    state: restarted

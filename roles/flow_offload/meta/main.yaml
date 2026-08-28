@@ -1,0 +1,27 @@
+---
+# Role metadata for ak1ra_lab.network.flow_offload
+
+galaxy_info:
+  author: ak1ra
+  description: nftables flowtable offloading for forwarded traffic (opt-in)
+  license: MIT
+  min_ansible_version: "2.18"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+        - jammy
+    - name: Debian
+      versions:
+        - trixie
+        - bookworm
+
+  galaxy_tags:
+    - network
+    - nftables
+    - offload
+
+dependencies: []
+
+allow_duplicates: false

@@ -1,0 +1,25 @@
+---
+# tasks file for ak1ra_lab.network.flow_offload
+- name: ensure nftables package is installed
+  ansible.builtin.package:
+    name: nftables
+    state: present
+
+- name: ensure /etc/nftables.d directory exists
+  ansible.builtin.file:
+    path: /etc/nftables.d
+    state: directory
+    mode: "0755"
+
+- name: template flow offload nft rules on remote
+  ansible.builtin.template:
+    src: etc/nftables.d/ansible_flow_offload.nft.j2
+    dest: /etc/nftables.d/ansible_flow_offload.nft
+    mode: "0644"
+  notify:
+    - systemctl restart nftables.service
+
+- name: ensure nftables.service enabled
+  ansible.builtin.systemd_service:
+    name: nftables.service
+    enabled: true

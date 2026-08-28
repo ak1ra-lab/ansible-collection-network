@@ -1,0 +1,18 @@
+---
+- name: ensure ip_forward state
+  ansible.posix.sysctl:
+    name: "{{ sysctl_param.name }}"
+    value: "{{ sysctl_param.value }}"
+    state: "{{ 'present' if _tproxy_enable_ip_forward else 'absent' }}"
+    sysctl_file: /etc/sysctl.d/90-ansible-tproxy-ip_forward.conf
+    reload: true
+    ignoreerrors: true
+  loop:
+    - name: net.ipv4.ip_forward
+      value: 1
+    - name: net.ipv4.conf.all.proxy_arp
+      value: 1
+    - name: net.ipv6.conf.all.forwarding
+      value: 1
+  loop_control:
+    loop_var: sysctl_param

@@ -1,0 +1,27 @@
+---
+namespace: ak1ra_lab
+name: network
+version: 0.1.0
+readme: README.md
+authors:
+  - ak1ra <git@ak1ra.xyz>
+description: Shared Ansible roles for network infrastructure (transparent proxy, routing).
+license_file: LICENSE
+tags:
+  - automation
+  - linux
+  - network
+  - nftables
+  - tproxy
+dependencies: {}
+repository: https://github.com/ak1ra-lab/ansible-collection-network
+documentation: https://github.com/ak1ra-lab/ansible-collection-network
+homepage: https://github.com/ak1ra-lab/ansible-collection-network
+issues: https://github.com/ak1ra-lab/ansible-collection-network/issues
+# https://setuptools.pypa.io/en/latest/userguide/miscellaneous.html
+manifest:
+  omit_default_directives: true
+  directives:
+    - graft roles
+    - global-exclude *~ *.py[cod] __pycache__ *.bak *.swp *.tmp *.retry
+    - include LICENSE README.md

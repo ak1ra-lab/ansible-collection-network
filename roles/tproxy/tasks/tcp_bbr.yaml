@@ -1,0 +1,21 @@
+---
+- name: load tcp_bbr module
+  community.general.modprobe:
+    name: tcp_bbr
+    state: present
+    persistent: present
+
+- name: enable tcp_bbr
+  ansible.posix.sysctl:
+    name: "{{ sysctl_param.name }}"
+    value: "{{ sysctl_param.value }}"
+    sysctl_file: /etc/sysctl.d/90-ansible-tproxy-tcp_bbr.conf
+    reload: true
+    ignoreerrors: true
+  loop:
+    - name: net.core.default_qdisc
+      value: fq
+    - name: net.ipv4.tcp_congestion_control
+      value: bbr
+  loop_control:
+    loop_var: sysctl_param

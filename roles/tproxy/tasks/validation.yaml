@@ -1,0 +1,52 @@
+---
+# Self-contained validation of the public variable contract (design D5).
+# Runs first in tasks/main.yaml so the role fails fast without any external
+# validation role.
+
+- name: validate tproxy_mode
+  ansible.builtin.assert:
+    that:
+      - tproxy_mode in tproxy_mode_available
+    fail_msg: |
+      tproxy_mode must be one of: {{ tproxy_mode_available }} (got: {{ tproxy_mode }})
+    quiet: true
+
+- name: validate tproxy_bypass_cidr4
+  ansible.builtin.assert:
+    that:
+      - tproxy_bypass_cidr4 is defined
+      - tproxy_bypass_cidr4 | ansible.builtin.type_debug == "list"
+    fail_msg: "tproxy_bypass_cidr4 must be a list of CIDRs."
+    quiet: true
+
+- name: validate tproxy_bypass_cidr6
+  ansible.builtin.assert:
+    that:
+      - tproxy_bypass_cidr6 is defined
+      - tproxy_bypass_cidr6 | ansible.builtin.type_debug == "list"
+    fail_msg: "tproxy_bypass_cidr6 must be a list of CIDRs."
+    quiet: true
+
+- name: validate tproxy_reject_cidr4
+  ansible.builtin.assert:
+    that:
+      - tproxy_reject_cidr4 is defined
+      - tproxy_reject_cidr4 | ansible.builtin.type_debug == "list"
+    fail_msg: "tproxy_reject_cidr4 must be a list of CIDRs."
+    quiet: true
+
+- name: validate tproxy_reject_cidr6
+  ansible.builtin.assert:
+    that:
+      - tproxy_reject_cidr6 is defined
+      - tproxy_reject_cidr6 | ansible.builtin.type_debug == "list"
+    fail_msg: "tproxy_reject_cidr6 must be a list of CIDRs."
+    quiet: true
+
+- name: validate conntrack buckets
+  ansible.builtin.assert:
+    that:
+      - tproxy_sysctl_nf_conntrack_buckets | int >= 1024
+    fail_msg: "tproxy_sysctl_nf_conntrack_buckets is too small (min 1024)."
+    quiet: true
+  when: tproxy_sysctl_nf_conntrack | ansible.builtin.bool
