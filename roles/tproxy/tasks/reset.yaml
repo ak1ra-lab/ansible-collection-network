@@ -1,0 +1,65 @@
+---
+# tasks/reset.yaml - atomic teardown of everything this role created
+# (tproxy_state: absent).
+#
+# Shared/system-wide files are deliberately left untouched:
+#   - /etc/nftables.conf  - still a valid base config; the include glob serves
+#                           other roles' tables
+#   - nftables.service    - shipped unit, may serve other purposes
+#   - /etc/resolv.conf    - the previous content is not backed up, so it cannot
+#                           be restored; adjust it manually if needed
+#
+# sysctl note: removing the drop-in files does NOT revert kernel values -
+# they persist until reboot.  Explicitly resetting shared keys (e.g.
+# net.ipv4.ip_forward) would affect other consumers (docker, libvirt, ...),
+# so that is left to the operator.
+
+- name: stop and disable ansible-tproxy-routing.service
+  ansible.builtin.systemd_service:
+    name: ansible-tproxy-routing.service
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: remove ansible-tproxy-routing.service unit file
+  ansible.builtin.file:
+    path: /etc/systemd/system/ansible-tproxy-routing.service
+    state: absent
+  notify:
+    - systemctl daemon-reload
+
+- name: remove tproxy nftables ruleset file
+  ansible.builtin.file:
+    path: /etc/nftables.d/ansible_tproxy.nft
+    state: absent
+  notify:
+    - systemctl restart nftables.service
+
+- name: remove iproute2 rt_tables entry
+  ansible.builtin.file:
+    path: /etc/iproute2/rt_tables.d/ansible_tproxy.conf
+    state: absent
+
+- name: remove sysctl drop-in files
+  ansible.builtin.file:
+    path: "/etc/sysctl.d/{{ item }}"
+    state: absent
+  loop:
+    - 90-ansible-tproxy-ip_forward.conf
+    - 90-ansible-tproxy-nf_conntrack.conf
+    - 90-ansible-tproxy-tcp_bbr.conf
+  loop_control:
+    loop_var: item
+
+- name: remove modules-load.d entries created by persistent modprobe
+  ansible.builtin.file:
+    path: "/etc/modules-load.d/{{ item }}.conf"
+    state: absent
+  loop:
+    - nft_tproxy
+    - nft_socket
+    - nf_tproxy_ipv4
+    - nf_tproxy_ipv6
+    - tcp_bbr
+  loop_control:
+    loop_var: item

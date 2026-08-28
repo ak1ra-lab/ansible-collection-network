@@ -22,6 +22,7 @@ variables alone; the role never references engine-specific names.
 
 | Variable | Default | Description |
 | --- | --- | --- |
+| `tproxy_state` | `present` | `present` applies the plumbing; `absent` atomically tears down everything this role created (see below). |
 | `tproxy_mode` | `gateway` | `gateway` proxies LAN-forwarded + local traffic (enables ip_forward); `local` proxies local traffic only. |
 | `tproxy_listen_port` | `7895` | Engine's TPROXY inbound listen port. **Also the delivery point of DNS transparent interception.** |
 | `tproxy_uid` / `tproxy_gid` | `13` / `13` | Engine runtime identity; its packets get the bypass mark (loop prevention). |
@@ -35,6 +36,19 @@ variables alone; the role never references engine-specific names.
 | `tproxy_sysctl_nf_conntrack*` | see defaults | conntrack tuning for the interception path. |
 | `tproxy_etc_resolv_conf` / `tproxy_etc_resolv_conf_servers` | `true` / `1.1.1.1, 1.0.0.1` | Optional static `/etc/resolv.conf`. |
 | `tproxy_tcp_bbr_enabled` | `true` | **Temporary.** BBR sysctl is shipped here until its final home is decided; do not build on it. |
+
+## Declarative teardown: `tproxy_state: absent`
+
+Setting `tproxy_state: absent` removes, in one atomic pass: the routing unit
+(stopped first — its `ExecStop` removes the `ip rule` / `ip route` entries),
+`/etc/nftables.d/ansible_tproxy.nft`, the rt_tables entry, the
+`90-ansible-tproxy-*.conf` sysctl drop-ins, and the `/etc/modules-load.d/`
+entries written by persistent modprobe. nftables is reloaded afterwards.
+
+Deliberately **not** touched: `/etc/nftables.conf`, the `nftables.service`
+unit, `/etc/resolv.conf` (the previous content was never backed up), and the
+packages. Kernel sysctl values persist until reboot — reverting shared keys
+like `net.ipv4.ip_forward` is left to the operator.
 
 ## Escape hatch: stop one service for direct connectivity
 

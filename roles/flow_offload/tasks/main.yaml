@@ -1,25 +1,20 @@
 ---
 # tasks file for ak1ra_lab.network.flow_offload
-- name: ensure nftables package is installed
-  ansible.builtin.package:
-    name: nftables
-    state: present
+# Dispatcher: branch on flow_offload_state.
 
-- name: ensure /etc/nftables.d directory exists
-  ansible.builtin.file:
-    path: /etc/nftables.d
-    state: directory
-    mode: "0755"
+- name: validate flow_offload_state
+  ansible.builtin.assert:
+    that:
+      - flow_offload_state in flow_offload_state_available
+    fail_msg: |
+      flow_offload_state must be one of: {{ flow_offload_state_available }}
+      (got: {{ flow_offload_state }})
+    quiet: true
 
-- name: template flow offload nft rules on remote
-  ansible.builtin.template:
-    src: etc/nftables.d/ansible_flow_offload.nft.j2
-    dest: /etc/nftables.d/ansible_flow_offload.nft
-    mode: "0644"
-  notify:
-    - systemctl restart nftables.service
+- name: "remove managed artifacts (flow_offload_state: absent)"
+  when: flow_offload_state == 'absent'
+  ansible.builtin.import_tasks: reset.yaml
 
-- name: ensure nftables.service enabled
-  ansible.builtin.systemd_service:
-    name: nftables.service
-    enabled: true
+- name: "apply flow offload table (flow_offload_state: present)"
+  when: flow_offload_state == 'present'
+  ansible.builtin.import_tasks: present.yaml

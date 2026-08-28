@@ -47,6 +47,7 @@ timer is written exactly once and cannot be extended by further packets.
 
 | Variable | Default | Description |
 | --- | --- | --- |
+| `proxy_guard_state` | `present` | `present` applies the table; `absent` removes the table file this role created. |
 | `proxy_guard_enabled` | `false` | Master switch — review all parameters before enabling. |
 | `proxy_guard_lan4_subnets` | RFC 1918 trio | LAN prefixes subject to protection. |
 | `proxy_guard_lan6_subnets` | `[]` | IPv6 LAN prefixes (empty = IPv6 protection disabled). |

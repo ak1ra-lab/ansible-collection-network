@@ -11,6 +11,13 @@
 tproxy_mode: gateway
 tproxy_mode_available: [local, gateway]
 
+# Declarative state:
+#   present - apply the TPROXY plumbing
+#   absent  - atomically tear down everything this role created (see
+#             tasks/reset.yaml); shared system files are left untouched
+tproxy_state: present
+tproxy_state_available: [present, absent]
+
 # Port the proxy engine listens on with its TPROXY inbound.
 # DNS transparent interception (chain-first prerouting rule) delivers packets
 # to this port as well; the engine consumes them through its own mechanism

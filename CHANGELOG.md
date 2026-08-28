@@ -17,3 +17,6 @@ The format is based on Keep a Changelog, and this project does not currently gua
     (opt-in, independent).
   - `proxy_guard` — per-client TCP abuse protection with throttle / auto-ban
     (opt-in, independent).
+- Declarative state for every role: `<role>_state` (default `present`);
+  `absent` atomically tears down the role's own artifacts via
+  `tasks/reset.yaml`, leaving shared system files untouched.

@@ -1,0 +1,11 @@
+---
+# tasks/reset.yaml - remove the table file this role created
+# (proxy_guard_state: absent).  The nftables package and any base config are
+# left untouched (shared with other roles / the host).
+
+- name: remove proxy guard nft ruleset file
+  ansible.builtin.file:
+    path: /etc/nftables.d/ansible_proxy_guard.nft
+    state: absent
+  notify:
+    - systemctl restart nftables.service

@@ -1,6 +1,12 @@
 ---
 # defaults file for ak1ra_lab.network.flow_offload
 
+# Declarative state:
+#   present - apply the flow offload table
+#   absent  - remove the table file this role created (tasks/reset.yaml)
+flow_offload_state: present
+flow_offload_state_available: [present, absent]
+
 # Master switch - disabled by default (opt-in role).
 flow_offload_enabled: false
 

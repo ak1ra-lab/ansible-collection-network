@@ -11,6 +11,14 @@
       tproxy_mode must be one of: {{ tproxy_mode_available }} (got: {{ tproxy_mode }})
     quiet: true
 
+- name: validate tproxy_state
+  ansible.builtin.assert:
+    that:
+      - tproxy_state in tproxy_state_available
+    fail_msg: |
+      tproxy_state must be one of: {{ tproxy_state_available }} (got: {{ tproxy_state }})
+    quiet: true
+
 - name: validate tproxy_bypass_cidr4
   ansible.builtin.assert:
     that:

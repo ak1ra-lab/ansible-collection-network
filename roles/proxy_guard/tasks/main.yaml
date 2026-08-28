@@ -1,25 +1,20 @@
 ---
 # tasks file for ak1ra_lab.network.proxy_guard
-- name: ensure nftables package is installed
-  ansible.builtin.package:
-    name: nftables
-    state: present
+# Dispatcher: branch on proxy_guard_state.
 
-- name: ensure /etc/nftables.d directory exists
-  ansible.builtin.file:
-    path: /etc/nftables.d
-    state: directory
-    mode: "0755"
+- name: validate proxy_guard_state
+  ansible.builtin.assert:
+    that:
+      - proxy_guard_state in proxy_guard_state_available
+    fail_msg: |
+      proxy_guard_state must be one of: {{ proxy_guard_state_available }}
+      (got: {{ proxy_guard_state }})
+    quiet: true
 
-- name: template proxy guard nft rules on remote
-  ansible.builtin.template:
-    src: etc/nftables.d/ansible_proxy_guard.nft.j2
-    dest: /etc/nftables.d/ansible_proxy_guard.nft
-    mode: "0644"
-  notify:
-    - systemctl restart nftables.service
+- name: "remove managed artifacts (proxy_guard_state: absent)"
+  when: proxy_guard_state == 'absent'
+  ansible.builtin.import_tasks: reset.yaml
 
-- name: ensure nftables.service enabled
-  ansible.builtin.systemd_service:
-    name: nftables.service
-    enabled: true
+- name: "apply proxy guard table (proxy_guard_state: present)"
+  when: proxy_guard_state == 'present'
+  ansible.builtin.import_tasks: present.yaml
