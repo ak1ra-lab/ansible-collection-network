@@ -55,3 +55,25 @@ nohup.out
 
 # Retry files generated for failed Ansible playbook runs
 *.retry
+
+# Ansible host_vars / group_vars
+inventory/*.yaml
+playbooks/host_vars/**/*.yaml
+playbooks/group_vars/**/*.yaml
+
+# Ansible runtime scripts and templates
+playbooks/scripts/*
+playbooks/templates/*
+
+# Ansible example inventory
+!inventory/hosts.example.yaml
+
+# General configuration file and examples folder
+config/*
+credentials/
+credentials.yaml
+examples/*
+
+# LLM
+.agents/plans/*
+.agents/sessions/*
