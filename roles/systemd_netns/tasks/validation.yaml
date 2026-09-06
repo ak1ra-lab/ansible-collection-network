@@ -115,12 +115,12 @@
       systemd_netns_links[].bridge must name a bridge that already exists on
       the host.  Bridges are owned by ak1ra_lab.network.systemd_bridge (or
       the host's own network configuration); run that role first or create
-      the bridge beforehand.  Missing: {{ probe.item.bridge }}
+      the bridge beforehand.  Missing: {{ probe.link.bridge }}
     quiet: true
   loop: "{{ _systemd_netns_bridge_probe.results }}"
   loop_control:
     loop_var: probe
-    label: "{{ probe.item.bridge }}"
+    label: "{{ probe.link.bridge }}"
   when: systemd_netns_state == 'present'
 
 - name: validate systemd_netns_hook_services type
@@ -153,7 +153,7 @@
 - name: validate systemd_netns_verify_url
   ansible.builtin.assert:
     that:
-      - systemd_netns_verify_url is ansible.builtin.startswith('https://')
+      - systemd_netns_verify_url.startswith('https://')
     fail_msg: "systemd_netns_verify_url must be an https:// URL."
     quiet: true
   when: systemd_netns_verify | ansible.builtin.bool
