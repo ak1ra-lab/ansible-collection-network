@@ -1,0 +1,20 @@
+---
+# ak1ra_lab.network.systemd_bridge - collection playbook entry point.
+#
+# Wraps the systemd_bridge role: declarative host-level Linux bridges - one
+# per dedicated physical interface, managed by systemd-networkd (.netdev +
+# enslave .network files, NetworkManager unmanaged-devices drop-ins when
+# NetworkManager runs).  The contract is the systemd_bridge_* variable
+# namespace documented in roles/systemd_bridge/README.md; override it via
+# group_vars/host_vars or extra-vars - role defaults apply otherwise.
+#
+# Bridges are shared, stable host infrastructure: apply this playbook before
+# ak1ra_lab.network.systemd_netns so the netns role finds the bridges at
+# validation time.
+
+- name: declarative host-level linux bridges (systemd_bridge)
+  hosts: "{{ playbook_hosts | default('localhost') }}"
+  become: true
+  gather_facts: true
+  roles:
+    - ak1ra_lab.network.systemd_bridge

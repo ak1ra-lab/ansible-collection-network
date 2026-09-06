@@ -1,0 +1,103 @@
+---
+# tasks/reset.yaml - tear down the declared bridges
+# (systemd_bridge_state: absent)
+#
+# Removes the NetworkManager drop-ins, the .netdev/.network files and finally
+# the bridges themselves (systemd-networkd drops the bridges once their
+# .netdev files are gone; the ip link del tasks below are fallbacks).  Any
+# interface still enslaved - e.g. veth legs of a systemd_netns namespace - is
+# released from the bridge and loses its L2 connectivity; tear the namespaces
+# down first (ak1ra_lab.network.systemd_netns with state: absent).
+#
+# Connectivity safety: removing a bridge that carries the host's own address
+# takes that address away with it.  Set absent_release_mode (static or dhcp)
+# per bridge and the freed physical interface is reconfigured in the same
+# networkd restart that drops the bridge, so the host never loses its last
+# address.  Without it, bridges that carry no host address are safe to
+# remove; bridges that do carry one are reported.
+
+- name: remove NetworkManager unmanaged-devices drop-ins
+  ansible.builtin.file:
+    path: "{{ _systemd_bridge_nm_conf_dir }}/10-{{ bridge.name }}.conf"
+    state: absent
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.name }}"
+  notify:
+    - reload NetworkManager
+
+- name: remove bridge netdev files
+  ansible.builtin.file:
+    path: "{{ _systemd_bridge_network_dir }}/10-{{ bridge.name }}.netdev"
+    state: absent
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.name }}"
+  notify:
+    - restart systemd-networkd.service
+
+- name: remove bridge configuration files
+  ansible.builtin.file:
+    path: "{{ _systemd_bridge_network_dir }}/20-{{ bridge.name }}.network"
+    state: absent
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.name }}"
+  notify:
+    - restart systemd-networkd.service
+
+- name: remove physical interface enslave files
+  ansible.builtin.file:
+    path: "{{ _systemd_bridge_network_dir }}/15-{{ bridge.interface }}.network"
+    state: absent
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.interface }}"
+  notify:
+    - restart systemd-networkd.service
+
+- name: write release network files (keep the freed interface reachable)
+  ansible.builtin.template:
+    src: etc/systemd/network/ansible-bridge-release.network.j2
+    dest: "{{ _systemd_bridge_network_dir }}/15-{{ bridge.interface }}.network"
+    mode: "0644"
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.interface }}"
+  notify:
+    - restart systemd-networkd.service
+  when: bridge.absent_release_mode | default('none') in ['static', 'dhcp']
+
+- name: warn about bridges with a host address being removed without release mode
+  ansible.builtin.debug:
+    msg: >-
+      bridge {{ bridge.name }} carries the host address {{ bridge.address }}
+      and is removed without absent_release_mode - if it is the host's only
+      address on this segment, connectivity to the host is lost when the
+      bridge is dropped.  Re-run with absent_release_mode: static (or dhcp)
+      to move the address (or DHCP) onto {{ bridge.interface }} first.
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.name }}"
+  when: >-
+    bridge.address is defined
+    and not (bridge.absent_release_mode | default('none') in ['static', 'dhcp'])
+
+- name: apply file removals (networkd drops the bridges, NetworkManager reloads)
+  ansible.builtin.meta: flush_handlers
+
+- name: remove leftover bridges (fallback if systemd-networkd left them behind)
+  ansible.builtin.command:
+    cmd: /usr/bin/ip link del {{ bridge.name }}
+  changed_when: false
+  failed_when: false
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.name }}"

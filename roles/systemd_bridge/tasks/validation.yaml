@@ -1,0 +1,143 @@
+---
+# Self-contained validation of the public variable contract.
+# Runs first in tasks/main.yaml so the role fails fast without any external
+# validation role.
+
+- name: validate systemd_bridge_state
+  ansible.builtin.assert:
+    that:
+      - systemd_bridge_state in systemd_bridge_state_available
+    fail_msg: |
+      systemd_bridge_state must be one of: {{ systemd_bridge_state_available }}
+      (got: {{ systemd_bridge_state }})
+    quiet: true
+
+- name: validate systemd_bridge_bridges type
+  ansible.builtin.assert:
+    that:
+      - systemd_bridge_bridges | ansible.builtin.type_debug == "list"
+    fail_msg: "systemd_bridge_bridges must be a list of {name, interface} dicts."
+    quiet: true
+
+- name: "validate systemd_bridge_bridges elements (systemd_bridge_state: present)"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (bridge.name is defined
+        and bridge.name is ansible.builtin.match('^[a-zA-Z0-9_.-]+$')
+        and bridge.name | ansible.builtin.length <= 15
+        and bridge.interface is defined
+        and bridge.interface in ansible_facts['interfaces'])
+    fail_msg: >-
+      systemd_bridge_bridges elements must be {name, interface} dicts: name a
+      valid interface name (<= 15 chars), interface an existing interface on
+      the host (got: {{ bridge }}; found: {{ ansible_facts['interfaces'] }})
+    quiet: true
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.name | ansible.builtin.default('?') }}"
+  when: systemd_bridge_state == 'present'
+
+- name: validate unique bridge names and enslaved interfaces
+  ansible.builtin.assert:
+    that:
+      - >-
+        systemd_bridge_bridges | map(attribute='name') | ansible.builtin.list
+        | ansible.builtin.unique | ansible.builtin.length
+        == systemd_bridge_bridges | ansible.builtin.length
+      - >-
+        systemd_bridge_bridges | map(attribute='interface') | ansible.builtin.list
+        | ansible.builtin.unique | ansible.builtin.length
+        == systemd_bridge_bridges | ansible.builtin.length
+    fail_msg: >-
+      each systemd_bridge_bridges name and enslaved interface must be unique:
+      one physical interface cannot back two bridges, and one bridge cannot be
+      declared twice
+      (got: {{ systemd_bridge_bridges }})
+    quiet: true
+  when: systemd_bridge_state == 'present'
+
+- name: "validate optional systemd_bridge_bridges fields (systemd_bridge_state: present)"
+  vars:
+    _addr_v4: >-
+      {{ bridge.address is defined
+         and (bridge.address | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy }}
+    _addr_prefix: "{{ (bridge.address | ansible.utils.ipaddr('prefix') | ansible.builtin.int) if _addr_v4 else 0 }}"
+    _ageing_ok: >-
+      {{ (not (bridge.ageing_time is defined))
+         or (bridge.ageing_time | ansible.builtin.type_debug in ['int', 'float']
+             and (bridge.ageing_time | ansible.builtin.int) >= 1) }}
+    _gateway_ok: >-
+      {{ (not (bridge.gateway is defined))
+         or ((bridge.gateway | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy
+             and not ('/' in bridge.gateway)
+             and bridge.address is defined and _addr_v4
+             and bridge.gateway is ansible.utils.in_network(bridge.address | ansible.utils.ipaddr('subnet'))) }}
+    _dns_no_slash: >-
+      {{ bridge.dns | ansible.builtin.select('search', '/') | ansible.builtin.list | length == 0 }}
+    _dns_ips_valid: >-
+      {{ bridge.dns | ansible.builtin.map('ansible.utils.ipaddr', 'ipv4')
+         | ansible.builtin.select('equalto', false) | ansible.builtin.list | length == 0 }}
+    _dns_ok: >-
+      {{ (not (bridge.dns is defined))
+         or (bridge.address is defined
+             and bridge.dns | ansible.builtin.type_debug == "list"
+             and bridge.dns | length > 0
+             and _dns_no_slash
+             and _dns_ips_valid) }}
+  ansible.builtin.assert:
+    that:
+      - (not (bridge.address is defined)) or _addr_v4
+      - (not (bridge.address is defined)) or (_addr_prefix >= 1 and _addr_prefix <= 32)
+      - _ageing_ok
+      - _gateway_ok
+      - _dns_ok
+    fail_msg: >-
+      systemd_bridge_bridges optional fields: address, when set, must be a
+      canonical IPv4 CIDR (a.b.c.d/prefix, prefix 1-32) assigned to the
+      bridge itself; gateway, when set, must be a bare IPv4 address inside
+      the address network; dns, when set, must be a non-empty list of IPv4
+      resolvers (both require address); ageing_time, when set, must be a
+      positive number of seconds (stp, forward_delay, multicast_snooping and
+      vlan_filtering are coerced to booleans/numbers by the template).
+      Offending element: {{ bridge }}
+    quiet: true
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.name | ansible.builtin.default('?') }}"
+  when: systemd_bridge_state == 'present'
+
+- name: validate at most one gateway-carrying bridge (single host default route)
+  ansible.builtin.assert:
+    that:
+      - systemd_bridge_bridges | selectattr('gateway', 'defined') | ansible.builtin.list | ansible.builtin.length <= 1
+    fail_msg: >-
+      at most one systemd_bridge_bridges element may declare a gateway: the
+      host has a single default route, and a second gateway would install a
+      second one.  Offending elements: {{ systemd_bridge_bridges }}
+    quiet: true
+  when: systemd_bridge_state == 'present'
+
+- name: validate absent_release_mode (all states)
+  vars:
+    _mode: "{{ bridge.absent_release_mode | default('none') }}"
+    _mode_ok: "{{ _mode in ['none', 'static', 'dhcp'] }}"
+    _addr_v4: >-
+      {{ bridge.address is defined
+         and (bridge.address | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy }}
+    _static_needs_address: "{{ _mode != 'static' or bridge.address is defined }}"
+  ansible.builtin.assert:
+    that:
+      - _mode_ok
+      - _static_needs_address
+    fail_msg: >-
+      absent_release_mode must be one of none|static|dhcp; 'static' moves the
+      bridge's own address back onto the physical interface, so `address`
+      must be declared on the bridge.  Offending element: {{ bridge }}
+    quiet: true
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.name | ansible.builtin.default('?') }}"

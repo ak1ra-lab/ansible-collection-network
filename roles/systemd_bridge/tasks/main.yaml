@@ -1,0 +1,14 @@
+---
+# tasks file for ak1ra_lab.network.systemd_bridge
+# Dispatcher: validation first, then branch on systemd_bridge_state.
+
+- name: validate contract variables
+  ansible.builtin.import_tasks: validation.yaml
+
+- name: "tear down managed bridges (systemd_bridge_state: absent)"
+  when: systemd_bridge_state == 'absent'
+  ansible.builtin.import_tasks: reset.yaml
+
+- name: "apply bridge configuration (systemd_bridge_state: present)"
+  when: systemd_bridge_state == 'present'
+  ansible.builtin.import_tasks: present.yaml

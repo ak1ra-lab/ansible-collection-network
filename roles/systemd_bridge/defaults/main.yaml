@@ -1,0 +1,100 @@
+---
+# ak1ra_lab.network.systemd_bridge - public variable contract
+#
+# Declarative host-level Linux bridges: one bridge per dedicated physical
+# interface, behaving like a L2 switch whose uplink is that interface.  Any
+# interface can then be enslaved as a bridge port - e.g. the veth legs of
+# ak1ra_lab.network.systemd_netns namespaces, or further physical ports.
+#
+# Bridges are created by systemd-networkd from a .netdev file; the dedicated
+# physical interface is enslaved via a .network file.  When NetworkManager is
+# running, the enslaved interface is declared unmanaged via a conf.d drop-in.
+# networkd artifact names encode load order (numbers) and the device they
+# configure (the name):
+#   10-<name>.network[dev]  the bridge .netdev definition
+#   15-<interface>.network  enslaves the physical interface (during teardown
+#                           with a release mode it carries the released
+#                           interface's own configuration instead)
+#   20-<name>.network       configures the bridge link - rendered for EVERY
+#                           bridge, with `address`/`gateway`/`dns` added when
+#                           declared: without a matching .network file
+#                           systemd-networkd does not manage (bring up) the
+#                           bridge link at all.
+#
+# Addressing: a bridge is an ordinary Linux network device - when the host
+# itself must be reachable on the segment (e.g. management), configure an
+# address on the bridge via the optional per-bridge `address` field.  Do NOT
+# configure addresses on the enslaved physical interface: once enslaved it is
+# a pure L2 port and addresses configured there do not behave correctly.
+
+# Declarative state:
+#   present - apply the bridge configuration
+#   absent  - tear down the declared bridges: drop-ins, .netdev/.network
+#             files and the bridges themselves (any remaining ports are
+#             released from the bridge before it is deleted).  Per-bridge
+#             `absent_release_mode` keeps the host reachable through the
+#             freed physical interface (see below).
+systemd_bridge_state: present
+systemd_bridge_state_available: [present, absent]
+
+# Host-level Linux bridges, each enslaving one dedicated physical interface.
+# Elements: {name, interface, address?, gateway?, dns?, stp?, forward_delay?,
+#            ageing_time?, multicast_snooping?, vlan_filtering?,
+#            absent_release_mode?}, e.g.
+#   - {name: br_wan, interface: enp36s0}
+#   - {name: br_mgmt, interface: enp36s1, address: 192.0.2.10/24,
+#      gateway: 192.0.2.1, dns: [223.5.5.5]}
+# name:          bridge device name (must be a valid interface name, <= 15 chars)
+# interface:     physical interface enslaved into the bridge.  It must be
+#                dedicated to this bridge: not configured by netplan /
+#                ifupdown / another NetworkManager profile (the role writes a
+#                NetworkManager unmanaged-devices drop-in when NetworkManager
+#                is running) and carrying no address of its own - addresses
+#                belong on the bridge (`address`), not on the enslaved port.
+# address:       optional IPv4 CIDR assigned to the bridge itself when the
+#                host needs an L3 presence on this segment.  The bridge
+#                remains a normal member of the segment next to namespace
+#                legs.
+# gateway:       optional IPv4 gateway for the bridge's own default route
+#                (host uplink style).  Requires `address`; at most one bridge
+#                per host may declare a gateway (a second one would install a
+#                second default route).
+# dns:           optional list of IPv4 resolvers for the bridge's own
+#                .network file (requires `address`).
+# stp:           Spanning Tree Protocol, default false.  Enable it once a
+#                bridge carries more than one physical (potentially looping)
+#                port - with veth/container-style legs only, a single uplink
+#                cannot form a loop.
+# forward_delay: bridge forward delay in seconds, default 0.  Only relevant
+#                with STP enabled - give it at least a few seconds then.
+# ageing_time:   FDB entry lifetime in seconds, default 300 (kernel default).
+# multicast_snooping: IGMP/MLD snooping, default true (kernel default).
+# vlan_filtering: 802.1Q VLAN filtering on the bridge, default false.
+# absent_release_mode: what to do with the physical interface when the bridge
+#                is removed (state: absent), default `none`:
+#                - none:   just release it; if this bridge carried the host's
+#                          only address you may lose connectivity to the host
+#                - static: move `address` (and `gateway`/`dns` when set) onto
+#                          the physical interface before the bridge is
+#                          dropped, so the host keeps its reachable address
+#                - dhcp:   let the interface obtain an address via DHCP after
+#                          the bridge is dropped (the 15-<interface>.network
+#                          file keeps it configured until the next present
+#                          run)
+systemd_bridge_bridges: []
+
+# Strictness of the networkd conflict preflight: fail when other
+# systemd-networkd configuration files (in /etc, /run or /usr/lib) already
+# match an interface or bridge this role is about to manage.  Set false to
+# downgrade the check to a warning.
+systemd_bridge_conflict_check: true
+
+# Internal: derived values (do not modify manually)
+_systemd_bridge_network_dir: /etc/systemd/network
+_systemd_bridge_nm_conf_dir: /etc/NetworkManager/conf.d
+
+# Marker embedded in every file this role renders (first comment line).  The
+# networkd conflict preflight greps for it to tell role-owned files apart
+# from hand-written or third-party configuration that happens to use the same
+# device-based file names.
+_systemd_bridge_file_marker: ak1ra_lab.network.systemd_bridge
