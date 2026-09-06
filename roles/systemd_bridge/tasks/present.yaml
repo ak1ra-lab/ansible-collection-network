@@ -11,6 +11,15 @@
 #   15-<interface>.network  enslaves the dedicated physical interface
 #   20-<name>.network       configures the bridge link (always rendered; with
 #                           `address`/`gateway`/`dns` when declared)
+#
+# The networkd conflict preflight runs FIRST, before anything is written or
+# restarted: it inspects configuration files only (never live state), and a
+# failing check leaves the host untouched instead of aborting mid-run with
+# new files on disk but no networkd restart applied.
+
+- name: preflight networkd conflicts (fails before anything is touched)
+  when: systemd_bridge_bridges | length > 0
+  ansible.builtin.include_tasks: preflight.yaml
 
 - name: ensure iproute2 is installed (bridge teardown fallback)
   ansible.builtin.package:
@@ -95,67 +104,3 @@
     label: "{{ bridge.address | ansible.builtin.default('<no address>') }}"
   notify:
     - restart systemd-networkd.service
-
-- name: scan networkd configuration for other files matching the managed devices
-  when: systemd_bridge_bridges | length > 0
-  vars:
-    _managed_names: >-
-      {{ (systemd_bridge_bridges | map(attribute='name')
-          + systemd_bridge_bridges | map(attribute='interface'))
-         | ansible.builtin.list | ansible.builtin.unique
-         | ansible.builtin.map('ansible.builtin.regex_escape') | ansible.builtin.join('|') }}
-  ansible.builtin.command:
-    argv:
-      - /usr/bin/grep
-      - -rlsE
-      - "^Name=([^!]*[*|][^!]*|{{ _managed_names }})$"
-      - /etc/systemd/network
-      - /run/systemd/network
-      - /usr/lib/systemd/network
-  changed_when: false
-  failed_when: false
-  register: _systemd_bridge_conflict_files
-
-- name: exclude this role's own networkd files (embedded marker comment)
-  when: _systemd_bridge_conflict_files.stdout_lines | length > 0
-  ansible.builtin.command:
-    argv: >-
-      {{ ['/usr/bin/grep', '-LsF', _systemd_bridge_file_marker]
-         + _systemd_bridge_conflict_files.stdout_lines }}
-  changed_when: false
-  failed_when: false
-  register: _systemd_bridge_conflict_files_other
-
-- name: fail on conflicting networkd configuration (systemd_bridge_conflict_check)
-  when: >-
-    systemd_bridge_bridges | length > 0
-    and _systemd_bridge_conflict_files.stdout_lines | length > 0
-    and systemd_bridge_conflict_check | ansible.builtin.bool
-    and _systemd_bridge_conflict_files_other.stdout_lines | length > 0
-  ansible.builtin.assert:
-    that: false
-    fail_msg: >-
-      other systemd-networkd configuration already matches an interface or
-      bridge this role is about to manage:
-      {{ _systemd_bridge_conflict_files_other.stdout_lines }}.  A device is
-      configured by a single .network file; make sure netplan / ifupdown /
-      manual configs do not also claim the dedicated interfaces (remove or
-      rename the conflicting files, or set systemd_bridge_conflict_check:
-      false to only warn).
-    quiet: false
-
-- name: warn about conflicting networkd configuration (check disabled)
-  when: >-
-    systemd_bridge_bridges | length > 0
-    and _systemd_bridge_conflict_files.stdout_lines | length > 0
-    and not (systemd_bridge_conflict_check | ansible.builtin.bool)
-    and _systemd_bridge_conflict_files_other.stdout_lines | length > 0
-  ansible.builtin.debug:
-    msg: >-
-      other systemd-networkd configuration matches an interface or bridge
-      this role manages: {{ _systemd_bridge_conflict_files_other.stdout_lines }}.
-      A device is configured by a single .network file - verify these files
-      do not claim the dedicated interfaces.
-
-- name: apply the bridge configuration now
-  ansible.builtin.meta: flush_handlers

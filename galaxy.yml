@@ -25,5 +25,6 @@ manifest:
   directives:
     - graft roles
     - graft playbooks
+    - graft plugins
     - global-exclude *~ *.py[cod] __pycache__ *.bak *.swp *.tmp *.retry
     - include LICENSE README.md

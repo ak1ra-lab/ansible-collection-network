@@ -1,0 +1,92 @@
+---
+# tasks/preflight.yaml - networkd conflict preflight
+# Included from present.yaml FIRST, before anything is written or restarted.
+# It inspects configuration files only (never live state), and a failing
+# check leaves the host untouched instead of aborting mid-run with new files
+# on disk but no networkd restart applied.
+#
+# A device is configured by a single .network file, so any foreign file
+# whose [Match] Name= patterns (shell-style globs) actually overlap with a
+# device this role manages is a conflict.  Matching is semantic: wildcard
+# files that cannot match any managed device (e.g. the distro-packaged
+# 80-container-*.network defaults) are ignored.  Files carrying this role's
+# own marker comment are this role's and never reported.
+
+- name: probe networkd configuration directories
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ _systemd_bridge_network_dir }}"
+    - /run/systemd/network
+    - /usr/lib/systemd/network
+  register: _systemd_bridge_networkd_dirs
+
+- name: derive directory stat results
+  ansible.builtin.set_fact:
+    _systemd_bridge_networkd_dir_stats: >-
+      {{ _systemd_bridge_networkd_dirs.results
+         | ansible.builtin.map(attribute='stat') | ansible.builtin.list }}
+
+- name: derive existing networkd configuration directories and managed devices
+  ansible.builtin.set_fact:
+    _systemd_bridge_networkd_scan_dirs: >-
+      {{ (_systemd_bridge_networkd_dir_stats | ansible.builtin.reject('equalto', none))
+         | ansible.builtin.selectattr('exists', 'equalto', true)
+         | ansible.builtin.selectattr('isdir', 'equalto', true)
+         | ansible.builtin.map(attribute='path') | ansible.builtin.list }}
+    _systemd_bridge_devices: >-
+      {{ (systemd_bridge_bridges | map(attribute='name')
+          + systemd_bridge_bridges | map(attribute='interface'))
+         | ansible.builtin.list | ansible.builtin.unique }}
+
+- name: find networkd configuration files with Name= matches
+  when: _systemd_bridge_networkd_scan_dirs | length > 0
+  ansible.builtin.find:
+    paths: "{{ _systemd_bridge_networkd_scan_dirs }}"
+    patterns: ["*.network", "*.netdev"]
+    file_type: file
+    contains: "^Name="
+  register: _systemd_bridge_networkd_files
+
+- name: read the candidate files
+  ansible.builtin.slurp:
+    src: "{{ item }}"
+  loop: "{{ _systemd_bridge_networkd_files.files | default([]) | map(attribute='path') | ansible.builtin.list }}"
+  register: _systemd_bridge_networkd_contents
+
+- name: determine foreign networkd files claiming the managed devices
+  ansible.builtin.set_fact:
+    _systemd_bridge_conflict_files_other: >-
+      {{ ((_systemd_bridge_networkd_files.files | default([])
+          | ansible.builtin.map(attribute='path') | ansible.builtin.list)
+          | ansible.builtin.zip(_systemd_bridge_networkd_contents.results | default([])
+             | ansible.builtin.map(attribute='content') | ansible.builtin.list))
+         | ansible.builtin.map('ansible.builtin.list') | ansible.builtin.list
+         | ak1ra_lab.network.networkd_conflicts(_systemd_bridge_file_marker, _systemd_bridge_devices) }}
+
+- name: fail on conflicting networkd configuration (systemd_bridge_conflict_check)
+  when: >-
+    systemd_bridge_conflict_check | ansible.builtin.bool
+    and _systemd_bridge_conflict_files_other | length > 0
+  ansible.builtin.assert:
+    that: false
+    fail_msg: >-
+      other systemd-networkd configuration already claims an interface or
+      bridge this role is about to manage:
+      {{ _systemd_bridge_conflict_files_other }}.  A device is configured by
+      a single .network file; make sure netplan / ifupdown / manual configs
+      do not also claim the dedicated interfaces (remove or rename the
+      conflicting files, or set systemd_bridge_conflict_check: false to only
+      warn).
+    quiet: false
+
+- name: warn about conflicting networkd configuration (check disabled)
+  when: >-
+    not (systemd_bridge_conflict_check | ansible.builtin.bool)
+    and _systemd_bridge_conflict_files_other | length > 0
+  ansible.builtin.debug:
+    msg: >-
+      other systemd-networkd configuration claims an interface or bridge
+      this role manages: {{ _systemd_bridge_conflict_files_other }}.  A
+      device is configured by a single .network file - verify these files do
+      not claim the dedicated interfaces.

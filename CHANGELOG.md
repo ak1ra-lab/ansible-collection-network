@@ -59,9 +59,13 @@ The format is based on Keep a Changelog, and this project does not currently gua
   without a matching `.network` file is not managed by networkd at all;
   `address`/`gateway`/`dns` are added when declared).  Every rendered file
   embeds an ownership marker comment
-  (`# ... managed by ak1ra_lab.network.systemd_bridge ...`) that the networkd
-  conflict preflight greps for, so role-owned files are recognized by content
-  rather than by file name.
+  (`# ... managed by ak1ra_lab.network.systemd_bridge ...`), and the networkd
+  conflict preflight (`systemd_bridge_conflict_check`) evaluates `Name=`
+  patterns semantically instead of grepping: a file only conflicts when one
+  of its shell-glob patterns actually matches a managed device (marker-carrying
+  files are this role's own), so distro-packaged wildcard defaults such as
+  `80-container-*.network` or `80-vm-vt.network` are ignored unless they
+  really claim a managed interface or bridge.
 - `systemd_bridge` enslave file places `Bridge=` under `[Network]`; the
   previous `[Bridge]` section made systemd-networkd ignore the enslave
   (`Unknown key 'Bridge' in section [Bridge]`), leaving the uplink
