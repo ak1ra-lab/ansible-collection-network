@@ -1,0 +1,11 @@
+---
+# handlers file for ak1ra_lab.network.systemd_netns
+
+- name: systemctl daemon-reload
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: restart netns service
+  ansible.builtin.systemd_service:
+    name: "{{ _systemd_netns_service }}"
+    state: restarted

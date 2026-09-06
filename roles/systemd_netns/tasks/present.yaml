@@ -1,0 +1,109 @@
+---
+# tasks/present.yaml - apply the namespace infrastructure
+# (systemd_netns_state: present)
+#
+# Host-level bridges are owned by ak1ra_lab.network.systemd_bridge (or the
+# host's own network configuration layer); this role only creates the
+# namespace, its veth legs, the resolv.conf and the per-service drop-ins.
+# It never touches systemd-networkd or NetworkManager.
+
+- name: ensure packages are installed
+  ansible.builtin.package:
+    name:
+      - iproute2
+    state: present
+
+- name: ensure curl is installed (egress verification)
+  when: systemd_netns_verify | ansible.builtin.bool
+  ansible.builtin.package:
+    name: curl
+    state: present
+
+- name: ensure /etc/netns directory exists
+  ansible.builtin.file:
+    path: /etc/netns/{{ systemd_netns_name }}
+    state: directory
+    mode: "0755"
+
+- name: template namespace resolv.conf (iproute2 netns convention; systemd drop-ins bind this path directly)
+  ansible.builtin.template:
+    src: etc/netns/resolv.conf.j2
+    dest: /etc/netns/{{ systemd_netns_name }}/resolv.conf
+    mode: "0644"
+
+- name: template netns systemd service unit on remote
+  ansible.builtin.template:
+    src: etc/systemd/system/ansible-netns.service.j2
+    dest: /etc/systemd/system/{{ _systemd_netns_service }}
+    mode: "0644"
+  notify:
+    - systemctl daemon-reload
+    - restart netns service
+
+- name: ensure systemd drop-in directories for hooked services exist
+  ansible.builtin.file:
+    path: /etc/systemd/system/{{ service }}.d
+    state: directory
+    mode: "0755"
+  loop: "{{ systemd_netns_hook_services }}"
+  loop_control:
+    loop_var: service
+    label: "{{ service }}"
+
+- name: template systemd drop-ins hooking services into the namespace
+  ansible.builtin.template:
+    src: etc/systemd/system/hook.service.d/netns.conf.j2
+    dest: /etc/systemd/system/{{ service }}.d/netns.conf
+    mode: "0644"
+  loop: "{{ systemd_netns_hook_services }}"
+  loop_control:
+    loop_var: service
+    label: "{{ service }}"
+  notify:
+    - systemctl daemon-reload
+
+- name: enable and start netns service
+  ansible.builtin.systemd_service:
+    name: "{{ _systemd_netns_service }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: verify namespace egress (informational)
+  when: systemd_netns_verify | ansible.builtin.bool
+  block:
+    - name: collect namespace exit IP
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/ip
+          - netns
+          - exec
+          - "{{ systemd_netns_name }}"
+          - /usr/bin/curl
+          - -4
+          - -fsS
+          - --max-time
+          - "10"
+          - "{{ systemd_netns_verify_url }}"
+      changed_when: false
+      failed_when: false
+      register: _systemd_netns_verify_ns
+
+    - name: collect host exit IP
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/curl
+          - -4
+          - -fsS
+          - --max-time
+          - "10"
+          - "{{ systemd_netns_verify_url }}"
+      changed_when: false
+      failed_when: false
+      register: _systemd_netns_verify_host
+
+    - name: report egress addresses
+      ansible.builtin.debug:
+        msg: >-
+          namespace egress IP: {{ _systemd_netns_verify_ns.stdout | ansible.builtin.default('unreachable', true) }};
+          host egress IP: {{ _systemd_netns_verify_host.stdout | ansible.builtin.default('unreachable', true) }}

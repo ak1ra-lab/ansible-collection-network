@@ -1,0 +1,31 @@
+# Role metadata for ak1ra_lab.network.systemd_netns
+
+galaxy_info:
+  author: ak1ra
+  description: "Dedicated-segment egress isolation: bridged network namespaces for per-service direct egress over host-level Linux bridges (opt-in)"
+  license: MIT
+  min_ansible_version: "2.18"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+        - jammy
+    - name: Debian
+      versions:
+        - trixie
+        - bookworm
+
+  galaxy_tags:
+    - network
+    - netns
+    - bridge
+    - systemd
+
+dependencies: []
+
+# Namespaces are fully parameterized by systemd_netns_name.  Run the role
+# once per namespace with distinct systemd_netns_name values; several
+# namespaces can share one host-level bridge (managed by the
+# systemd_bridge role).
+allow_duplicates: true

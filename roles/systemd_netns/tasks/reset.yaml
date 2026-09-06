@@ -1,0 +1,168 @@
+---
+# tasks/reset.yaml - tear down everything this role created
+# (systemd_netns_state: absent).
+#
+# Host-level bridges are owned by ak1ra_lab.network.systemd_bridge (or the
+# host's own network configuration layer) and are never touched here.
+
+- name: discover systemd drop-ins referencing this namespace
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/grep
+      - -rl
+      - "NetworkNamespacePath=/run/netns/{{ systemd_netns_name }}"
+      - /etc/systemd/system
+      - --include=netns.conf
+  changed_when: false
+  failed_when: false
+  register: _systemd_netns_dropins
+
+- name: discover processes still inside the namespace
+  ansible.builtin.command:
+    cmd: ip netns pids {{ systemd_netns_name }}
+  changed_when: false
+  failed_when: false
+  register: _systemd_netns_ns_pids
+
+- name: read the cgroup of each namespace process (systemd unit attribution)
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/cat
+      - "/proc/{{ item }}/cgroup"
+  changed_when: false
+  failed_when: false
+  register: _systemd_netns_pid_cgroups
+  loop: "{{ _systemd_netns_ns_pids.stdout_lines }}"
+  loop_control:
+    loop_var: item
+    label: "pid {{ item }}"
+  when: _systemd_netns_ns_pids.stdout_lines | length > 0
+
+- name: derive the systemd units joined to the namespace
+  ansible.builtin.set_fact:
+    _systemd_netns_hooked_units: >-
+      {{ (_systemd_netns_hooked_units | ansible.builtin.default([]))
+         + ([ _systemd_netns_pid_unit ] if _systemd_netns_pid_unit else []) }}
+  vars:
+    _cgroup_parts: "{{ (item.stdout | default('')) | ansible.builtin.trim | ansible.builtin.split('/') }}"
+    _systemd_netns_pid_unit: >-
+      {{ ((_cgroup_parts | ansible.builtin.select('equalto', 'system.slice') | ansible.builtin.list | length == 1)
+          and ((_cgroup_parts[-1] | ansible.builtin.split('.'))[-1] == 'service'))
+         | ansible.builtin.ternary(_cgroup_parts[-1], '') }}
+  loop: "{{ _systemd_netns_pid_cgroups.results | default([]) }}"
+  loop_control:
+    loop_var: item
+    label: "pid {{ item.item }}"
+  when: item.rc is defined and item.rc == 0
+
+- name: stop systemd services still joined to the namespace
+  ansible.builtin.systemd_service:
+    name: "{{ unit }}"
+    state: stopped
+  failed_when: false
+  loop: "{{ _systemd_netns_hooked_units | ansible.builtin.default([]) | ansible.builtin.unique }}"
+  loop_control:
+    loop_var: unit
+    label: "{{ unit }}"
+
+- name: check whether the netns service unit file is present
+  ansible.builtin.stat:
+    path: /etc/systemd/system/{{ _systemd_netns_service }}
+  register: _systemd_netns_unit_file
+
+- name: stop and disable the netns service (its ExecStop removes the namespace and veth legs)
+  when: _systemd_netns_unit_file.stat.exists
+  ansible.builtin.systemd_service:
+    name: "{{ _systemd_netns_service }}"
+    enabled: false
+    state: stopped
+
+- name: check for processes lingering in the namespace
+  ansible.builtin.command:
+    cmd: ip netns pids {{ systemd_netns_name }}
+  changed_when: false
+  failed_when: false
+  register: _systemd_netns_lingering_pids
+
+- name: report lingering namespace processes
+  when: _systemd_netns_lingering_pids.stdout | length > 0
+  ansible.builtin.debug:
+    msg: >-
+      processes still hold the {{ systemd_netns_name }} namespace:
+      {{ _systemd_netns_lingering_pids.stdout_lines }}.  The namespace is
+      removed from /run/netns but stays alive (with its veth legs gone)
+      until these processes exit; stop them and re-run
+      systemd_netns_state: absent to finish the teardown.
+
+- name: remove systemd drop-ins that hooked services into the namespace
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ _systemd_netns_dropins.stdout_lines }}"
+  loop_control:
+    loop_var: item
+    label: "{{ item }}"
+  notify:
+    - systemctl daemon-reload
+
+- name: remove netns service unit file
+  ansible.builtin.file:
+    path: /etc/systemd/system/{{ _systemd_netns_service }}
+    state: absent
+  notify:
+    - systemctl daemon-reload
+
+- name: remove netns convention directory (resolv.conf)
+  ansible.builtin.file:
+    path: /etc/netns/{{ systemd_netns_name }}
+    state: absent
+
+- name: apply unit file removals
+  ansible.builtin.meta: flush_handlers
+
+- name: remove leftover namespace (fallback for already-deleted unit files)
+  ansible.builtin.command:
+    cmd: /usr/bin/ip netns del {{ systemd_netns_name }}
+  changed_when: false
+  failed_when: false
+
+- name: list host-side veth interfaces (leftover leg discovery)
+  ansible.builtin.command:
+    cmd: /usr/bin/ip -o link show type veth
+  changed_when: false
+  failed_when: false
+  register: _systemd_netns_veth_list
+
+- name: collect veth interface names from the listing
+  ansible.builtin.set_fact:
+    _systemd_netns_veth_names: "{{ _systemd_netns_veth_list.stdout_lines \
+      | map('ansible.builtin.regex_replace', '^\\d+: ([^:@]+)(@[^:]+)?: .*$', '\\1') \
+      | ansible.builtin.list }}"
+
+- name: keep leftover host veth legs of this namespace by naming prefix
+  ansible.builtin.set_fact:
+    _systemd_netns_leftover_veth: "{{ _systemd_netns_veth_names \
+      | ansible.builtin.select('match', '^' ~ _systemd_netns_veth_host_prefix ~ '-[0-9]+$') \
+      | ansible.builtin.list }}"
+
+- name: remove leftover host veth legs (fallback for already-deleted unit files)
+  ansible.builtin.command:
+    cmd: /usr/bin/ip link del {{ item }}
+  changed_when: false
+  failed_when: false
+  loop: "{{ _systemd_netns_leftover_veth }}"
+  loop_control:
+    loop_var: item
+    label: "{{ item }}"
+
+- name: remove now-empty drop-in directories (they may still hold other overrides - rmdir only succeeds when empty)
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/rmdir
+      - "{{ item }}"
+  changed_when: false
+  failed_when: false
+  loop: "{{ _systemd_netns_dropins.stdout_lines | map('dirname') | ansible.builtin.list | ansible.builtin.unique }}"
+  loop_control:
+    loop_var: item
+    label: "{{ item }}"

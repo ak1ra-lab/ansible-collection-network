@@ -1,0 +1,79 @@
+---
+# ak1ra_lab.network.systemd_netns - public variable contract
+#
+# Dedicated-segment egress isolation: systemd services run inside a network
+# namespace that attaches veth legs to host-level Linux bridges (created and
+# owned by ak1ra_lab.network.systemd_bridge or the host's own network
+# configuration layer).  The namespace carries real segment addresses and its
+# default route via the leg that declares a gateway - the host does no
+# routing, NAT or filtering for this traffic (pure L2).
+
+# Declarative state:
+#   present - apply the namespace infrastructure
+#   absent  - tear down everything this role created (namespace, veth legs,
+#             resolv.conf, hook drop-ins, unit).  Host-level bridges are
+#             shared infrastructure owned by ak1ra_lab.network.systemd_bridge
+#             and are never touched by this role.
+systemd_netns_state: present
+systemd_netns_state_available: [present, absent]
+
+# Namespace identifier.  Doubles as the unit name component
+# (netns-<name>.service), the /etc/netns/<name> resolv.conf directory and the
+# per-invocation systemd unit name, so it must be a valid ip netns name and
+# systemd unit name component.
+systemd_netns_name: dedicated_net
+
+# veth legs between the namespace and the host-level bridges (one veth pair
+# per leg, container-style: one leg per network segment).  The host end of
+# each pair is a bridge port (L2 only), the namespace end carries the segment
+# address.  At most one leg may declare a gateway; that leg owns the
+# namespace's default route.
+# Elements: {bridge, address, gateway?, mac?}, e.g.
+#   - {bridge: br_wan, address: 10.255.0.245/24, gateway: 10.255.0.1, mac: "bc:24:11:a1:5c:50"}
+# bridge:  name of an existing bridge on the host - regardless of its owner
+#          (systemd_bridge, netplan, hand-rolled); existence is validated at
+#          run time, so the bridge must already be created when the role runs
+# address: canonical IPv4 CIDR assigned inside the namespace
+# gateway: optional IPv4 next-hop of the default route (segment's router)
+# mac:     optional MAC pinned to the namespace end (stable ARP/leases across
+#          namespace recreations - veth MACs are random by default)
+systemd_netns_links: []
+
+# Resolvers for the namespace, written to the iproute2-convention path
+# /etc/netns/<name>/resolv.conf (ip netns exec bind-mounts it automatically;
+# systemd drop-ins bind this path directly).
+systemd_netns_dns_servers:
+  - 223.5.5.5
+  - 119.29.29.29
+
+# Optional systemd units to join to this namespace via a drop-in written at
+# /etc/systemd/system/<unit>.d/netns.conf (NetworkNamespacePath= plus the
+# PartOf=/Requires=/After= wiring).  The role only writes/removes the
+# drop-in; it never enables, starts, restarts or otherwise manages these
+# units.  Template units work by passing e.g. "qbittorrent-nox@.service".
+systemd_netns_hook_services: []
+
+# Disable IPv6 inside the namespace.  The bridged legs can carry IPv6, but
+# segments are often v4-only; disabling avoids happy-eyeballs stalls when no
+# v6 route exists.
+systemd_netns_disable_ipv6: true
+
+# Informational reachability check after deployment: curl the exit-IP echo
+# service from inside the namespace and from the host.  Never fails the run -
+# comparing the two addresses is the operator's verdict.
+systemd_netns_verify: false
+
+# Exit-IP echo service used by the verification task (both checks use curl
+# for consistent behavior).
+systemd_netns_verify_url: https://ip.sb
+
+# Internal: derived names and values (do not modify manually)
+#
+# Kernel interface names are capped at 15 characters (IFNAMSIZ), so the veth
+# ends cannot embed systemd_netns_name directly.  They use a short prefix plus
+# the first 8 hex chars of the namespace name's md5 digest, plus a per-leg
+# index: deterministic across runs, unique per namespace, short regardless of
+# systemd_netns_name length or the number of legs.
+_systemd_netns_veth_host_prefix: vh-{{ (systemd_netns_name | ansible.builtin.hash('md5'))[:8] }}
+_systemd_netns_veth_ns_prefix: vn-{{ (systemd_netns_name | ansible.builtin.hash('md5'))[:8] }}
+_systemd_netns_service: netns-{{ systemd_netns_name }}.service

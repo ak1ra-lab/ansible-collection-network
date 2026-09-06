@@ -1,0 +1,22 @@
+---
+# ak1ra_lab.network.systemd_netns - collection playbook entry point.
+#
+# Wraps the systemd_netns role: dedicated-segment egress for individual
+# systemd services - a network namespace attaching veth legs to host-level
+# Linux bridges (owned by ak1ra_lab.network.systemd_bridge or the host's own
+# network configuration) with real segment addresses + gateway inside the
+# namespace.  The contract is the systemd_netns_* variable namespace
+# documented in roles/systemd_netns/README.md; override it via
+# group_vars/host_vars or extra-vars - role defaults apply otherwise.
+#
+# The role sets allow_duplicates: true; run the playbook once per namespace
+# with distinct systemd_netns_name values to isolate several services on one
+# host.  The referenced bridges must already exist (run
+# ak1ra_lab.network.systemd_bridge first on fresh hosts).
+
+- name: bridged network-namespace egress (systemd_netns)
+  hosts: "{{ playbook_hosts | default('localhost') }}"
+  become: true
+  gather_facts: true
+  roles:
+    - ak1ra_lab.network.systemd_netns
