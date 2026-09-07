@@ -97,3 +97,7 @@ The format is based on Keep a Changelog, and this project does not currently gua
 - `systemd_bridge` preflights the networkd configuration directories
   (`systemd_bridge_conflict_check`) and fails when other `.network` files
   already match the interfaces or bridges it manages.
+- The `systemd_netns` documentation now describes per-service next-hop
+  gateway selection in both directions: host proxied with a service direct,
+  or host direct with a single service proxied through a TPROXY gateway on
+  the same bridged segment.

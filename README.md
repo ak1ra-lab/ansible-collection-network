@@ -11,7 +11,7 @@ Shared Ansible roles for network infrastructure, published as the
 | `ak1ra_lab.network.flow_offload` | nftables flowtable offloading for forwarded traffic. | opt-in |
 | `ak1ra_lab.network.proxy_guard` | Per-client TCP abuse protection (throttle / auto-ban) for transparent-proxy gateways. | opt-in |
 | `ak1ra_lab.network.systemd_bridge` | Declarative host-level Linux bridges (one per dedicated physical interface) via systemd-networkd: `.netdev` + enslave `.network` files, NetworkManager unmanaged-devices drop-ins. Stable shared infrastructure. | opt-in |
-| `ak1ra_lab.network.systemd_netns` | Dedicated-segment egress isolation: bridged network namespaces for per-service direct egress - namespace veth legs with real segment addresses attach to the host-level bridges of `systemd_bridge`. No host-side routing/NAT. | opt-in |
+| `ak1ra_lab.network.systemd_netns` | Dedicated-segment egress isolation: bridged network namespaces for per-service egress over the shared host-level bridges of `systemd_bridge` - namespace veth legs with real segment addresses and an arbitrary per-service next-hop gateway (e.g. a TPROXY gateway when only the hooked service should be proxied). No host-side routing/NAT. | opt-in |
 
 ## Engine contract
 
