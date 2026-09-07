@@ -71,9 +71,11 @@ systemd_netns_verify_url: https://ip.sb
 #
 # Kernel interface names are capped at 15 characters (IFNAMSIZ), so the veth
 # ends cannot embed systemd_netns_name directly.  They use a short prefix plus
-# the first 8 hex chars of the namespace name's md5 digest, plus a per-leg
-# index: deterministic across runs, unique per namespace, short regardless of
-# systemd_netns_name length or the number of legs.
-_systemd_netns_veth_host_prefix: vh-{{ (systemd_netns_name | ansible.builtin.hash('md5'))[:8] }}
-_systemd_netns_veth_ns_prefix: vn-{{ (systemd_netns_name | ansible.builtin.hash('md5'))[:8] }}
+# the first 10 hex chars of the namespace name's sha256 digest, plus a per-leg
+# index (vh-<10 hex>-<leg> = 15 chars max): deterministic across runs, unique
+# per namespace, short regardless of systemd_netns_name length or the number
+# of legs.  Same scheme as systemd_netns_routing so both roles stay
+# consistent.
+_systemd_netns_veth_host_prefix: vh-{{ (systemd_netns_name | ansible.builtin.hash('sha256'))[:10] }}
+_systemd_netns_veth_ns_prefix: vn-{{ (systemd_netns_name | ansible.builtin.hash('sha256'))[:10] }}
 _systemd_netns_service: netns-{{ systemd_netns_name }}.service
