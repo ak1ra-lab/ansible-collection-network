@@ -16,7 +16,7 @@
   ansible.builtin.assert:
     that:
       - systemd_bridge_bridges | ansible.builtin.type_debug == "list"
-    fail_msg: "systemd_bridge_bridges must be a list of {name, interface} dicts."
+    fail_msg: "systemd_bridge_bridges must be a list of {name, interface?} dicts."
     quiet: true
 
 - name: "validate systemd_bridge_bridges elements (systemd_bridge_state: present)"
@@ -25,13 +25,17 @@
       - >-
         (bridge.name is defined
         and bridge.name is ansible.builtin.match('^[a-zA-Z0-9_.-]+$')
-        and bridge.name | ansible.builtin.length <= 15
-        and bridge.interface is defined
-        and bridge.interface in ansible_facts['interfaces'])
+        and bridge.name | ansible.builtin.length <= 15)
+      - >-
+        (not (bridge.interface is defined))
+        or (bridge.interface is ansible.builtin.match('^[a-zA-Z0-9_.@:-]+$')
+            and bridge.interface in ansible_facts['interfaces'])
     fail_msg: >-
-      systemd_bridge_bridges elements must be {name, interface} dicts: name a
-      valid interface name (<= 15 chars), interface an existing interface on
-      the host (got: {{ bridge }}; found: {{ ansible_facts['interfaces'] }})
+      systemd_bridge_bridges elements must be {name, interface?} dicts: name a
+      valid interface name (<= 15 chars); interface, when set, an existing
+      interface on the host (got: {{ bridge }}; found: {{ ansible_facts['interfaces'] }}).
+      Bridges without an interface are pure L2 segments (e.g. the private
+      bridge networks of systemd_netns_routing) and get no enslave file.
     quiet: true
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:
@@ -47,13 +51,15 @@
         | ansible.builtin.unique | ansible.builtin.length
         == systemd_bridge_bridges | ansible.builtin.length
       - >-
-        systemd_bridge_bridges | map(attribute='interface') | ansible.builtin.list
+        systemd_bridge_bridges | selectattr('interface', 'defined')
+        | map(attribute='interface') | ansible.builtin.list
         | ansible.builtin.unique | ansible.builtin.length
-        == systemd_bridge_bridges | ansible.builtin.length
+        == systemd_bridge_bridges | selectattr('interface', 'defined')
+        | ansible.builtin.list | ansible.builtin.length
     fail_msg: >-
-      each systemd_bridge_bridges name and enslaved interface must be unique:
-      one physical interface cannot back two bridges, and one bridge cannot be
-      declared twice
+      each systemd_bridge_bridges name must be unique and each enslaved
+      interface must back at most one bridge (bridges without an interface
+      are pure L2 segments and carry no uniqueness constraint)
       (got: {{ systemd_bridge_bridges }})
     quiet: true
   when: systemd_bridge_state == 'present'
@@ -128,14 +134,18 @@
       {{ bridge.address is defined
          and (bridge.address | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy }}
     _static_needs_address: "{{ _mode != 'static' or bridge.address is defined }}"
+    _release_needs_interface: "{{ _mode not in ['static', 'dhcp'] or bridge.interface is defined }}"
   ansible.builtin.assert:
     that:
       - _mode_ok
       - _static_needs_address
+      - _release_needs_interface
     fail_msg: >-
       absent_release_mode must be one of none|static|dhcp; 'static' moves the
       bridge's own address back onto the physical interface, so `address`
-      must be declared on the bridge.  Offending element: {{ bridge }}
+      must be declared on the bridge, and any release mode writes a
+      15-<interface>.network file, so `interface` must be declared on the
+      bridge.  Offending element: {{ bridge }}
     quiet: true
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:

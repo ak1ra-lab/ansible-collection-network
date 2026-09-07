@@ -36,7 +36,8 @@
          | ansible.builtin.map(attribute='path') | ansible.builtin.list }}
     _systemd_bridge_devices: >-
       {{ (systemd_bridge_bridges | map(attribute='name')
-          + systemd_bridge_bridges | map(attribute='interface'))
+          + systemd_bridge_bridges | selectattr('interface', 'defined')
+            | map(attribute='interface'))
          | ansible.builtin.list | ansible.builtin.unique }}
 
 - name: find networkd configuration files with Name= matches

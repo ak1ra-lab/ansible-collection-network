@@ -7,14 +7,13 @@
 # does not lose its last address.  The file takes over the regular
 # 15-<interface>.network path (the enslave file is removed in the same run);
 # the next systemd_bridge_state: present run replaces it with the enslave
-# file again.
+# file again.  The interface now carries the host's connectivity itself, so
+# RequiredForOnline keeps the systemd default (yes) and wait-online waits for
+# it.
 {% if bridge.absent_release_mode | default('none') == 'static' %}
 
 [Match]
 Name={{ bridge.interface }}
-
-[Link]
-RequiredForOnline=no
 
 [Network]
 Address={{ bridge.address }}
@@ -28,9 +27,6 @@ DNS={{ server }}
 
 [Match]
 Name={{ bridge.interface }}
-
-[Link]
-RequiredForOnline=no
 
 [Network]
 DHCP=ipv4

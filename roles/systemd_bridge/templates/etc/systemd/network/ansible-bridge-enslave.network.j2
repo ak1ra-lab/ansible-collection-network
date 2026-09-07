@@ -12,6 +12,11 @@
 # offload-capable single auto-port may have its promisc mode cleared and
 # inbound frames for MACs behind the bridge (namespace veth legs, further
 # physical ports) would then be dropped by the NIC.
+#
+# RequiredForOnline=no: the enslaved port is a pure L2 member and never
+# reaches an online operational state itself (host connectivity lives on the
+# bridge, whose own file is required for online when it carries an address),
+# so wait-online must not wait for the port.
 
 [Match]
 Name={{ bridge.interface }}

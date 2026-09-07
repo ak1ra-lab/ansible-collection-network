@@ -8,14 +8,21 @@
 # device.  `address` (plus `gateway`/`dns` when declared) gives the bridge -
 # and thereby the host - an L3 presence on the segment; without them the
 # [Match]/[Link] block alone makes networkd bring the link up.
+#
+# RequiredForOnline: a bridge carrying the host's own address/gateway/dns is
+# the host's connectivity endpoint, so it keeps the systemd default (yes)
+# and systemd-networkd-wait-online waits for it.  A pure L2 bridge (no
+# address) never reaches an online operational state - especially without an
+# enslaved uplink there is no carrier at all - so it is excluded from
+# wait-online instead of blocking or failing network-online.target at boot.
 
 [Match]
 Name={{ bridge.name }}
 
+{% if not (bridge.address is defined or (bridge.gateway is defined and bridge.gateway) or bridge.dns | default([]) | length) %}
 [Link]
 RequiredForOnline=no
-{% if bridge.address is defined or (bridge.gateway is defined and bridge.gateway) or bridge.dns | default([]) | length %}
-
+{% else %}
 [Network]
 {% if bridge.address is defined %}
 Address={{ bridge.address }}

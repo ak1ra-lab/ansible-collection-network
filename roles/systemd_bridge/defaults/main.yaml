@@ -2,9 +2,14 @@
 # ak1ra_lab.network.systemd_bridge - public variable contract
 #
 # Declarative host-level Linux bridges: one bridge per dedicated physical
-# interface, behaving like a L2 switch whose uplink is that interface.  Any
-# interface can then be enslaved as a bridge port - e.g. the veth legs of
-# ak1ra_lab.network.systemd_netns namespaces, or further physical ports.
+# interface (when declared), behaving like a L2 switch whose uplink is that
+# interface.  Any interface can then be enslaved as a bridge port - e.g. the
+# veth legs of ak1ra_lab.network.systemd_netns namespaces, or further
+# physical ports.  A bridge may also declare NO interface at all: it is then
+# a pure L2 island (no uplink, no carrier of its own) used as a private
+# segment - e.g. the private bridge networks of
+# ak1ra_lab.network.systemd_netns_routing, whose namespaces exit through the
+# host's L3 stack instead of through the bridge.
 #
 # Bridges are created by systemd-networkd from a .netdev file; the dedicated
 # physical interface is enslaved via a .network file.  When NetworkManager is
@@ -37,20 +42,26 @@
 systemd_bridge_state: present
 systemd_bridge_state_available: [present, absent]
 
-# Host-level Linux bridges, each enslaving one dedicated physical interface.
-# Elements: {name, interface, address?, gateway?, dns?, stp?, forward_delay?,
+# Host-level Linux bridges, each optionally enslaving one dedicated physical
+# interface.
+# Elements: {name, interface?, address?, gateway?, dns?, stp?, forward_delay?,
 #            ageing_time?, multicast_snooping?, vlan_filtering?,
 #            absent_release_mode?}, e.g.
 #   - {name: br_wan, interface: enp36s0}
+#   - {name: br_private, address: 10.200.0.1/24}
 #   - {name: br_mgmt, interface: enp36s1, address: 192.0.2.10/24,
 #      gateway: 192.0.2.1, dns: [223.5.5.5]}
 # name:          bridge device name (must be a valid interface name, <= 15 chars)
-# interface:     physical interface enslaved into the bridge.  It must be
-#                dedicated to this bridge: not configured by netplan /
-#                ifupdown / another NetworkManager profile (the role writes a
-#                NetworkManager unmanaged-devices drop-in when NetworkManager
-#                is running) and carrying no address of its own - addresses
-#                belong on the bridge (`address`), not on the enslaved port.
+# interface:     OPTIONAL physical interface enslaved into the bridge.  When
+#                set it must be dedicated to this bridge: not configured by
+#                netplan / ifupdown / another NetworkManager profile (the
+#                role writes a NetworkManager unmanaged-devices drop-in when
+#                NetworkManager is running) and carrying no address of its
+#                own - addresses belong on the bridge (`address`), not on the
+#                enslaved port.  When unset the bridge is a pure L2 segment
+#                island with no uplink (no 15-<interface>.network enslave
+#                file is rendered); give it an `address` when the host (or a
+#                namespace gateway) needs an L3 presence on it.
 # address:       optional IPv4 CIDR assigned to the bridge itself when the
 #                host needs an L3 presence on this segment.  The bridge
 #                remains a normal member of the segment next to namespace
@@ -71,7 +82,9 @@ systemd_bridge_state_available: [present, absent]
 # multicast_snooping: IGMP/MLD snooping, default true (kernel default).
 # vlan_filtering: 802.1Q VLAN filtering on the bridge, default false.
 # absent_release_mode: what to do with the physical interface when the bridge
-#                is removed (state: absent), default `none`:
+#                is removed (state: absent), default `none`.  Requires
+#                `interface` (the release file replaces the enslave file on
+#                the 15-<interface>.network path):
 #                - none:   just release it; if this bridge carried the host's
 #                          only address you may lose connectivity to the host
 #                - static: move `address` (and `gateway`/`dns` when set) onto

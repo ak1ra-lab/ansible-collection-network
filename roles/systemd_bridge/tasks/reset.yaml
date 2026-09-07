@@ -26,6 +26,7 @@
     label: "{{ bridge.name }}"
   notify:
     - reload NetworkManager
+  when: bridge.interface is defined
 
 - name: remove bridge netdev files
   ansible.builtin.file:
@@ -59,6 +60,7 @@
     label: "{{ bridge.interface }}"
   notify:
     - restart systemd-networkd.service
+  when: bridge.interface is defined
 
 - name: write release network files (keep the freed interface reachable)
   ansible.builtin.template:
@@ -71,7 +73,9 @@
     label: "{{ bridge.interface }}"
   notify:
     - restart systemd-networkd.service
-  when: bridge.absent_release_mode | default('none') in ['static', 'dhcp']
+  when: >-
+    bridge.interface is defined
+    and bridge.absent_release_mode | default('none') in ['static', 'dhcp']
 
 - name: warn about bridges with a host address being removed without release mode
   ansible.builtin.debug:
@@ -80,7 +84,8 @@
       and is removed without absent_release_mode - if it is the host's only
       address on this segment, connectivity to the host is lost when the
       bridge is dropped.  Re-run with absent_release_mode: static (or dhcp)
-      to move the address (or DHCP) onto {{ bridge.interface }} first.
+      to move the address (or DHCP) onto
+      {{ bridge.interface | ansible.builtin.default('<freed interface>') }} first.
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:
     loop_var: bridge

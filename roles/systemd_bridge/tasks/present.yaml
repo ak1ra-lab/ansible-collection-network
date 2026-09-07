@@ -58,6 +58,7 @@
     systemd_bridge_bridges | length > 0
     and ansible_facts['services'] is defined
     and 'NetworkManager.service' in ansible_facts['services']
+    and bridge.interface is defined
   ansible.builtin.template:
     src: etc/NetworkManager/conf.d/ansible-bridge.conf.j2
     dest: "{{ _systemd_bridge_nm_conf_dir }}/10-{{ bridge.name }}.conf"
@@ -65,7 +66,7 @@
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:
     loop_var: bridge
-    label: "{{ bridge.interface }}"
+    label: "{{ bridge.interface | ansible.builtin.default('<no interface>') }}"
   notify:
     - reload NetworkManager
 
@@ -92,6 +93,7 @@
     label: "{{ bridge.interface }}"
   notify:
     - restart systemd-networkd.service
+  when: bridge.interface is defined
 
 - name: template bridge configuration files on remote
   ansible.builtin.template:

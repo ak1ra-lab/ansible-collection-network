@@ -23,13 +23,20 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Added
 
-- `systemd_bridge` — declarative host-level Linux bridges, one per dedicated
-  physical interface, managed entirely by `systemd-networkd` (`.netdev`
-  files, enslave `.network` files, NetworkManager `unmanaged-devices`
-  drop-ins when NetworkManager is running).  Bridges are shared, stable
-  infrastructure; STP, forward delay, FDB ageing time, multicast snooping
-  and VLAN filtering are configurable per bridge, and an optional `address`
-  gives the bridge (and thereby the host) an L3 presence on the segment.
+- `systemd_bridge` — declarative host-level Linux bridges, each optionally
+  enslaving one dedicated physical interface, managed entirely by
+  `systemd-networkd` (`.netdev` files, enslave `.network` files,
+  NetworkManager `unmanaged-devices` drop-ins when NetworkManager is
+  running).  Bridges without an `interface` are pure L2 private segments
+  (no uplink) - the natural substrate for `systemd_netns_routing`.
+  Bridges are shared, stable infrastructure; STP, forward delay, FDB
+  ageing time, multicast snooping and VLAN filtering are configurable per
+  bridge, and an optional `address` gives the bridge (and thereby the
+  host) an L3 presence on the segment.  `RequiredForOnline=` is scoped to
+  links that actually carry host connectivity (address-carrying bridges
+  and teardown release files keep the default; enslaved ports and
+  address-less bridges are excluded), so `systemd-networkd-wait-online`
+  neither stalls on never-online devices nor loses its only required link.
 - `systemd_netns` — dedicated-segment egress isolation (opt-in,
   independent): a network namespace attaching veth legs to the host-level
   bridges of `systemd_bridge` (or any existing bridge), carrying real
