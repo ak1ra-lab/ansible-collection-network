@@ -90,7 +90,7 @@
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:
     loop_var: bridge
-    label: "{{ bridge.interface }}"
+    label: "{{ bridge.interface | ansible.builtin.default('<no interface>') }}"
   notify:
     - restart systemd-networkd.service
   when: bridge.interface is defined
