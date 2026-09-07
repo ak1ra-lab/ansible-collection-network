@@ -9,20 +9,29 @@
 # and thereby the host - an L3 presence on the segment; without them the
 # [Match]/[Link] block alone makes networkd bring the link up.
 #
+# Carrier: a bridge with an enslaved physical interface gains carrier from
+# that port and networkd configures it once it is up.  A bridge declared
+# without an enslaved interface - a pure segment bridge whose ports (e.g.
+# veth legs of a systemd_netns_routing namespace) are attached later at run
+# time - never has carrier on its own, so networkd would wait for it
+# forever: such a bridge is configured without carrier
+# (ConfigureWithoutCarrier=yes).
+#
 # RequiredForOnline: a bridge carrying the host's own address/gateway/dns is
 # the host's connectivity endpoint, so it keeps the systemd default (yes)
-# and systemd-networkd-wait-online waits for it.  A pure L2 bridge (no
-# address) never reaches an online operational state - especially without an
-# enslaved uplink there is no carrier at all - so it is excluded from
-# wait-online instead of blocking or failing network-online.target at boot.
+# and systemd-networkd-wait-online waits for it.  Bridges that never reach
+# an online operational state are excluded from wait-online instead of
+# blocking or failing network-online.target at boot - a pure L2 bridge
+# (no address, especially without an enslaved uplink there is no carrier at
+# all) and every interface-less bridge (its segment ports attach only when
+# the consumer service starts, which may order after network-online.target
+# and would otherwise deadlock boot).
 
 [Match]
 Name={{ bridge.name }}
 
-{% if not (bridge.address is defined or (bridge.gateway is defined and bridge.gateway) or bridge.dns | default([]) | length) %}
-[Link]
-RequiredForOnline=no
-{% else %}
+{% set _bridge_l3 = bridge.address is defined or (bridge.gateway is defined and bridge.gateway) or bridge.dns | default([]) | length %}
+{% if _bridge_l3 and bridge.interface is defined %}
 [Network]
 {% if bridge.address is defined %}
 Address={{ bridge.address }}
@@ -33,4 +42,20 @@ Gateway={{ bridge.gateway }}
 {% for server in bridge.dns | default([]) %}
 DNS={{ server }}
 {% endfor %}
+{% elif _bridge_l3 %}
+[Network]
+ConfigureWithoutCarrier=yes
+RequiredForOnline=no
+{% if bridge.address is defined %}
+Address={{ bridge.address }}
+{% endif %}
+{% if bridge.gateway is defined and bridge.gateway %}
+Gateway={{ bridge.gateway }}
+{% endif %}
+{% for server in bridge.dns | default([]) %}
+DNS={{ server }}
+{% endfor %}
+{% else %}
+[Link]
+RequiredForOnline=no
 {% endif %}
