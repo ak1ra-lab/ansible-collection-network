@@ -1,7 +1,7 @@
 ---
 # ak1ra_lab.network.systemd_netns - public variable contract
 #
-# Dedicated-segment egress isolation: systemd services run inside a network
+# Bridged-segment egress isolation: systemd services run inside a network
 # namespace that attaches veth legs to host-level Linux bridges (created and
 # owned by ak1ra_lab.network.systemd_bridge or the host's own network
 # configuration layer).  The namespace carries real segment addresses and its
@@ -11,17 +11,19 @@
 # Declarative state:
 #   present - apply the namespace infrastructure
 #   absent  - tear down everything this role created (namespace, veth legs,
-#             resolv.conf, hook drop-ins, unit).  Host-level bridges are
-#             shared infrastructure owned by ak1ra_lab.network.systemd_bridge
-#             and are never touched by this role.
+#             resolv.conf, hook drop-ins, unit).  Bridges are shared
+#             infrastructure owned by ak1ra_lab.network.systemd_bridge (or
+#             the host's own network layer) and are never touched by this
+#             role.
 systemd_netns_state: present
-systemd_netns_state_available: [present, absent]
 
 # Namespace identifier.  Doubles as the unit name component
-# (netns-<name>.service), the /etc/netns/<name> resolv.conf directory and the
-# per-invocation systemd unit name, so it must be a valid ip netns name and
-# systemd unit name component.
-systemd_netns_name: dedicated_net
+# (netns-<name>.service), the /etc/netns/<name> resolv.conf directory and
+# other per-invocation names, so it must be a valid ip netns name and systemd
+# unit name component.  The default follows the role's reference workload
+# (see systemd_netns_sysctl_params); run the role once per namespace with a
+# distinct name.
+systemd_netns_name: qbittorrent
 
 # veth legs between the namespace and the host-level bridges (one veth pair
 # per leg, container-style: one leg per network segment).  The host end of
@@ -31,8 +33,9 @@ systemd_netns_name: dedicated_net
 # Elements: {bridge, address, gateway?, mac?}, e.g.
 #   - {bridge: br_wan, address: 10.255.0.245/24, gateway: 10.255.0.1, mac: "bc:24:11:a1:5c:50"}
 # bridge:  name of an existing bridge on the host - regardless of its owner
-#          (systemd_bridge, netplan, hand-rolled); existence is validated at
-#          run time, so the bridge must already be created when the role runs
+#          (systemd_bridge, netplan, hand-rolled); existence and an enslaved
+#          member are validated at run time, so the bridge must already be
+#          created when the role runs
 # address: canonical IPv4 CIDR assigned inside the namespace
 # gateway: optional IPv4 next-hop of the default route (segment's router)
 # mac:     optional MAC pinned to the namespace end (stable ARP/leases across
@@ -58,24 +61,31 @@ systemd_netns_hook_services: []
 # v6 route exists.
 systemd_netns_disable_ipv6: true
 
+# Per-netns sysctls, re-applied after every namespace (re)creation via the
+# netns unit's ExecStart (ip netns exec <name> sysctl -qw key=value);
+# template changes restart the unit, and a restart re-runs ExecStart.  Keys
+# are full dotted sysctl names, values render verbatim after key= (quote
+# multi-value strings like tcp_wmem: "4096 16384 16777216").  Application
+# order is map order - like sysctl, the last write wins.
+#
+# Only per-netns keys affect this namespace alone: net.ipv4.*, net.ipv6.*
+# and conf.*, plus a few net.core.* keys (somaxconn, optmem_max, txrehash,
+# verified on 6.12).  net.core.rmem_max / wmem_max / netdev_max_backlog and
+# everything outside net.* are host-global even when written from inside
+# the namespace - prefer namespaced keys.
+#
+# BitTorrent tuning candidates (A/B-test only, after observing nstat
+# ListenOverflows / ListenDrops / UdpRcvbufErrors or EADDRNOTAVAIL
+# connect() errors - kernel defaults are usually right):
+#   net.core.somaxconn: 8192              # app listen backlog raised past the default 4096
+#   net.ipv4.tcp_max_syn_backlog: 8192    # heavy incoming peer churn (ListenDrops)
+#   net.ipv4.tcp_fin_timeout: 30          # many short peer conns; free half-closed sockets sooner
+#   net.ipv4.tcp_slow_start_after_idle: 0 # long-idle peer conns resume at full speed
+#   net.ipv4.ip_local_port_range: "1024 65535"  # outbound peer conns fail with EADDRNOTAVAIL
+#   net.ipv4.tcp_congestion_control: bbr  # high-RTT path: compare with the cubic default
+systemd_netns_sysctl_params: {}
+
 # Informational reachability check after deployment: curl the exit-IP echo
 # service from inside the namespace and from the host.  Never fails the run -
 # comparing the two addresses is the operator's verdict.
 systemd_netns_verify: false
-
-# Exit-IP echo service used by the verification task (both checks use curl
-# for consistent behavior).
-systemd_netns_verify_url: https://ip.sb
-
-# Internal: derived names and values (do not modify manually)
-#
-# Kernel interface names are capped at 15 characters (IFNAMSIZ), so the veth
-# ends cannot embed systemd_netns_name directly.  They use a short prefix plus
-# the first 10 hex chars of the namespace name's sha256 digest, plus a per-leg
-# index (vh-<10 hex>-<leg> = 15 chars max): deterministic across runs, unique
-# per namespace, short regardless of systemd_netns_name length or the number
-# of legs.  Same scheme as systemd_netns_routing so both roles stay
-# consistent.
-_systemd_netns_veth_host_prefix: vh-{{ (systemd_netns_name | ansible.builtin.hash('sha256'))[:10] }}
-_systemd_netns_veth_ns_prefix: vn-{{ (systemd_netns_name | ansible.builtin.hash('sha256'))[:10] }}
-_systemd_netns_service: netns-{{ systemd_netns_name }}.service

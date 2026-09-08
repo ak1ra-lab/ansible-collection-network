@@ -143,6 +143,34 @@
   loop_control:
     loop_var: service
 
+- name: validate systemd_netns_sysctl_params type
+  ansible.builtin.assert:
+    that:
+      - systemd_netns_sysctl_params | ansible.builtin.type_debug == "dict"
+    fail_msg: >-
+      systemd_netns_sysctl_params must be a dict mapping full dotted sysctl
+      names to their values (e.g. {net.ipv4.tcp_congestion_control: bbr}).
+    quiet: true
+
+- name: validate systemd_netns_sysctl_params keys and values
+  ansible.builtin.assert:
+    that:
+      - sysctl_key is ansible.builtin.match('^[a-z0-9_.-]+$')
+      - sysctl_value | ansible.builtin.type_debug not in ["list", "dict"]
+    fail_msg: >-
+      systemd_netns_sysctl_params keys must be full dotted sysctl names
+      (lowercase letters, digits, dots); values must be scalars rendered
+      verbatim after key= (quote multi-value strings like tcp_wmem).
+      Offending entry: {{ sysctl_key }}: {{ sysctl_value }}
+    quiet: true
+  loop: "{{ systemd_netns_sysctl_params | ansible.builtin.dict2items }}"
+  loop_control:
+    loop_var: sysctl_entry
+    label: "{{ sysctl_entry.key }}"
+  vars:
+    sysctl_key: "{{ sysctl_entry.key }}"
+    sysctl_value: "{{ sysctl_entry.value }}"
+
 - name: validate systemd_netns_dns_servers type
   ansible.builtin.assert:
     that:
