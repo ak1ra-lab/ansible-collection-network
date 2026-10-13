@@ -1,0 +1,16 @@
+---
+# Collections required to run the Molecule scenarios and to lint the
+# collection's roles:
+#   containers.podman - create/destroy playbooks and the podman connection
+#                       used by the shared Molecule inventory (default;
+#                       MOLECULE_CONTAINER_RUNTIME=podman)
+#   community.docker  - create/destroy playbooks and the docker connection
+#                       used when MOLECULE_CONTAINER_RUNTIME=docker
+#   ansible.posix     - sysctl used by the tproxy role, and the profile_tasks
+#                       callback enabled by ansible.cfg
+#   community.general - modprobe used by the tproxy role
+collections:
+  - name: containers.podman
+  - name: community.docker
+  - name: ansible.posix
+  - name: community.general

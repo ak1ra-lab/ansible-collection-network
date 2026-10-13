@@ -1,0 +1,37 @@
+---
+# Shared settings for the test_resources group; per-host values (container
+# name and image) live in hosts.yml.
+#
+# The container runtime is selectable through the environment so the same
+# scenarios run unchanged on Podman (default; CI uses rootful Podman) or on
+# a rootful Docker daemon:
+#
+#   MOLECULE_CONTAINER_RUNTIME=docker \
+#     MOLECULE_GLOB='extensions/molecule/**/molecule.yml' molecule test --all
+#
+# Docker needs the community.docker collection (root requirements.yml) and
+# its Python SDK on the control node.  Both runtimes run the containers
+# privileged: systemd needs the capabilities anyway, and a privileged
+# container also gets a writable /sys, which the shared prepare needs for
+# its udev net-event trigger (docker-systemd's least-privilege Docker recipe
+# keeps /sys read-only and udevadm trigger then fails).  Privileged
+# containers run with an unconfined AppArmor profile.
+
+_molecule_container_runtime: "{{ lookup('ansible.builtin.env', 'MOLECULE_CONTAINER_RUNTIME') | default('podman', true) }}"
+
+ansible_connection: >-
+  {{ 'community.docker.docker'
+     if _molecule_container_runtime == 'docker'
+     else 'containers.podman.podman' }}
+
+container_command: /sbin/init
+container_systemd: always
+container_privileged: true
+
+# Bind the host's kernel module tree into every shared container read-only:
+# the tproxy role modprobes kernel modules (nft_tproxy, nft_socket, tcp_bbr,
+# ...), and modprobe inside the container needs /lib/modules/<host kernel>.
+# Harmless for the scenarios that do not load modules, and required for any
+# future role with the same need.
+container_volumes:
+  - /lib/modules:/lib/modules:ro

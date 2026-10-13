@@ -1,0 +1,55 @@
+---
+# proxy_guard scenario - apply the proxy guard table a real user declares.
+#
+# The role deploys /etc/nftables.d/ansible_proxy_guard.nft and enables
+# nftables.service; the table only becomes live through a base
+# /etc/nftables.conf that includes the drop-in directory, so this scenario
+# provides the equivalent base config its README documents
+# (ak1ra_lab.network.tproxy deploys the same shape in a full deployment).
+#
+# The parameter values mirror the defaults documented in the role README -
+# the role only defaults the state and the master switch, the guard
+# parameters themselves are part of the calling playbook's contract.
+
+- name: apply the test proxy guard table (proxy_guard present)
+  hosts: all
+  gather_facts: true
+  vars:
+    proxy_guard_enabled: true
+    proxy_guard_state: present
+    proxy_guard_lan4_subnets:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+    proxy_guard_lan6_subnets:
+      - fd00::/8
+    proxy_guard_throttle_enabled: true
+    proxy_guard_throttle_rate: 600
+    proxy_guard_throttle_burst: 150
+    proxy_guard_throttle_timeout: 2m
+    proxy_guard_auto_ban_enabled: true
+    proxy_guard_auto_ban_rate: 1200
+    proxy_guard_auto_ban_burst: 300
+    proxy_guard_auto_ban_timeout: 5m
+  handlers:
+    - name: reload the nftables ruleset
+      ansible.builtin.systemd_service:
+        name: nftables.service
+        state: restarted
+  tasks:
+    - name: apply the proxy guard table when enabled
+      when: proxy_guard_enabled | ansible.builtin.bool
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.proxy_guard
+
+    - name: deploy the minimal base nftables config that includes the drop-in
+      ansible.builtin.copy:
+        content: |
+          #!/usr/sbin/nft -f
+          # Molecule test fixture: the base config a real host gets from
+          # ak1ra_lab.network.tproxy (or any equivalent deployment).
+          flush ruleset
+          include "/etc/nftables.d/*.nft"
+        dest: /etc/nftables.conf
+        mode: "0644"
+      notify: reload the nftables ruleset

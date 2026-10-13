@@ -1,0 +1,3 @@
+---
+# tproxy scenario - exercises the TPROXY plumbing role on the shared
+# containers; inherits the base config.

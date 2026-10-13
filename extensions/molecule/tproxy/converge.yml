@@ -1,0 +1,36 @@
+---
+# tproxy scenario - apply the TPROXY plumbing a real user declares.
+#
+# Mirrors a gateway deployment: nftables marking, the policy routing service
+# (ip rule + local default route), the iproute2 route table entry, the sysctl
+# drop-ins and the kernel-module persistence files.
+#
+# Two host-only facets of the role are switched off in this scenario, because
+# the shared containers cannot carry them (see the per-variable comments
+# below): the static /etc/resolv.conf and the tcp_bbr / nf_conntrack sysctl
+# tuning.
+
+- name: apply the test TPROXY plumbing (tproxy present)
+  hosts: all
+  gather_facts: true
+  vars:
+    tproxy_state: present
+    tproxy_mode: gateway
+    # Exercise the custom bypass/reject sets of the nftables template.
+    tproxy_bypass_cidr4:
+      - 198.18.0.0/15
+    tproxy_reject_cidr4:
+      - 192.0.2.0/24
+    # /etc/resolv.conf is a bind-mounted file inside the containers, so the
+    # atomic replace the template module performs fails with EBUSY.
+    tproxy_etc_resolv_conf: false
+    # net.core.default_qdisc does not exist outside the initial network
+    # namespace and the nf_conntrack sysctls are not writable from a
+    # container network namespace; ansible.posix.sysctl would report these
+    # tasks as changed on every run (breaking the idempotence check).
+    tproxy_tcp_bbr_enabled: false
+    tproxy_sysctl_nf_conntrack: false
+  tasks:
+    - name: apply the TPROXY plumbing
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.tproxy

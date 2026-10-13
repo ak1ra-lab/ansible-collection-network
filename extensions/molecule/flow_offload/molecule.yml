@@ -1,0 +1,3 @@
+---
+# flow_offload scenario - exercises the opt-in flowtable offload role on the
+# shared containers; inherits the base config.

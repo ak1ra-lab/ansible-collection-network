@@ -1,0 +1,3 @@
+---
+# proxy_guard scenario - exercises the opt-in per-client abuse protection
+# role on the shared containers; inherits the base config.

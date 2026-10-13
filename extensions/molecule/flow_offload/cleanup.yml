@@ -1,0 +1,18 @@
+---
+# flow_offload scenario - reset the shared containers.
+#
+# Runs at the start of the scenario (leftovers from an interrupted run), at
+# the end, and before destroy, so it must tolerate a fresh host: the role's
+# absent state is idempotent.  Fact gathering is skipped so an
+# already-removed container stays tolerable.
+
+- name: tear down the test flow offload table (flow_offload absent)
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true
+  vars:
+    flow_offload_state: absent
+  tasks:
+    - name: tear down the flow offload table
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.flow_offload

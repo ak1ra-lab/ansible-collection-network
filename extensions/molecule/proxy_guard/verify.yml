@@ -1,0 +1,106 @@
+---
+# proxy_guard scenario - assert the converged state an operator observes: the
+# guard table is loaded with its LAN-scoped sets and rate meters, and the
+# role's file is in place.
+
+- name: verify the converged proxy_guard state
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the loaded proxy guard table
+      ansible.builtin.command:
+        argv: [/usr/sbin/nft, list, table, inet, ansible_proxy_guard]
+      changed_when: false
+      register: _proxy_guard_table
+
+    - name: assert the guard table is loaded with both chains and the sets
+      ansible.builtin.assert:
+        that:
+          - _proxy_guard_table.stdout is search('table inet ansible_proxy_guard')
+          - _proxy_guard_table.stdout is search('chain prerouting')
+          - _proxy_guard_table.stdout is search('chain input')
+          - _proxy_guard_table.stdout is search('lan4_subnets')
+          - _proxy_guard_table.stdout is search('lan6_subnets')
+          - _proxy_guard_table.stdout is search('auto_banned_ip4')
+          - _proxy_guard_table.stdout is search('auto_banned_ip6')
+          - _proxy_guard_table.stdout is search('throttled_ip4')
+          - _proxy_guard_table.stdout is search('throttled_ip6')
+        fail_msg: >-
+          the guard table must be loaded with the LAN sets and protection
+          sets, got: {{ _proxy_guard_table.stdout }}
+        quiet: true
+
+    - name: collect the IPv4 LAN subnet set
+      ansible.builtin.command:
+        argv: [/usr/sbin/nft, list, set, inet, ansible_proxy_guard, lan4_subnets]
+      changed_when: false
+      register: _proxy_guard_lan4
+
+    - name: assert the IPv4 LAN subnets are in the set
+      ansible.builtin.assert:
+        that:
+          - _proxy_guard_lan4.stdout is search('10.0.0.0/8')
+          - _proxy_guard_lan4.stdout is search('172.16.0.0/12')
+          - _proxy_guard_lan4.stdout is search('192.168.0.0/16')
+        fail_msg: >-
+          the IPv4 LAN subnets must be in the set, got:
+          {{ _proxy_guard_lan4.stdout }}
+        quiet: true
+
+    - name: collect the auto-ban set definition
+      ansible.builtin.command:
+        argv: [/usr/sbin/nft, list, set, inet, ansible_proxy_guard, auto_banned_ip4]
+      changed_when: false
+      register: _proxy_guard_autoban
+
+    - name: assert the auto-ban set carries the configured timeout
+      ansible.builtin.assert:
+        that:
+          - _proxy_guard_autoban.stdout is search('timeout 5m')
+        fail_msg: >-
+          the auto-ban set must carry the configured timeout, got:
+          {{ _proxy_guard_autoban.stdout }}
+        quiet: true
+
+    - name: collect the nftables service enablement
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-enabled, nftables.service]
+      changed_when: false
+      register: _proxy_guard_nftables_enabled
+
+    - name: assert the nftables service is enabled
+      ansible.builtin.assert:
+        that:
+          - _proxy_guard_nftables_enabled.stdout == 'enabled'
+        fail_msg: >-
+          nftables.service must be enabled, got:
+          {{ _proxy_guard_nftables_enabled.stdout }}
+        quiet: true
+
+    - name: collect the deployed proxy guard drop-in
+      ansible.builtin.slurp:
+        src: /etc/nftables.d/ansible_proxy_guard.nft
+      register: _proxy_guard_dropin
+
+    - name: assert the drop-in renders the guard table
+      ansible.builtin.assert:
+        that:
+          - >-
+            'table inet ansible_proxy_guard'
+            in (_proxy_guard_dropin.content | b64decode)
+          - >-
+            'set auto_banned_ip4'
+            in (_proxy_guard_dropin.content | b64decode)
+          - >-
+            'set throttled_ip4'
+            in (_proxy_guard_dropin.content | b64decode)
+          - >-
+            'set lan4_subnets'
+            in (_proxy_guard_dropin.content | b64decode)
+          - >-
+            'set lan6_subnets'
+            in (_proxy_guard_dropin.content | b64decode)
+        fail_msg: >-
+          unexpected drop-in content:
+          {{ _proxy_guard_dropin.content | b64decode }}
+        quiet: true

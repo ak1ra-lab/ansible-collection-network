@@ -1,0 +1,55 @@
+---
+# Shared Molecule configuration for every scenario of this collection.
+#
+# Layout follows the official collection-testing guide: scenarios live under
+# extensions/molecule/<name>/, this base file is deep-merged into every
+# scenario's molecule.yml, and `shared_state: true` makes the `default`
+# scenario the single lifecycle manager for all test containers (create
+# once, destroy once) while the component scenarios only prepare, converge,
+# verify and clean up.
+#
+# Every scenario shares one inventory (extensions/molecule/inventory/) that
+# declares the supported managed nodes; see inventory/hosts.yml.
+#
+# The collection under test and its galaxy.yml dependencies are installed
+# automatically by ansible-compat's prerun before each component scenario.
+# The default scenario's create/destroy run earlier than that, so the
+# collections their playbooks use (requirements.yml) must already be
+# installed on the control node; the dependency action is disabled to avoid
+# a second, redundant install.
+
+ansible:
+  executor:
+    backend: ansible-playbook
+    args:
+      ansible_playbook:
+        - --inventory=${MOLECULE_PROJECT_DIRECTORY}/extensions/molecule/inventory/
+  cfg:
+    defaults:
+      host_key_checking: false
+      retry_files_enabled: false
+  env:
+    ANSIBLE_FORCE_COLOR: "true"
+    # Match the repository's ansible.cfg collections_path so the shared
+    # default scenario's create/destroy (which run before ansible-compat's
+    # prerun installs anything) and every component scenario search the
+    # same project-local collection path.
+    ANSIBLE_COLLECTIONS_PATH: ${MOLECULE_PROJECT_DIRECTORY}/.ansible/collections
+
+dependency:
+  enabled: false
+
+shared_state: true
+
+scenario:
+  # Component scenarios: reset leftovers, prepare prerequisites, converge,
+  # prove idempotence, verify the converged state, then run the role's
+  # teardown in cleanup.yml and verify the teardown in absent-verify.yml.
+  test_sequence:
+    - cleanup
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - cleanup
+    - verify absent-verify.yml

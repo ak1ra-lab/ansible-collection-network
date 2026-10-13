@@ -20,6 +20,22 @@ The format is based on Keep a Changelog, and this project does not currently gua
 - Declarative state for every role: `<role>_state` (default `present`);
   `absent` atomically tears down the role's own artifacts via
   `tasks/reset.yaml`, leaving shared system files untouched.
+- Molecule test scenarios (`extensions/molecule/`, collection-testing
+  layout) for `tproxy`, `flow_offload` and `proxy_guard`, running the roles
+  against the systemd-enabled container images of
+  [ak1ra-lab/docker-systemd](https://github.com/ak1ra-lab/docker-systemd)
+  (debian-12/13, ubuntu-24.04/26.04) over the `containers.podman.podman` or
+  `community.docker.docker` connection, with `shared_state` making the
+  `default` scenario the lifecycle manager of the shared containers.
+  Component scenarios run prepare, converge, idempotence, verify, the role's
+  teardown via `cleanup.yml` and a post-cleanup verification; a root
+  `requirements.yml` and justfile recipes cover the control-node setup, the
+  container runtime is selectable via `MOLECULE_CONTAINER_RUNTIME` (Podman
+  default, rootful Docker opt-in), and the host kernel module tree is
+  bind-mounted into the containers for the `tproxy` modprobe calls.  A
+  GitHub Actions workflow runs ansible-lint and every scenario (rootful
+  Podman) on pull requests and pushes to `master`/`dev`, with Dependabot
+  keeping the SHA-pinned actions current.
 
 ### Changed
 

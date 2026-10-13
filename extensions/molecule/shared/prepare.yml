@@ -1,0 +1,53 @@
+---
+# Shared preparation for every component scenario.
+#
+# The ak1ra-lab/docker-systemd images do not install udev, and
+# systemd-networkd waits for udev to initialize a link before it configures
+# it: without udev every link stays in the "pending" setup state and no
+# bridge address is ever assigned.  Real managed hosts always ship udev, so
+# this is a test-container prerequisite, not something the roles under test
+# should provide.
+#
+# The images also ship an apt index from their build time; it goes stale as
+# the distributions publish new package versions, and the roles' `package`
+# installs then fail with 404s.  Every preparation refreshes the index first
+# (the components share one container, so `cache_valid_time` keeps this to
+# one refresh per test run).
+#
+# Scenario-specific prepare.yml files import this play first and then add
+# their own prerequisites (test veth members, container accommodations).
+
+- name: prepare the systemd container for systemd-networkd
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: refresh the apt index (the images ship one from build time)
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: ensure udev is installed (systemd-networkd waits for it)
+      ansible.builtin.package:
+        name: udev
+        state: present
+
+    - name: ensure systemd-udevd is running
+      ansible.builtin.systemd_service:
+        name: systemd-udevd.service
+        state: started
+
+    - name: trigger udev add events for the links that exist since boot
+      ansible.builtin.command:
+        argv:
+          - udevadm
+          - trigger
+          - --action=add
+          - --subsystem-match=net
+      changed_when: false
+
+    - name: wait for the udev event queue to settle
+      ansible.builtin.command:
+        argv:
+          - udevadm
+          - settle
+      changed_when: false

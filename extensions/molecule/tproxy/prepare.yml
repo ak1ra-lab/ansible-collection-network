@@ -1,0 +1,37 @@
+---
+# tproxy scenario - one-time container preparation.
+#
+# The shared preparation brings up udev (systemd-networkd needs it; see
+# shared/prepare.yml); this scenario adds what the tproxy role needs from its
+# containers:
+#   - the host kernel module tree, so the role's modprobe calls reach the
+#     host kernel (bind-mounted read-only; see the inventory's
+#     container_volumes)
+#   - kmod, providing the modprobe binary inside the container
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml
+
+- name: prepare the tproxy kernel-module access
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: ensure kmod is installed (the role modprobes nft_tproxy & co.)
+      ansible.builtin.package:
+        name: kmod
+        state: present
+
+    - name: check the container sees the host kernel module tree
+      ansible.builtin.stat:
+        path: "/lib/modules/{{ ansible_facts['kernel'] }}"
+      register: _tproxy_module_tree
+
+    - name: assert the kernel module tree is bind-mounted into the container
+      ansible.builtin.assert:
+        that:
+          - _tproxy_module_tree.stat.isdir | default(false)
+        fail_msg: >-
+          /lib/modules/{{ ansible_facts['kernel'] }} is not visible in the
+          container; recreate the shared containers (`molecule create`) so
+          the inventory's container_volumes are applied.
+        quiet: true

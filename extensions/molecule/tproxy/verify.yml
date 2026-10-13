@@ -1,0 +1,166 @@
+---
+# tproxy scenario - assert the converged state an operator observes: the
+# routing service is up with its policy rules, the nftables table is loaded
+# from the deployed base config, and the role's files are in place.
+
+- name: verify the converged tproxy state
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the tproxy service activity states
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, "{{ item }}"]
+      changed_when: false
+      register: _tproxy_services
+      loop:
+        - nftables.service
+        - ansible-tproxy-routing.service
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert the tproxy services are active
+      ansible.builtin.assert:
+        that:
+          - item.stdout == 'active'
+        fail_msg: "{{ item.item }} must be active, got: {{ item.stdout }}"
+        quiet: true
+      loop: "{{ _tproxy_services.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: collect the nftables service enablement
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-enabled, nftables.service]
+      changed_when: false
+      register: _tproxy_nftables_enabled
+
+    - name: assert the nftables service is enabled
+      ansible.builtin.assert:
+        that:
+          - _tproxy_nftables_enabled.stdout == 'enabled'
+        fail_msg: >-
+          nftables.service must be enabled, got:
+          {{ _tproxy_nftables_enabled.stdout }}
+        quiet: true
+
+    - name: collect the loaded tproxy nftables table
+      ansible.builtin.command:
+        argv: [/usr/sbin/nft, list, table, inet, ansible_tproxy]
+      changed_when: false
+      register: _tproxy_table
+
+    - name: assert the tproxy table is loaded with both chains and the custom sets
+      ansible.builtin.assert:
+        that:
+          - _tproxy_table.stdout is search('table inet ansible_tproxy')
+          - _tproxy_table.stdout is search('chain prerouting_tproxy')
+          - _tproxy_table.stdout is search('chain output_tproxy')
+          - _tproxy_table.stdout is search('tproxy to :7895')
+          - _tproxy_table.stdout is search('198.18.0.0/15')
+          - _tproxy_table.stdout is search('192.0.2.0/24')
+        fail_msg: >-
+          the tproxy table must be loaded from the deployed base config with
+          the custom bypass/reject sets, got: {{ _tproxy_table.stdout }}
+        quiet: true
+
+    - name: collect the IPv4 policy routing rules
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -4, rule, show]
+      changed_when: false
+      register: _tproxy_ip_rules
+
+    - name: assert the fwmark rule is installed with the named route table
+      ansible.builtin.assert:
+        that:
+          - _tproxy_ip_rules.stdout is search('fwmark 0xe0 lookup ansible_tproxy')
+        fail_msg: >-
+          the ansible-tproxy-routing service must install the fwmark rule,
+          got: {{ _tproxy_ip_rules.stdout }}
+        quiet: true
+
+    - name: collect the tproxy route table
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -4, route, show, table, "224"]
+      changed_when: false
+      register: _tproxy_route_table
+
+    - name: assert the local default route is installed
+      ansible.builtin.assert:
+        that:
+          - _tproxy_route_table.stdout is search('local default dev ')
+        fail_msg: >-
+          the ansible-tproxy-routing service must install the local default
+          route, got: {{ _tproxy_route_table.stdout }}
+        quiet: true
+
+    - name: collect the role's deployed artifacts
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/iproute2/rt_tables.d/ansible_tproxy.conf
+        - /etc/nftables.d/ansible_tproxy.nft
+        - /etc/nftables.conf
+        - /etc/systemd/system/nftables.service
+        - /etc/systemd/system/ansible-tproxy-routing.service
+        - /etc/sysctl.d/90-ansible-tproxy-ip_forward.conf
+        - /etc/modules-load.d/nft_tproxy.conf
+        - /etc/modules-load.d/nft_socket.conf
+        - /etc/modules-load.d/nf_tproxy_ipv4.conf
+        - /etc/modules-load.d/nf_tproxy_ipv6.conf
+      register: _tproxy_artifacts
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert every role artifact is in place
+      ansible.builtin.assert:
+        that:
+          - >-
+            _tproxy_artifacts.results | selectattr('stat.exists') | list | length
+            == _tproxy_artifacts.results | length
+        fail_msg: >-
+          missing tproxy artifacts:
+          {{ _tproxy_artifacts.results | rejectattr('stat.exists') | map(attribute='item') | list }}
+        quiet: true
+
+    - name: collect the iproute2 route table entry
+      ansible.builtin.slurp:
+        src: /etc/iproute2/rt_tables.d/ansible_tproxy.conf
+      register: _tproxy_rt_tables
+
+    - name: assert the route table entry names the table
+      ansible.builtin.assert:
+        that:
+          - "'224 ansible_tproxy' in (_tproxy_rt_tables.content | b64decode)"
+        quiet: true
+
+    - name: collect the ip_forward sysctl drop-in
+      ansible.builtin.slurp:
+        src: /etc/sysctl.d/90-ansible-tproxy-ip_forward.conf
+      register: _tproxy_ip_forward_conf
+
+    - name: assert the ip_forward drop-in carries the forwarding keys
+      ansible.builtin.assert:
+        that:
+          - >-
+            'net.ipv4.ip_forward=1'
+            in (_tproxy_ip_forward_conf.content | b64decode)
+          - >-
+            'net.ipv4.conf.all.proxy_arp=1'
+            in (_tproxy_ip_forward_conf.content | b64decode)
+          - >-
+            'net.ipv6.conf.all.forwarding=1'
+            in (_tproxy_ip_forward_conf.content | b64decode)
+        quiet: true
+
+    - name: collect the deployed nftables base config
+      ansible.builtin.slurp:
+        src: /etc/nftables.conf
+      register: _tproxy_base_conf
+
+    - name: assert the base config includes the drop-in directory
+      ansible.builtin.assert:
+        that:
+          - >-
+            '/etc/nftables.d/*.nft'
+            in (_tproxy_base_conf.content | b64decode)
+        quiet: true
