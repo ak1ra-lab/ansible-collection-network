@@ -1,0 +1,50 @@
+---
+# systemd_bridge scenario - assert the teardown the cleanup action performed:
+# bridges, networkd artifacts and test scaffolding are gone.
+
+- name: verify the systemd_bridge teardown
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect remaining bridge devices
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -br, link, show, type, bridge]
+      changed_when: false
+      register: _bridges
+
+    - name: assert no test bridge remains
+      ansible.builtin.assert:
+        that:
+          - _bridges.stdout is not search('br-uplink')
+          - _bridges.stdout is not search('br-svc')
+        fail_msg: "test bridges must be gone, got: {{ _bridges.stdout }}"
+        quiet: true
+
+    - name: collect remaining networkd files for the test devices
+      ansible.builtin.find:
+        paths:
+          - /etc/systemd/network
+        patterns:
+          - "*-br-uplink.*"
+          - "*-br-svc.*"
+          - "15-vh-br-a.network"
+      register: _files
+
+    - name: assert the networkd configuration files are gone
+      ansible.builtin.assert:
+        that:
+          - _files.files | length == 0
+        fail_msg: "leftover networkd files: {{ _files.files }}"
+        quiet: true
+
+    - name: collect the test veth scaffolding
+      ansible.builtin.stat:
+        path: /sys/class/net/vh-br-a
+      register: _veth
+
+    - name: assert the test veth scaffolding is gone
+      ansible.builtin.assert:
+        that:
+          - not _veth.stat.exists
+        fail_msg: "test veth vh-br-a must be gone"
+        quiet: true

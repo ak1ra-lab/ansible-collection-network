@@ -1,0 +1,8 @@
+---
+# Shared settings for the test_resources group; per-host values (container
+# name and image) live in hosts.yml.
+ansible_connection: containers.podman.podman
+
+container_command: /sbin/init
+container_systemd: always
+container_privileged: true

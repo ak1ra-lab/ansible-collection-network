@@ -1,0 +1,35 @@
+---
+# systemd_bridge scenario - one-time container preparation.
+#
+# The shared preparation brings up udev (systemd-networkd needs it); this
+# scenario then creates the veth pair whose host end is enslaved into the
+# test bridge, raised so the bridge port has carrier.
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml
+
+- name: prepare the systemd_bridge test member
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: create the veth pair enslaved by the test bridge
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/ip
+          - link
+          - add
+          - vh-br-a
+          - type
+          - veth
+          - peer
+          - name
+          - vh-br-b
+        creates: /sys/class/net/vh-br-a
+
+    - name: raise both veth ends (carrier for the enslaved member)
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, link, set, "{{ item }}", up]
+      changed_when: false
+      loop:
+        - vh-br-a
+        - vh-br-b

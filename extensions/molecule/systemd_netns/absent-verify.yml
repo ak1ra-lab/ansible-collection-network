@@ -1,0 +1,85 @@
+---
+# systemd_netns scenario - assert the teardown the cleanup action performed:
+# namespace, unit, bridge, networkd artifacts and test veth are all gone.
+
+- name: verify the test namespace teardown
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect remaining network namespaces
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, netns, list]
+      changed_when: false
+      register: _netns
+
+    - name: assert the test namespace is gone
+      ansible.builtin.assert:
+        that:
+          - _netns.stdout is not search('molnet')
+        fail_msg: "namespace molnet must be gone, got: {{ _netns.stdout }}"
+        quiet: true
+
+    - name: collect remaining bridge devices
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -br, link, show, type, bridge]
+      changed_when: false
+      register: _bridges
+
+    - name: assert the test bridge is gone
+      ansible.builtin.assert:
+        that:
+          - _bridges.stdout is not search('br-test')
+        fail_msg: "bridge br-test must be gone, got: {{ _bridges.stdout }}"
+        quiet: true
+
+    - name: collect the netns service unit file
+      ansible.builtin.stat:
+        path: /etc/systemd/system/netns-molnet.service
+      register: _unit_file
+
+    - name: assert the netns service unit file is gone
+      ansible.builtin.assert:
+        that:
+          - not _unit_file.stat.exists
+        fail_msg: "netns-molnet.service unit file must be gone"
+        quiet: true
+
+    - name: collect the namespace convention directory
+      ansible.builtin.stat:
+        path: /etc/netns/molnet
+      register: _netns_dir
+
+    - name: assert the namespace convention directory is gone
+      ansible.builtin.assert:
+        that:
+          - not _netns_dir.stat.exists
+        fail_msg: "/etc/netns/molnet must be gone"
+        quiet: true
+
+    - name: collect remaining networkd files for the test devices
+      ansible.builtin.find:
+        paths:
+          - /etc/systemd/network
+        patterns:
+          - "*-br-test.*"
+          - "15-vh-ns-a.network"
+      register: _files
+
+    - name: assert the networkd configuration files are gone
+      ansible.builtin.assert:
+        that:
+          - _files.files | length == 0
+        fail_msg: "leftover networkd files: {{ _files.files }}"
+        quiet: true
+
+    - name: collect the test veth scaffolding
+      ansible.builtin.stat:
+        path: /sys/class/net/vh-ns-a
+      register: _veth
+
+    - name: assert the test veth scaffolding is gone
+      ansible.builtin.assert:
+        that:
+          - not _veth.stat.exists
+        fail_msg: "test veth vh-ns-a must be gone"
+        quiet: true

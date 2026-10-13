@@ -1,0 +1,86 @@
+---
+# systemd_bridge scenario - assert the converged state an operator observes:
+# both bridges exist, the member is enslaved, the segment addresses are
+# assigned and the interface-less bridge is excluded from network-online
+# waits.
+
+- name: verify the converged systemd_bridge state
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: wait for networkd to finish configuring the bridges
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -4, -br, addr, show, type, bridge]
+      changed_when: false
+      register: _bridge_addrs
+      retries: 30
+      delay: 1
+      until: >-
+        _bridge_addrs.stdout is search('br-uplink.*10.201.0.1/24')
+        and _bridge_addrs.stdout is search('br-svc.*10.200.0.1/24')
+
+    - name: collect the bridge device listing
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -br, link, show, type, bridge]
+      changed_when: false
+      register: _bridges
+
+    - name: assert both bridges exist and are up
+      ansible.builtin.assert:
+        that:
+          - _bridges.stdout is search('br-uplink.*UP')
+          - _bridges.stdout is search('br-svc.*UP')
+        fail_msg: "expected both test bridges present and up, got: {{ _bridges.stdout }}"
+        quiet: true
+
+    - name: assert the configured segment addresses are assigned
+      ansible.builtin.assert:
+        that:
+          - _bridge_addrs.stdout is search('br-uplink.*10.201.0.1/24')
+          - _bridge_addrs.stdout is search('br-svc.*10.200.0.1/24')
+        fail_msg: "expected segment addresses on the bridges, got: {{ _bridge_addrs.stdout }}"
+        quiet: true
+
+    - name: collect the enslaved member of br-uplink
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -o, link, show, master, br-uplink]
+      changed_when: false
+      register: _uplink_members
+
+    - name: assert the veth member is enslaved to br-uplink
+      ansible.builtin.assert:
+        that:
+          - _uplink_members.stdout is search('vh-br-a')
+        fail_msg: "vh-br-a must be enslaved to br-uplink, got: {{ _uplink_members.stdout }}"
+        quiet: true
+
+    - name: collect the networkd state of the interface-less bridge
+      ansible.builtin.command:
+        argv: [/usr/bin/networkctl, status, br-svc]
+      changed_when: false
+      register: _svc_netctl
+
+    - name: assert the interface-less bridge is configured and not required for online
+      ansible.builtin.assert:
+        that:
+          - "_svc_netctl.stdout is search('State: (no-carrier|degraded)')"
+          - "_svc_netctl.stdout is search('Required For Online: no')"
+        fail_msg: >-
+          br-svc must be configured without carrier and excluded from
+          wait-online, got: {{ _svc_netctl.stdout }}
+        quiet: true
+
+    - name: collect the networkd state of the uplink bridge
+      ansible.builtin.command:
+        argv: [/usr/bin/networkctl, status, br-uplink]
+      changed_when: false
+      register: _uplink_netctl
+
+    - name: assert the uplink bridge keeps its default online requirement
+      ansible.builtin.assert:
+        that:
+          - "_uplink_netctl.stdout is search('Required For Online: yes')"
+        fail_msg: >-
+          br-uplink carries the host-side segment endpoint and must stay
+          required for online, got: {{ _uplink_netctl.stdout }}
+        quiet: true

@@ -1,0 +1,14 @@
+---
+# default scenario - remove the shared test containers.
+
+- name: destroy the shared test containers
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: remove containers from the inventory
+      containers.podman.podman_container:
+        name: "{{ hostvars[item]['ansible_host'] }}"
+        state: absent
+      loop: "{{ groups['test_resources'] }}"
+      loop_control:
+        label: "{{ item }}"

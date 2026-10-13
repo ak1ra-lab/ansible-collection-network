@@ -1,0 +1,34 @@
+---
+# systemd_netns scenario - one-time container preparation.
+#
+# The shared preparation brings up udev; this scenario creates the veth pair
+# whose host end is enslaved into the bridge the namespace hangs off.
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml
+
+- name: prepare the test member
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: create the veth pair enslaved by the test bridge
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/ip
+          - link
+          - add
+          - vh-ns-a
+          - type
+          - veth
+          - peer
+          - name
+          - vh-ns-b
+        creates: /sys/class/net/vh-ns-a
+
+    - name: raise both veth ends (carrier for the enslaved member)
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, link, set, "{{ item }}", up]
+      changed_when: false
+      loop:
+        - vh-ns-a
+        - vh-ns-b

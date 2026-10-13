@@ -1,0 +1,14 @@
+---
+# Collections required to run the Molecule scenarios and to lint the
+# collection's roles:
+#   containers.podman - create/destroy playbooks and the podman connection
+#                       used by the shared Molecule inventory
+#   ansible.utils     - ipaddr/in_network filters used by the systemd_*
+#                       roles (also a galaxy.yml dependency)
+#   ansible.posix     - sysctl used by the tproxy role
+#   community.general - modprobe used by the tproxy role
+collections:
+  - name: containers.podman
+  - name: ansible.utils
+  - name: ansible.posix
+  - name: community.general

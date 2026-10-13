@@ -1,0 +1,47 @@
+---
+# systemd_netns scenario - apply the namespace infrastructure.
+#
+# Mirrors playbooks/systemd_netns.yaml: the bridge is applied first (as a
+# real user declares it alongside the namespace), the systemd_bridge
+# handlers are flushed, the bridge is given a bounded moment to come up,
+# and only then is the namespace applied - its validation reads the live
+# bridge.  Egress verification is disabled: it pings an external exit-IP
+# service and must not make the test depend on the runner's network.
+
+- name: apply the test namespace (systemd_netns present)
+  hosts: all
+  gather_facts: true
+  vars:
+    systemd_bridge_state: present
+    systemd_bridge_bridges:
+      - name: br-test
+        interface: vh-ns-a
+        address: 10.89.0.1/24
+    systemd_netns_state: present
+    systemd_netns_name: molnet
+    systemd_netns_links:
+      - bridge: br-test
+        address: 10.89.0.2/24
+        gateway: 10.89.0.1
+    systemd_netns_verify: false
+  tasks:
+    - name: apply the host-level test bridge (systemd_bridge)
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.systemd_bridge
+
+    - name: flush systemd_bridge handlers before the namespace is validated
+      ansible.builtin.meta: flush_handlers
+
+    - name: wait for the test bridge to enslave its member
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -o, link, show, master, br-test]
+      changed_when: false
+      failed_when: false
+      register: _bridge_member
+      retries: 15
+      delay: 1
+      until: _bridge_member.stdout is search('vh-ns-a')
+
+    - name: apply the namespace infrastructure (systemd_netns)
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.systemd_netns

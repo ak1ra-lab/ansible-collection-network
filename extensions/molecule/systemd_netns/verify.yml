@@ -1,0 +1,82 @@
+---
+# systemd_netns scenario - assert the converged state: the netns service is
+# active and enabled, the namespace leg carries the declared address and
+# default route, and both the member and the namespace leg are enslaved to
+# the bridge.
+
+- name: verify the converged namespace
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: wait for the namespace leg to carry its address
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/ip
+          - netns
+          - exec
+          - molnet
+          - /usr/bin/ip
+          - -4
+          - -br
+          - addr
+          - show
+      changed_when: false
+      register: _ns_addrs
+      retries: 30
+      delay: 1
+      until: _ns_addrs.stdout is search('10.89.0.2/24')
+
+    - name: collect the systemd state of the netns service
+      ansible.builtin.systemd_service:
+        name: netns-molnet.service
+      register: _unit
+
+    - name: assert the netns service is enabled and active
+      ansible.builtin.assert:
+        that:
+          - _unit.status.ActiveState == 'active'
+          - _unit.status.UnitFileState == 'enabled'
+        fail_msg: "netns-molnet.service must be active and enabled"
+        quiet: true
+
+    - name: assert the namespace leg carries the segment address
+      ansible.builtin.assert:
+        that:
+          - _ns_addrs.stdout is search('10.89.0.2/24')
+        fail_msg: "expected 10.89.0.2/24 inside molnet, got: {{ _ns_addrs.stdout }}"
+        quiet: true
+
+    - name: collect the namespace default route
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/ip
+          - netns
+          - exec
+          - molnet
+          - /usr/bin/ip
+          - route
+      changed_when: false
+      register: _ns_route
+
+    - name: assert the default route points at the bridge gateway
+      ansible.builtin.assert:
+        that:
+          - _ns_route.stdout is search('default via 10.89.0.1')
+        fail_msg: "expected default route via 10.89.0.1, got: {{ _ns_route.stdout }}"
+        quiet: true
+
+    - name: collect the bridge members of br-test
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -o, link, show, master, br-test]
+      changed_when: false
+      register: _members
+
+    - name: assert the member and the namespace leg are enslaved
+      ansible.builtin.assert:
+        that:
+          - _members.stdout is search('vh-ns-a')
+          - _members.stdout_lines | length >= 2
+        fail_msg: >-
+          expected the enslaved member and the namespace veth leg on br-test,
+          got: {{ _members.stdout }}
+        quiet: true

@@ -1,0 +1,25 @@
+---
+# systemd_bridge scenario - apply the bridges a real user declares.
+#
+# Mirrors playbooks/systemd_bridge.yaml: the two shapes the role supports are
+# exercised in one run -
+#   br-uplink  an uplink bridge over the enslaved veth member, carrying the
+#              segment address and staying required for online
+#   br-svc     an interface-less segment bridge, configured without carrier
+#              (its address makes it an L3 carrier-less bridge; the [Link]
+#              RequiredForOnline=no branch)
+- name: apply the test bridges (systemd_bridge present)
+  hosts: all
+  gather_facts: true
+  vars:
+    systemd_bridge_state: present
+    systemd_bridge_bridges:
+      - name: br-uplink
+        interface: vh-br-a
+        address: 10.201.0.1/24
+      - name: br-svc
+        address: 10.200.0.1/24
+  tasks:
+    - name: apply the declared bridges
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.systemd_bridge

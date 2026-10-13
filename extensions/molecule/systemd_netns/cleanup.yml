@@ -1,0 +1,34 @@
+---
+# systemd_netns scenario - reset the shared containers.
+#
+# Runs at the start, at the end and before destroy: the namespace is torn
+# down first (the documented order - the bridge carries the namespace leg),
+# then the host-level bridge and the test veth.  Fact gathering is skipped
+# and unreachable hosts are tolerated so an already-removed container does
+# not break the cleanup/destroy flow.
+
+- name: tear down the test namespace
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true
+  vars:
+    systemd_netns_state: absent
+    systemd_netns_name: molnet
+    systemd_bridge_state: absent
+    systemd_bridge_bridges:
+      - name: br-test
+        interface: vh-ns-a
+  tasks:
+    - name: tear down the namespace infrastructure (systemd_netns)
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.systemd_netns
+
+    - name: tear down the host-level test bridge (systemd_bridge)
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.systemd_bridge
+
+    - name: remove the test veth pair
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, link, del, vh-ns-a]
+      changed_when: false
+      failed_when: false

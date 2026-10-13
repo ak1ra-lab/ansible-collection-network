@@ -23,11 +23,12 @@ CIDRs. See `roles/tproxy/README.md` for the full table.
 
 ## Control-node requirements
 
-The `systemd_netns` role uses `ansible.utils` filters (`ipaddr`,
-`in_network`) for link validation on the control node:
+The `systemd_bridge` and `systemd_netns` roles use `ansible.utils` filters
+(`ipaddr`, `in_network`) for validation on the control node:
 
 ```shell
 ansible-galaxy collection install ansible.utils
+python -m pip install netaddr   # required by the ansible.utils.ipaddr filter
 ```
 
 `ansible.utils` itself is installed automatically as a collection
@@ -44,6 +45,42 @@ dependency.
 ansible-playbook ak1ra_lab.network.systemd_bridge -e systemd_bridge_bridges='[{"name": "br_wan", "interface": "enp36s0"}]'
 ansible-playbook ak1ra_lab.network.systemd_netns -e systemd_netns_name=qbittorrent
 ```
+
+## Testing
+
+Molecule scenarios live under `extensions/molecule/` (collection-testing
+layout).  The `default` scenario owns the shared container lifecycle
+(`shared_state: true`); the component scenarios (`systemd_bridge`,
+`systemd_netns`) reuse the same containers and each run prepare, converge,
+idempotence, verify, the role's teardown (cleanup) and a teardown
+verification.
+
+The managed nodes are the systemd-enabled container images from
+[ak1ra-lab/docker-systemd](https://github.com/ak1ra-lab/docker-systemd)
+that these roles support: `debian:12`, `debian:13`, `ubuntu:24.04`,
+`ubuntu:26.04`.  The roles require `systemd-networkd`, which is not
+available on the RHEL family; Fedora would additionally need the separate
+`systemd-networkd` package and `iproute` package name.
+
+```shell
+# First run only: the scenarios search the project-local collections path
+# (ANSIBLE_COLLECTIONS_PATH in extensions/molecule/config.yml), and the
+# default scenario creates the shared containers before Molecule installs
+# anything itself.
+just ansible-collection-install
+ansible-galaxy collection install -r requirements.yml -p .ansible/collections
+
+just molecule-test                   # every scenario (recursive glob)
+just molecule-test-one systemd_netns # one scenario
+just molecule-list
+```
+
+Podman is required.  Run it rootful (as the CI does): the `systemd_netns`
+unit uses `ip netns exec`, whose recursive `/sys` bind mount is not
+permitted inside the rootless user namespace.  When iterating with
+`molecule create` plus `molecule converge -s <scenario>`, pass `molecule
+prepare --force -s <scenario>` first if the shared "prepared" state is
+already set.
 
 ## Install
 

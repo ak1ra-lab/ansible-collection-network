@@ -6,6 +6,26 @@ default:
 lint:
     ansible-lint
 
+# Run every Molecule scenario (nested scenarios need the recursive glob)
+molecule-test:
+    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' molecule test --all
+
+# Run one Molecule scenario, e.g. `just molecule-test-one systemd_netns`
+molecule-test-one scenario:
+    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' molecule test -s {{scenario}}
+
+# List the Molecule scenarios
+molecule-list:
+    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' molecule list
+
+# Create the shared test containers used by every scenario
+molecule-create:
+    molecule create
+
+# Remove the shared test containers
+molecule-destroy:
+    molecule destroy
+
 # Install project-local Ansible collection
 ansible-collection-install:
     mkdir -p .ansible/collections

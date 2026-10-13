@@ -1,0 +1,3 @@
+---
+# systemd_bridge scenario - exercises the standalone bridge role on the
+# shared containers; inherits the base config.

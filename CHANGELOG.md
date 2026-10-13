@@ -13,6 +13,16 @@ The format is based on Keep a Changelog, and this project does not currently gua
   `ExecStart`, documented with evidence-driven BitTorrent tuning
   candidates; only per-netns keys are isolated to the namespace,
   host-global keys are documented as such.
+- Molecule test scenarios (`extensions/molecule/`, collection-testing
+  layout) for `systemd_bridge` and `systemd_netns`, running the roles
+  against the systemd-enabled container images of
+  [ak1ra-lab/docker-systemd](https://github.com/ak1ra-lab/docker-systemd)
+  (debian-12/13, ubuntu-24.04/26.04) via the `containers.podman.podman`
+  connection, with `shared_state` making the `default` scenario the
+  lifecycle manager of the shared containers.  Component scenarios run
+  prepare, converge, idempotence, verify, the role's teardown via
+  `cleanup.yml` and a post-cleanup verification; root `requirements.yml`
+  and justfile recipes cover the control-node setup.
 
 ### Changed
 
