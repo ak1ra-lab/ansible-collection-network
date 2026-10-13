@@ -8,9 +8,11 @@
 # namespace documented in roles/systemd_bridge/README.md; override it via
 # group_vars/host_vars or extra-vars - role defaults apply otherwise.
 #
-# Bridges are shared, stable host infrastructure: apply this playbook before
-# ak1ra_lab.network.systemd_netns so the netns role finds the bridges at
-# validation time.
+# Bridges are shared, stable host infrastructure: apply this playbook once
+# before the per-namespace runs so the netns role finds the bridges at
+# validation time.  The systemd_netns playbook can also apply declared
+# bridges itself (see its header) - this entry point stays the standalone
+# way to manage only bridges.
 
 - name: declarative host-level linux bridges (systemd_bridge)
   hosts: "{{ playbook_hosts | default('localhost') }}"

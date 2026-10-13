@@ -1,22 +1,47 @@
 ---
 # ak1ra_lab.network.systemd_netns - collection playbook entry point.
 #
-# Wraps the systemd_netns role: dedicated-segment egress for individual
-# systemd services - a network namespace attaching veth legs to host-level
-# Linux bridges (owned by ak1ra_lab.network.systemd_bridge or the host's own
-# network configuration) with real segment addresses + gateway inside the
-# namespace.  The contract is the systemd_netns_* variable namespace
-# documented in roles/systemd_netns/README.md; override it via
-# group_vars/host_vars or extra-vars - role defaults apply otherwise.
+# Applies the systemd_netns role: veth legs on shared host-level Linux
+# bridges that carry real segment addresses (bridges owned by
+# ak1ra_lab.network.systemd_bridge or the host's own network layer,
+# pre-existing and shared between namespaces).  The namespace behaves like
+# any other L2 neighbor; the host does no routing, NAT or filtering.
+#
+# Role orchestration stays in the playbook: when this run also declares
+# bridges (systemd_bridge_bridges), the systemd_bridge role is applied
+# first and its handlers are flushed before the namespace is validated, so
+# one run can also bring up a fresh host whose bridges are declared here.
+# An empty bridge list creates no bridge artifacts, so this file still
+# works as the thin per-namespace wrapper for bridges managed separately
+# via ak1ra_lab.network.systemd_bridge.  The systemd_netns role itself
+# never calls other roles.
+#
+# The contract is the systemd_netns_* variable namespace documented in
+# roles/systemd_netns/README.md (systemd_bridge_bridges documented in
+# roles/systemd_bridge/README.md); override it via group_vars/host_vars or
+# extra-vars - role defaults apply otherwise.
 #
 # The role sets allow_duplicates: true; run the playbook once per namespace
-# with distinct systemd_netns_name values to isolate several services on one
-# host.  The referenced bridges must already exist (run
-# ak1ra_lab.network.systemd_bridge first on fresh hosts).
+# with distinct systemd_netns_name values to isolate several services on
+# one host.  The referenced bridges must already exist (run
+# ak1ra_lab.network.systemd_bridge first on fresh hosts) and carry at least
+# one enslaved member interface.
+#
+# Upgrading across role versions: run the teardown with the old code first
+# (systemd_netns_state: absent), then deploy with the new code.
 
-- name: bridged network-namespace egress (systemd_netns)
+- name: network namespace egress (systemd_netns)
   hosts: "{{ playbook_hosts | default('localhost') }}"
   become: true
   gather_facts: true
-  roles:
-    - ak1ra_lab.network.systemd_netns
+  tasks:
+    - name: apply host-level bridges declared for this run (systemd_bridge)
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.systemd_bridge
+
+    - name: flush systemd_bridge handlers before the namespace is validated
+      ansible.builtin.meta: flush_handlers
+
+    - name: apply the namespace infrastructure (systemd_netns)
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.systemd_netns

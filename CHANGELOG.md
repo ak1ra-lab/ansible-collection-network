@@ -21,6 +21,11 @@ The format is based on Keep a Changelog, and this project does not currently gua
   `defaults/main.yaml` into `vars/main.yaml`, keeping the overridable
   public contract short; `systemd_netns_name` defaults to `qbittorrent`
   (the role's reference workload) instead of `dedicated_net`.
+- `ak1ra_lab.network.systemd_netns` applies the host bridges declared for
+  the run (`systemd_bridge_bridges`) before the namespace: the playbook
+  chains `systemd_bridge` and flushes its handlers before `systemd_netns`
+  validates the namespace, so one run can also bring up a fresh host.  The
+  role itself still never calls other roles.
 
 ### Fixed
 

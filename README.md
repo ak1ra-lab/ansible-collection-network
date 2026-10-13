@@ -38,7 +38,7 @@ dependency.
 | Playbook | Description |
 | --- | --- |
 | `ak1ra_lab.network.systemd_bridge` | Thin wrapper around the `systemd_bridge` role (root privileges, fact gathering); drive it entirely through the `systemd_bridge_*` variable contract. |
-| `ak1ra_lab.network.systemd_netns` | Thin wrapper around the `systemd_netns` role (root privileges, fact gathering); drive it entirely through the `systemd_netns_*` variable contract. |
+| `ak1ra_lab.network.systemd_netns` | Entry point for the `systemd_netns` role: applies the host bridges declared for the run (`systemd_bridge_bridges`) first, then the namespace (root privileges, fact gathering); the `systemd_netns_*` contract drives the namespace. |
 
 ```shell
 ansible-playbook ak1ra_lab.network.systemd_bridge -e systemd_bridge_bridges='[{"name": "br_wan", "interface": "enp36s0"}]'
