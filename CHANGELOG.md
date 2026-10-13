@@ -22,7 +22,10 @@ The format is based on Keep a Changelog, and this project does not currently gua
   lifecycle manager of the shared containers.  Component scenarios run
   prepare, converge, idempotence, verify, the role's teardown via
   `cleanup.yml` and a post-cleanup verification; root `requirements.yml`
-  and justfile recipes cover the control-node setup.
+  and justfile recipes cover the control-node setup.  A GitHub Actions
+  workflow runs ansible-lint and every scenario (rootful Podman) on pull
+  requests and pushes to `master`/`dev`, with Dependabot keeping the
+  SHA-pinned actions current.
 
 ### Changed
 
