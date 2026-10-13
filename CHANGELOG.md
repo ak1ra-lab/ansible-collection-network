@@ -21,6 +21,15 @@ The format is based on Keep a Changelog, and this project does not currently gua
   `absent` atomically tears down the role's own artifacts via
   `tasks/reset.yaml`, leaving shared system files untouched.
 
+### Changed
+
+- `flow_offload` and `proxy_guard` honor their `*_enabled` master switch in
+  `tasks/present.yaml`: the drop-in is only deployed while the switch is on,
+  and a drop-in left behind by a previous run is removed when it is turned
+  off (the removal notifies the nftables service restart).  Before, the
+  documented switch was never read and applying either role always deployed
+  the table.
+
 ### Fixed
 
 - `proxy_guard` restores the guard parameter defaults its README documents -
