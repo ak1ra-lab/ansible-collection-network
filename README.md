@@ -82,6 +82,14 @@ permitted inside the rootless user namespace.  When iterating with
 prepare --force -s <scenario>` first if the shared "prepared" state is
 already set.
 
+A rootful Docker daemon is supported as an alternative to Podman: set
+`MOLECULE_CONTAINER_RUNTIME=docker` for every molecule invocation.  The
+containers are then managed through `community.docker` (installed by the
+root `requirements.yml`; the `docker` Python SDK must be available to
+Ansible) and run privileged, like the Podman path: systemd needs the
+capabilities, and a privileged container also gets a writable `/sys` for
+the shared udev net-event trigger.
+
 ## Install
 
 ```shell
