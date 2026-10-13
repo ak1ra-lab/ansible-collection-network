@@ -32,6 +32,12 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Fixed
 
+- `tproxy` notified a `restart ansible-tproxy-routing.service` handler that
+  did not exist (the handler was named `restart tproxy-routing.service` and
+  pointed at the wrong unit), so the first application of the role failed
+  while rendering `/etc/systemd/system/ansible-tproxy-routing.service`; the
+  handler now matches the notification and restarts
+  `ansible-tproxy-routing.service`.
 - `proxy_guard` restores the guard parameter defaults its README documents -
   `proxy_guard_lan4_subnets` (the RFC 1918 trio) and
   `proxy_guard_lan6_subnets` (`[]`), the throttle set
