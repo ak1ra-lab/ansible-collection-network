@@ -13,12 +13,11 @@ host, stable configuration), or rely on the host's own network configuration
 layer.  This role only manages the namespace, its veth legs, the resolv.conf
 and the per-service drop-ins.
 
-Use this instead of `ak1ra_lab.network.systemd_netns_routing` when a
-dedicated physical interface (or a segment with spare addresses) exists:
-each service gets its own exit identity, inbound arrives directly (no
-host-port DNAT), and the namespace traffic never passes through the host's
-L3 stack - `systemd_netns_routing` runs the same per-service isolation on
-a private, host-NATed bridge network when no real segment is available.
+Use it when a dedicated physical interface (or a segment with spare
+addresses) exists: each service gets its own exit identity and inbound
+arrives directly - the namespace traffic never passes through the host's
+L3 stack, so there is no host-port DNAT, no conntrack/NAT state and no
+`ip_forward` for this traffic.
 
 ## Requirements
 
@@ -62,10 +61,9 @@ it only switches frames (L2).
     application is transparently proxied (per-service gateway selection,
     no host-wide tproxy needed).
 
-  A TPROXY gateway must be reachable on the *same bridged segment* as the
-  namespace leg (the leg's own L2 neighbor) - unlike
-  `systemd_netns_routing`, nothing here is policy-routed across the host,
-  so a gateway on another segment does not work.
+  The gateway must be reachable on the *same bridged segment* as the
+  namespace leg (the leg's own L2 neighbor): nothing here is policy-routed
+  across the host, so a gateway on another segment does not work.
 - **Inbound**: services are directly reachable at their namespace address on
   the bridged segment - no DNAT, no host port conflicts.  To expose a
   management interface on a *different* segment, declare a second leg on

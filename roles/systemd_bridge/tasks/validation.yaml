@@ -34,8 +34,8 @@
       systemd_bridge_bridges elements must be {name, interface?} dicts: name a
       valid interface name (<= 15 chars); interface, when set, an existing
       interface on the host (got: {{ bridge }}; found: {{ ansible_facts['interfaces'] }}).
-      Bridges without an interface are pure L2 segments (e.g. the private
-      bridge networks of systemd_netns_routing) and get no enslave file.
+      Bridges without an interface are pure L2 segments and get no enslave
+      file.
     quiet: true
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:

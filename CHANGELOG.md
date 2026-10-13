@@ -8,18 +8,21 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Added
 
-- Initial collection with three roles:
-  - `tproxy` — engine-agnostic TPROXY transparent proxy plumbing (nftables
-    marking, policy routing, sysctl), extracted from
-    `ak1ra-lab/sing-box-tproxy` `roles/sing_box_tproxy` and renamed to the
-    `tproxy_*` variable contract.
-  - `flow_offload` — nftables flowtable offloading for forwarded traffic
-    (opt-in, independent).
-  - `proxy_guard` — per-client TCP abuse protection with throttle / auto-ban
-    (opt-in, independent).
-- Declarative state for every role: `<role>_state` (default `present`);
-  `absent` atomically tears down the role's own artifacts via
-  `tasks/reset.yaml`, leaving shared system files untouched.
+- `systemd_netns` per-netns sysctls (`systemd_netns_sysctl_params`),
+  re-applied after every namespace (re)creation through the unit's
+  `ExecStart`, documented with evidence-driven BitTorrent tuning
+  candidates; only per-netns keys are isolated to the namespace,
+  host-global keys are documented as such.
+
+### Changed
+
+- `systemd_netns` convention values and derived names (enumeration lists,
+  verification URL, veth prefix/service names) move from
+  `defaults/main.yaml` into `vars/main.yaml`, keeping the overridable
+  public contract short; `systemd_netns_name` defaults to `qbittorrent`
+  (the role's reference workload) instead of `dedicated_net`.
+
+## [v0.2.0] - 2026-09-09
 
 ### Added
 
@@ -28,13 +31,12 @@ The format is based on Keep a Changelog, and this project does not currently gua
   `systemd-networkd` (`.netdev` files, enslave `.network` files,
   NetworkManager `unmanaged-devices` drop-ins when NetworkManager is
   running).  Bridges without an `interface` are pure L2 private segments
-  (no uplink) - the natural substrate for `systemd_netns_routing`.
-  Bridges are shared, stable infrastructure; STP, forward delay, FDB
-  ageing time, multicast snooping and VLAN filtering are configurable per
-  bridge, and an optional `address` gives the bridge (and thereby the
-  host) an L3 presence on the segment.  `RequiredForOnline=` is scoped to
-  links that actually carry host connectivity (address-carrying bridges
-  and teardown release files keep the default; enslaved ports and
+  (no uplink).  Bridges are shared, stable infrastructure; STP, forward
+  delay, FDB ageing time, multicast snooping and VLAN filtering are
+  configurable per bridge, and an optional `address` gives the bridge (and
+  thereby the host) an L3 presence on the segment.  `RequiredForOnline=` is
+  scoped to links that actually carry host connectivity (address-carrying
+  bridges and teardown release files keep the default; enslaved ports and
   address-less bridges are excluded), so `systemd-networkd-wait-online`
   neither stalls on never-online devices nor loses its only required link.
 - `systemd_netns` — dedicated-segment egress isolation (opt-in,
@@ -101,3 +103,20 @@ The format is based on Keep a Changelog, and this project does not currently gua
   gateway selection in both directions: host proxied with a service direct,
   or host direct with a single service proxied through a TPROXY gateway on
   the same bridged segment.
+
+## [v0.1.0] - 2026-09-07
+
+### Added
+
+- Initial collection with three roles:
+  - `tproxy` — engine-agnostic TPROXY transparent proxy plumbing (nftables
+    marking, policy routing, sysctl), extracted from
+    `ak1ra-lab/sing-box-tproxy` `roles/sing_box_tproxy` and renamed to the
+    `tproxy_*` variable contract.
+  - `flow_offload` — nftables flowtable offloading for forwarded traffic
+    (opt-in, independent).
+  - `proxy_guard` — per-client TCP abuse protection with throttle / auto-ban
+    (opt-in, independent).
+- Declarative state for every role: `<role>_state` (default `present`);
+  `absent` atomically tears down the role's own artifacts via
+  `tasks/reset.yaml`, leaving shared system files untouched.

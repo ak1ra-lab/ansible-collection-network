@@ -7,9 +7,8 @@
 # veth legs of ak1ra_lab.network.systemd_netns namespaces, or further
 # physical ports.  A bridge may also declare NO interface at all: it is then
 # a pure L2 island (no uplink, no carrier of its own) used as a private
-# segment - e.g. the private bridge networks of
-# ak1ra_lab.network.systemd_netns_routing, whose namespaces exit through the
-# host's L3 stack instead of through the bridge.
+# segment whose members (namespace veth legs, VM taps, further ports) attach
+# later at run time.
 #
 # Bridges are created by systemd-networkd from a .netdev file; the dedicated
 # physical interface is enslaved via a .network file.  When NetworkManager is

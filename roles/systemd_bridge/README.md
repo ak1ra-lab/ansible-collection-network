@@ -4,12 +4,11 @@ Declarative host-level Linux bridges, managed entirely by
 `systemd-networkd`.  Each bridge optionally enslaves a dedicated physical
 interface as its uplink and behaves like a L2 switch on that segment; any
 interface can then be enslaved as an additional bridge port.  The natural
-consumers are `ak1ra_lab.network.systemd_netns`, whose namespace veth legs
-attach to these bridges, and `ak1ra_lab.network.systemd_netns_routing`,
-whose namespaces hang off **interface-less** bridges (pure L2 islands with
-a private address, no uplink - the namespaces exit through the host's L3
-stack, never through the bridge).  Nothing prevents enslaving further
-physical ports or other interfaces either.
+consumer is `ak1ra_lab.network.systemd_netns`, whose namespace veth legs
+attach to these bridges.  A bridge may also be declared without any
+interface: a **pure L2 island** with no uplink whose members (veth legs,
+VM taps, further ports) attach later at run time.  Nothing prevents
+enslaving further physical ports or other interfaces either.
 
 Because bridges are shared, stable infrastructure, they are deliberately kept
 in their own role - their lifecycle does not change when namespaces come and
@@ -69,9 +68,9 @@ normal member of the segment, side by side with any namespace legs - nothing
 about the L2 bridging or the namespaces changes.  Add `gateway` (at most one
 per host - a second one would install a second default route) and `dns` when
 the bridge serves as the host's uplink.  Interface-less (private segment)
-bridges take an `address` the same way - it is the namespace gateway for
-`systemd_netns_routing` - with neither a `gateway` nor a physical uplink
-involved: that role routes namespace traffic at L3.
+bridges take an `address` the same way - it gives the host a direct L3
+presence on the otherwise uplink-less segment - with neither a `gateway`
+nor a physical uplink involved.
 
 Do **not** configure addresses on the enslaved physical interface.  The
 kernel accepts `ip addr add` on an enslaved port, but the port is a pure L2
@@ -100,7 +99,7 @@ Per-bridge element:
 | Field | Default | Description |
 | --- | --- | --- |
 | `name` | - | Bridge device name (valid interface name, <= 15 chars). |
-| `interface` | unset | Optional physical interface enslaved into the bridge (dedicated, no own address).  Unset for an interface-less bridge: a pure L2 island with no uplink, typically carrying a private `address` as the segment gateway for `systemd_netns_routing` namespaces. |
+| `interface` | unset | Optional physical interface enslaved into the bridge (dedicated, no own address).  Unset for an interface-less bridge: a pure L2 island with no uplink, carrying a private `address` when the host must be reachable on the segment. |
 | `address` | unset | Optional IPv4 CIDR assigned to the bridge itself (host presence on the segment). |
 | `gateway` | unset | Optional IPv4 gateway for the bridge's own default route; requires `address`, at most one per host. |
 | `dns` | unset | Optional list of IPv4 resolvers for the bridge's own `.network` file; requires `address`. |
@@ -130,15 +129,13 @@ host-addressed segments:
 ```
 
 `br_private` is an interface-less bridge - a private segment island whose
-gateway address `10.200.0.1/24` the host carries on the bridge device.  It
-never touches the host's physical uplinks; `systemd_netns_routing`
-namespaces attach here and exit through the host's L3 stack (NAT + policy
-routing), which is why no physical interface is enslaved.
+address `10.200.0.1/24` the host carries on the bridge device.  It never
+touches the host's physical uplinks; members (namespace veth legs, VM taps)
+attach to it at run time, which is why no physical interface is enslaved.
 
 Then run `systemd_netns` (once per namespace) with `systemd_netns_links`
-referencing these bridges, or `systemd_netns_routing` for the private
-bridge networks.  Apply `systemd_bridge` before the netns roles on fresh
-hosts: they validate bridge existence at run time.
+referencing these bridges.  Apply `systemd_bridge` before the netns role on
+fresh hosts: its validation reads the live bridges at run time.
 
 ## Declarative teardown: `systemd_bridge_state: absent`
 

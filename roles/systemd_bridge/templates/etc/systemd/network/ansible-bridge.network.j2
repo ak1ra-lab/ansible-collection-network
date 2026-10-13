@@ -12,10 +12,9 @@
 # Carrier: a bridge with an enslaved physical interface gains carrier from
 # that port and networkd configures it once it is up.  A bridge declared
 # without an enslaved interface - a pure segment bridge whose ports (e.g.
-# veth legs of a systemd_netns_routing namespace) are attached later at run
-# time - never has carrier on its own, so networkd would wait for it
-# forever: such a bridge is configured without carrier
-# (ConfigureWithoutCarrier=yes).
+# veth legs of a systemd_netns namespace) are attached later at run time -
+# never has carrier on its own, so networkd would wait for it forever:
+# such a bridge is configured without carrier (ConfigureWithoutCarrier=yes).
 #
 # RequiredForOnline: a bridge carrying the host's own address/gateway/dns is
 # the host's connectivity endpoint, so it keeps the systemd default (yes)
