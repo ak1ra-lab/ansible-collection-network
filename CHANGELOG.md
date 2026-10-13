@@ -20,3 +20,12 @@ The format is based on Keep a Changelog, and this project does not currently gua
 - Declarative state for every role: `<role>_state` (default `present`);
   `absent` atomically tears down the role's own artifacts via
   `tasks/reset.yaml`, leaving shared system files untouched.
+
+### Fixed
+
+- `proxy_guard` restores the guard parameter defaults its README documents -
+  `proxy_guard_lan4_subnets` (the RFC 1918 trio) and
+  `proxy_guard_lan6_subnets` (`[]`), the throttle set
+  (`false` / `600` / `150` / `2m`) and the auto-ban set
+  (`false` / `1200` / `300` / `5m`) - which the collection split dropped
+  together with the switch gating.
