@@ -44,7 +44,6 @@ DNS={{ server }}
 {% elif _bridge_l3 %}
 [Network]
 ConfigureWithoutCarrier=yes
-RequiredForOnline=no
 {% if bridge.address is defined %}
 Address={{ bridge.address }}
 {% endif %}
@@ -54,6 +53,13 @@ Gateway={{ bridge.gateway }}
 {% for server in bridge.dns | default([]) %}
 DNS={{ server }}
 {% endfor %}
+
+# RequiredForOnline is a [Link] section key (not [Network]); it is the
+# option that keeps systemd-networkd-wait-online from waiting on this
+# carrier-less bridge forever (veth legs attach only at run time, after
+# network-online.target).
+[Link]
+RequiredForOnline=no
 {% else %}
 [Link]
 RequiredForOnline=no

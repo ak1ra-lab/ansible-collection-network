@@ -16,6 +16,10 @@
 # address.  Without it, bridges that carry no host address are safe to
 # remove; bridges that do carry one are reported.
 
+- name: probe NetworkManager installation (drop-in removal gate)
+  when: systemd_bridge_bridges | length > 0
+  ansible.builtin.include_tasks: nm_probe.yaml
+
 - name: remove NetworkManager unmanaged-devices drop-ins
   ansible.builtin.file:
     path: "{{ _systemd_bridge_nm_conf_dir }}/10-{{ bridge.name }}.conf"
@@ -26,7 +30,9 @@
     label: "{{ bridge.name }}"
   notify:
     - reload NetworkManager
-  when: bridge.interface is defined
+  when: >-
+    bridge.interface is defined
+    and _systemd_bridge_nm_installed | bool
 
 - name: remove bridge netdev files
   ansible.builtin.file:

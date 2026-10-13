@@ -22,6 +22,22 @@ The format is based on Keep a Changelog, and this project does not currently gua
   public contract short; `systemd_netns_name` defaults to `qbittorrent`
   (the role's reference workload) instead of `dedicated_net`.
 
+### Fixed
+
+- `systemd_bridge` detects an actual NetworkManager installation by probing
+  the unit file instead of `ansible_facts['services']`: on Debian-family
+  hosts the packaged apt-daily units reference NetworkManager.service in
+  their `After=` lines, which makes systemd instantiate a not-found unit and
+  service_facts report NetworkManager.service even where NetworkManager is
+  not installed - the role then wrote unmanaged-devices drop-ins and the
+  reload handler failed hard on hosts without NetworkManager.
+- `systemd_bridge` renders `RequiredForOnline=` in the `[Link]` section for
+  interface-less bridges carrying an address instead of `[Network]`, where
+  systemd-networkd ignores the key: such a bridge never has carrier on its
+  own (its veth legs attach at run time, after network-online.target), so it
+  stayed required-for-online and systemd-networkd-wait-online could wait for
+  it forever - blocking network-online.target at boot.
+
 ## [v0.2.0] - 2026-09-09
 
 ### Added

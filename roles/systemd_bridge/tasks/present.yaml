@@ -27,9 +27,9 @@
       - iproute2
     state: present
 
-- name: gather service facts (NetworkManager coexistence)
+- name: probe NetworkManager installation (coexistence gates)
   when: systemd_bridge_bridges | length > 0
-  ansible.builtin.service_facts:
+  ansible.builtin.include_tasks: nm_probe.yaml
 
 - name: ensure systemd-networkd is enabled and running (bridge persistence)
   ansible.builtin.systemd_service:
@@ -46,8 +46,7 @@
 - name: ensure NetworkManager conf.d directory exists (when NetworkManager is present)
   when: >-
     systemd_bridge_bridges | length > 0
-    and ansible_facts['services'] is defined
-    and 'NetworkManager.service' in ansible_facts['services']
+    and _systemd_bridge_nm_installed | bool
   ansible.builtin.file:
     path: "{{ _systemd_bridge_nm_conf_dir }}"
     state: directory
@@ -56,8 +55,7 @@
 - name: template NetworkManager unmanaged-devices drop-ins on remote
   when: >-
     systemd_bridge_bridges | length > 0
-    and ansible_facts['services'] is defined
-    and 'NetworkManager.service' in ansible_facts['services']
+    and _systemd_bridge_nm_installed | bool
     and bridge.interface is defined
   ansible.builtin.template:
     src: etc/NetworkManager/conf.d/ansible-bridge.conf.j2

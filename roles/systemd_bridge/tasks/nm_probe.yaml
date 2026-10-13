@@ -1,0 +1,26 @@
+---
+# tasks/nm_probe.yaml - detect a real NetworkManager installation.
+#
+# Gating the NetworkManager coexistence work on ansible_facts.services is
+# unreliable: on Debian-family hosts the packaged apt-daily units reference
+# NetworkManager.service in their After= lines, which makes systemd
+# instantiate a not-found unit for it, and service_facts then reports
+# NetworkManager.service even on hosts without NetworkManager installed.
+# Stat the unit file instead - presence of the drop-in target is what the
+# role needs to decide.
+
+- name: probe NetworkManager unit files
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /usr/lib/systemd/system/NetworkManager.service
+    - /lib/systemd/system/NetworkManager.service
+  register: _systemd_bridge_nm_unit_stats
+
+- name: derive NetworkManager installation state
+  ansible.builtin.set_fact:
+    _systemd_bridge_nm_installed: >-
+      {{ _systemd_bridge_nm_unit_stats.results
+         | ansible.builtin.selectattr('stat', 'defined')
+         | ansible.builtin.selectattr('stat.exists', 'equalto', true)
+         | ansible.builtin.list | length > 0 }}
