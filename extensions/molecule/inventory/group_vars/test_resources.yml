@@ -27,3 +27,11 @@ ansible_connection: >-
 container_command: /sbin/init
 container_systemd: always
 container_privileged: true
+
+# Bind the host's kernel module tree into every shared container read-only:
+# the tproxy role modprobes kernel modules (nft_tproxy, nft_socket, tcp_bbr,
+# ...), and modprobe inside the container needs /lib/modules/<host kernel>.
+# Harmless for the scenarios that do not load modules, and required for any
+# future role with the same need.
+container_volumes:
+  - /lib/modules:/lib/modules:ro

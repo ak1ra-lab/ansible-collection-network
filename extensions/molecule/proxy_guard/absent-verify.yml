@@ -1,0 +1,34 @@
+---
+# proxy_guard scenario - assert the teardown the cleanup action performed:
+# the role's drop-in and the loaded table are gone.
+
+- name: verify the proxy_guard teardown
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the teardown state of the role's drop-in
+      ansible.builtin.stat:
+        path: /etc/nftables.d/ansible_proxy_guard.nft
+      register: _proxy_guard_dropin_after
+
+    - name: assert the drop-in is gone
+      ansible.builtin.assert:
+        that:
+          - not _proxy_guard_dropin_after.stat.exists
+        fail_msg: "the proxy guard drop-in must be gone"
+        quiet: true
+
+    - name: collect the remaining nftables tables
+      ansible.builtin.command:
+        argv: [/usr/sbin/nft, list, tables]
+      changed_when: false
+      register: _proxy_guard_tables
+
+    - name: assert the proxy guard table is gone
+      ansible.builtin.assert:
+        that:
+          - _proxy_guard_tables.stdout is not search('ansible_proxy_guard')
+        fail_msg: >-
+          the proxy guard table must be gone, got:
+          {{ _proxy_guard_tables.stdout }}
+        quiet: true

@@ -7,7 +7,8 @@
 flow_offload_state: present
 flow_offload_state_available: [present, absent]
 
-# Master switch - disabled by default (opt-in role).
+# Master switch - disabled by default (opt-in role).  With the switch off,
+# tasks/present.yaml only removes a drop-in left behind by a previous run.
 flow_offload_enabled: false
 
 # Interfaces bound to the flowtable.  Defaults to auto-detection of common

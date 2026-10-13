@@ -8,7 +8,8 @@
 #                       used when MOLECULE_CONTAINER_RUNTIME=docker
 #   ansible.utils     - ipaddr/in_network filters used by the systemd_*
 #                       roles (also a galaxy.yml dependency)
-#   ansible.posix     - sysctl used by the tproxy role
+#   ansible.posix     - sysctl used by the tproxy role, and the profile_tasks
+#                       callback enabled by ansible.cfg
 #   community.general - modprobe used by the tproxy role
 collections:
   - name: containers.podman

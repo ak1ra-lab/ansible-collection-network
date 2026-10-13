@@ -1,0 +1,37 @@
+---
+# flow_offload scenario - apply the flow offload table a real user declares.
+#
+# The role deploys /etc/nftables.d/ansible_flow_offload.nft and enables
+# nftables.service; the table only becomes live through a base
+# /etc/nftables.conf that includes the drop-in directory, so this scenario
+# provides the equivalent base config its README documents
+# (ak1ra_lab.network.tproxy deploys the same shape in a full deployment).
+
+- name: apply the test flow offload table (flow_offload present)
+  hosts: all
+  gather_facts: true
+  vars:
+    flow_offload_enabled: true
+    flow_offload_state: present
+  handlers:
+    - name: reload the nftables ruleset
+      ansible.builtin.systemd_service:
+        name: nftables.service
+        state: restarted
+  tasks:
+    - name: apply the flow offload table when enabled
+      when: flow_offload_enabled | ansible.builtin.bool
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.flow_offload
+
+    - name: deploy the minimal base nftables config that includes the drop-in
+      ansible.builtin.copy:
+        content: |
+          #!/usr/sbin/nft -f
+          # Molecule test fixture: the base config a real host gets from
+          # ak1ra_lab.network.tproxy (or any equivalent deployment).
+          flush ruleset
+          include "/etc/nftables.d/*.nft"
+        dest: /etc/nftables.conf
+        mode: "0644"
+      notify: reload the nftables ruleset

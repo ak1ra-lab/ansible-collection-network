@@ -13,7 +13,7 @@ classified as bypass-proxy traffic.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `flow_offload_state` | `present` | `present` applies the table; `absent` removes the table file this role created. |
-| `flow_offload_enabled` | `false` | Master switch (the calling playbook decides when to apply the role). |
+| `flow_offload_enabled` | `false` | Master switch: when disabled the role removes the drop-in it created (and otherwise touches nothing). |
 | `flow_offload_interfaces` | fact-detected | Interfaces bound to the flowtable (`eth*`, `enp*`, `ens*`, `enx*`, `br*`). |
 
 ## Deployed artifact

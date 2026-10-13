@@ -4,7 +4,10 @@
 # The Molecule scenarios run with rootful Podman on the runner (the same
 # recipe as ak1ra-lab/docker-systemd): the systemd_netns role's unit calls
 # `ip netns exec`, which performs a recursive /sys bind mount that rootless
-# Podman cannot do inside a user namespace.
+# Podman cannot do inside a user namespace, and the tproxy scenario loads
+# host kernel modules (`modprobe nft_tproxy`, `tcp_bbr`, ...), which a
+# rootless runtime cannot do inside a user namespace.  Rootful Podman also
+# supports the privileged containers every scenario uses.
 name: CI
 
 on:

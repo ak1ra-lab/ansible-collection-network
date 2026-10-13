@@ -9,7 +9,7 @@
     name: nftables.service
     state: restarted
 
-- name: restart tproxy-routing.service
+- name: restart ansible-tproxy-routing.service
   ansible.builtin.systemd_service:
-    name: tproxy-routing.service
+    name: ansible-tproxy-routing.service
     state: restarted

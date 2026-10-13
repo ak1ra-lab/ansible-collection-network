@@ -8,6 +8,12 @@
 # this is a test-container prerequisite, not something the roles under test
 # should provide.
 #
+# The images also ship an apt index from their build time; it goes stale as
+# the distributions publish new package versions, and the roles' `package`
+# installs then fail with 404s.  Every preparation refreshes the index first
+# (the components share one container, so `cache_valid_time` keeps this to
+# one refresh per test run).
+#
 # Scenario-specific prepare.yml files import this play first and then add
 # their own prerequisites (test veth members, container accommodations).
 
@@ -15,6 +21,11 @@
   hosts: all
   gather_facts: true
   tasks:
+    - name: refresh the apt index (the images ship one from build time)
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
     - name: ensure udev is installed (systemd-networkd waits for it)
       ansible.builtin.package:
         name: udev

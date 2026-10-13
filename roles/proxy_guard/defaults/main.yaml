@@ -7,5 +7,64 @@
 proxy_guard_state: present
 proxy_guard_state_available: [present, absent]
 
-# Master switch - disabled by default.  Review all parameters below before enabling.
+# Master switch - disabled by default.  Review all parameters below before
+# enabling.  With the switch off, tasks/present.yaml only removes a drop-in
+# left behind by a previous run and touches nothing else.
 proxy_guard_enabled: false
+
+# LAN subnets whose new TCP connections enter the protection chains.  Only
+# new TCP connections sourced from these prefixes are rate-limited; adjust
+# them to match the actual LAN addressing (narrower ranges are safer).  The
+# defaults cover the three RFC 1918 private-use blocks, which is sufficient
+# for most home / small-office deployments.
+proxy_guard_lan4_subnets:
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+
+# IPv6 LAN prefixes; leave empty to disable the IPv6 protection rules
+# entirely.  Example: ["fd00::/8", "fe80::/10"]
+proxy_guard_lan6_subnets: []
+
+# Throttle: rate-based soft protection (disabled by default).  A source IP
+# whose new-TCP-connection rate exceeds the configured threshold is added to
+# the throttled set for proxy_guard_throttle_timeout; during that period only
+# NEW connections from the IP are dropped and established connections remain
+# intact, which makes throttle significantly softer than auto-ban.
+proxy_guard_throttle_enabled: false
+
+# New TCP connections per minute that trigger a throttle once the burst
+# allowance is exhausted.  600/min is about 10 new connections/sec sustained,
+# which accommodates typical browser bursts and sync-client spikes while
+# catching runaway or misconfigured clients.
+proxy_guard_throttle_rate: 600
+
+# Token-bucket burst size before the throttle rate takes effect; allows
+# short-lived connection spikes (e.g. a browser opening many parallel
+# requests on page load) without immediately triggering a throttle.
+proxy_guard_throttle_burst: 150
+
+# Duration of a throttle period.  Kept short so legitimate clients recover
+# quickly after a transient connection burst.
+proxy_guard_throttle_timeout: "2m"
+
+# Auto-ban: rate-based hard protection (disabled by default).  A source IP
+# exceeding the configured threshold is added to the banned set for
+# proxy_guard_auto_ban_timeout, during which ALL TCP from it is dropped -
+# including already-established connections.  This is more disruptive than
+# throttle; enable it only when throttle alone is insufficient.
+proxy_guard_auto_ban_enabled: false
+
+# New TCP connections per minute that trigger a ban once the burst allowance
+# is exhausted.  1200/min is about 20 new connections/sec sustained, well
+# above normal browser/application behaviour but clearly anomalous for
+# scanning tools or runaway clients.
+proxy_guard_auto_ban_rate: 1200
+
+# Token-bucket burst size before the ban rate takes effect; a burst of 300
+# accommodates legitimate spikes while still catching sustained abuse.
+proxy_guard_auto_ban_burst: 300
+
+# Duration of an auto-ban.  Shorter values reduce the collateral damage of a
+# false positive; 5 minutes balances deterrence and recovery.
+proxy_guard_auto_ban_timeout: "5m"

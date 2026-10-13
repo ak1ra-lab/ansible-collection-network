@@ -1,0 +1,9 @@
+---
+# proxy_guard scenario - one-time container preparation.
+#
+# The shared preparation brings up udev (systemd-networkd needs it; see
+# shared/prepare.yml); the proxy guard role itself only deploys an nftables
+# drop-in and enables nftables.service, so nothing else is needed here.
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml

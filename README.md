@@ -5,13 +5,13 @@ Shared Ansible roles for network infrastructure, published as the
 
 ## Roles
 
-| Role | Description | Default |
-| --- | --- | --- |
-| `ak1ra_lab.network.tproxy` | Engine-agnostic TPROXY transparent proxy plumbing: nftables marking, policy routing (`ip rule` / `ip route`), sysctl. Any proxy engine with a TPROXY inbound (sing-box, mihomo, ...) plugs in via variables. | always applied |
-| `ak1ra_lab.network.flow_offload` | nftables flowtable offloading for forwarded traffic. | opt-in |
-| `ak1ra_lab.network.proxy_guard` | Per-client TCP abuse protection (throttle / auto-ban) for transparent-proxy gateways. | opt-in |
-| `ak1ra_lab.network.systemd_bridge` | Declarative host-level Linux bridges (one per dedicated physical interface) via systemd-networkd: `.netdev` + enslave `.network` files, NetworkManager unmanaged-devices drop-ins. Stable shared infrastructure. | opt-in |
-| `ak1ra_lab.network.systemd_netns` | Dedicated-segment egress isolation: bridged network namespaces for per-service egress over the shared host-level bridges of `systemd_bridge` - namespace veth legs with real segment addresses and an arbitrary per-service next-hop gateway (e.g. a TPROXY gateway when only the hooked service should be proxied). No host-side routing/NAT. | opt-in |
+| Role | Description |
+| --- | --- |
+| `ak1ra_lab.network.tproxy` | Engine-agnostic TPROXY transparent proxy plumbing: nftables marking, policy routing (`ip rule` / `ip route`), sysctl. Any proxy engine with a TPROXY inbound (sing-box, mihomo, ...) plugs in via variables. |
+| `ak1ra_lab.network.flow_offload` | nftables flowtable offloading for forwarded traffic (opt-in). |
+| `ak1ra_lab.network.proxy_guard` | Per-client TCP abuse protection (throttle / auto-ban) for transparent-proxy gateways (opt-in). |
+| `ak1ra_lab.network.systemd_bridge` | Declarative host-level Linux bridges (one per dedicated physical interface) via systemd-networkd: `.netdev` + enslave `.network` files, NetworkManager unmanaged-devices drop-ins. Stable shared infrastructure (opt-in). |
+| `ak1ra_lab.network.systemd_netns` | Dedicated-segment egress isolation: bridged network namespaces for per-service egress over the shared host-level bridges of `systemd_bridge` - namespace veth legs with real segment addresses and an arbitrary per-service next-hop gateway (e.g. a TPROXY gateway when only the hooked service should be proxied). No host-side routing/NAT (opt-in). |
 
 ## Engine contract
 
@@ -50,15 +50,15 @@ ansible-playbook ak1ra_lab.network.systemd_netns -e systemd_netns_name=qbittorre
 
 Molecule scenarios live under `extensions/molecule/` (collection-testing
 layout).  The `default` scenario owns the shared container lifecycle
-(`shared_state: true`); the component scenarios (`systemd_bridge`,
-`systemd_netns`) reuse the same containers and each run prepare, converge,
-idempotence, verify, the role's teardown (cleanup) and a teardown
-verification.
+(`shared_state: true`); the component scenarios (`flow_offload`,
+`proxy_guard`, `systemd_bridge`, `systemd_netns`, `tproxy`) reuse the same
+containers and each run prepare, converge, idempotence, verify, the role's
+teardown (cleanup) and a teardown verification.
 
 The managed nodes are the systemd-enabled container images from
 [ak1ra-lab/docker-systemd](https://github.com/ak1ra-lab/docker-systemd)
 that these roles support: `debian:12`, `debian:13`, `ubuntu:24.04`,
-`ubuntu:26.04`.  The roles require `systemd-networkd`, which is not
+`ubuntu:26.04`.  The systemd roles require `systemd-networkd`, which is not
 available on the RHEL family; Fedora would additionally need the separate
 `systemd-networkd` package and `iproute` package name.
 
@@ -77,10 +77,15 @@ just molecule-list
 
 Podman is required.  Run it rootful (as the CI does): the `systemd_netns`
 unit uses `ip netns exec`, whose recursive `/sys` bind mount is not
-permitted inside the rootless user namespace.  When iterating with
-`molecule create` plus `molecule converge -s <scenario>`, pass `molecule
-prepare --force -s <scenario>` first if the shared "prepared" state is
-already set.
+permitted inside the rootless user namespace, and the `tproxy` scenario
+loads host kernel modules (`modprobe nft_tproxy`, `tcp_bbr`, ...), which
+rootless Podman cannot do inside a user namespace either.  Every container
+is also created privileged (systemd needs the capabilities, and the shared
+udev preparation needs a writable `/sys`), and the host kernel module tree
+is bind-mounted read-only into the containers through the inventory's
+`container_volumes`.  When iterating with `molecule create` plus `molecule
+converge -s <scenario>`, pass `molecule prepare --force -s <scenario>` first
+if the shared "prepared" state is already set.
 
 A rootful Docker daemon is supported as an alternative to Podman: set
 `MOLECULE_CONTAINER_RUNTIME=docker` for every molecule invocation.  The
@@ -89,6 +94,15 @@ root `requirements.yml`; the `docker` Python SDK must be available to
 Ansible) and run privileged, like the Podman path: systemd needs the
 capabilities, and a privileged container also gets a writable `/sys` for
 the shared udev net-event trigger.
+
+The `tproxy` scenario switches off the role's host-only facets, which the
+shared containers cannot carry: the static `/etc/resolv.conf` (a
+bind-mounted file, so the atomic replace of the template module fails) and
+the `tcp_bbr` / `nf_conntrack` sysctl tuning (host-global or not writable
+from a container network namespace, which would make the idempotence check
+fail).  The `flow_offload` and `proxy_guard` scenarios deploy the minimal
+base nftables config (the include glob) that a real host gets from
+`ak1ra_lab.network.tproxy`, so their tables can be asserted live.
 
 ## Install
 

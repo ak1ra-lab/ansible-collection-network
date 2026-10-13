@@ -22,6 +22,7 @@
         command: "{{ hostvars[item]['container_command'] | default('/sbin/init') }}"
         systemd: "{{ hostvars[item]['container_systemd'] | default('always') }}"
         privileged: "{{ hostvars[item]['container_privileged'] | default(true) }}"
+        volumes: "{{ hostvars[item]['container_volumes'] | default([]) }}"
         state: started
       loop: "{{ groups['test_resources'] }}"
       loop_control:
@@ -36,6 +37,7 @@
         image: "{{ hostvars[item]['container_image'] }}"
         command: "{{ hostvars[item]['container_command'] | default('/sbin/init') }}"
         privileged: "{{ hostvars[item]['container_privileged'] | default(true) }}"
+        volumes: "{{ hostvars[item]['container_volumes'] | default([]) }}"
         state: started
       loop: "{{ groups['test_resources'] }}"
       loop_control:

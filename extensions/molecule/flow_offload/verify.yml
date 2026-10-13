@@ -1,0 +1,61 @@
+---
+# flow_offload scenario - assert the converged state an operator observes:
+# the flowtable is loaded from the deployed drop-in with the auto-detected
+# interfaces, and the role's file is in place.
+
+- name: verify the converged flow_offload state
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the loaded flow offload table
+      ansible.builtin.command:
+        argv: [/usr/sbin/nft, list, table, inet, ansible_flow_offload]
+      changed_when: false
+      register: _flow_offload_table
+
+    - name: assert the flowtable and its offload rule are loaded
+      ansible.builtin.assert:
+        that:
+          - _flow_offload_table.stdout is search('table inet ansible_flow_offload')
+          - _flow_offload_table.stdout is search('flowtable bypassed_flowtable')
+          - _flow_offload_table.stdout is search('flow add @bypassed_flowtable')
+          - _flow_offload_table.stdout is search('eth0')
+        fail_msg: >-
+          the flowtable must be loaded with the auto-detected interfaces,
+          got: {{ _flow_offload_table.stdout }}
+        quiet: true
+
+    - name: collect the nftables service enablement
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-enabled, nftables.service]
+      changed_when: false
+      register: _flow_offload_nftables_enabled
+
+    - name: assert the nftables service is enabled
+      ansible.builtin.assert:
+        that:
+          - _flow_offload_nftables_enabled.stdout == 'enabled'
+        fail_msg: >-
+          nftables.service must be enabled, got:
+          {{ _flow_offload_nftables_enabled.stdout }}
+        quiet: true
+
+    - name: collect the deployed flow offload drop-in
+      ansible.builtin.slurp:
+        src: /etc/nftables.d/ansible_flow_offload.nft
+      register: _flow_offload_dropin
+
+    - name: assert the drop-in renders the auto-detected device list
+      ansible.builtin.assert:
+        that:
+          - >-
+            'table inet ansible_flow_offload'
+            in (_flow_offload_dropin.content | b64decode)
+          - >-
+            'flowtable bypassed_flowtable'
+            in (_flow_offload_dropin.content | b64decode)
+          - "'eth0' in (_flow_offload_dropin.content | b64decode)"
+        fail_msg: >-
+          unexpected drop-in content:
+          {{ _flow_offload_dropin.content | b64decode }}
+        quiet: true
