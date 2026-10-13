@@ -2,6 +2,13 @@
 # Self-contained validation of the public variable contract.
 # Runs first in tasks/main.yaml so the role fails fast without any external
 # validation role.
+#
+# Contract checks split in two layers:
+#   - always: state, name and the shared runtime options
+#   - state: present only - the bridged topology the namespace is built from
+#     (declared links, referenced bridges).  Teardown (absent) needs only the
+#     namespace name - everything else it removes is name-derived and is
+#     discovered from the host itself.
 
 - name: validate systemd_netns_state
   ansible.builtin.assert:
@@ -22,106 +29,142 @@
       (got: {{ systemd_netns_name }})
     quiet: true
 
-- name: validate systemd_netns_links type
-  ansible.builtin.assert:
-    that:
-      - systemd_netns_links | ansible.builtin.type_debug == "list"
-    fail_msg: "systemd_netns_links must be a list of {bridge, address, gateway?} dicts."
-    quiet: true
-
-- name: validate systemd_netns_links element keys
-  ansible.builtin.assert:
-    that:
-      - link.bridge is defined
-      - link.address is defined
-    fail_msg: >-
-      systemd_netns_links elements must define bridge and address
-      (got: {{ link }})
-    quiet: true
-  loop: "{{ systemd_netns_links }}"
-  loop_control:
-    loop_var: link
-    label: "{{ link.bridge | ansible.builtin.default('?') }}"
-
-- name: validate systemd_netns_links addresses, gateways and MACs
-  vars:
-    _link_addr_valid: >-
-      {{ link.address is defined
-         and (link.address | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy }}
-    _link_prefix: "{{ (link.address | ansible.utils.ipaddr('prefix') | ansible.builtin.int) if _link_addr_valid else 0 }}"
-    _gateway_is_host: >-
-      {{ (not (link.gateway is defined))
-         or (((link.gateway | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy)
-             and not ('/' in link.gateway)) }}
-    _gateway_in_network: >-
-      {{ (not (link.gateway is defined and _link_addr_valid and _gateway_is_host))
-         or (link.gateway is ansible.utils.in_network(link.address | ansible.utils.ipaddr('subnet'))) }}
-  ansible.builtin.assert:
-    that:
-      - _link_addr_valid
-      - _link_prefix >= 1
-      - _link_prefix <= 32
-      - _gateway_is_host
-      - _gateway_in_network
-      - >-
-        (not (link.mac is defined))
-        or (link.mac is ansible.builtin.match('^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$'))
-    fail_msg: >-
-      systemd_netns_links addresses must be canonical IPv4 CIDRs
-      (a.b.c.d/prefix, prefix 1-32); gateway, when set, must be a bare IPv4
-      host address inside the address network (the kernel rejects an
-      off-subnet next hop with 'Nexthop has invalid gateway'); mac, when set,
-      must look like aa:bb:cc:dd:ee:ff.
-      Offending element: {{ link }}
-    quiet: true
-  loop: "{{ systemd_netns_links }}"
-  loop_control:
-    loop_var: link
-    label: "{{ link.address | ansible.builtin.default('?') }}"
-
-- name: validate at most one default-route leg
-  ansible.builtin.assert:
-    that:
-      - systemd_netns_links | selectattr('gateway', 'defined') | ansible.builtin.list | ansible.builtin.length <= 1
-    fail_msg: >-
-      at most one systemd_netns_links element may declare a gateway: the
-      namespace has a single default route, so only that leg can own it.
-      Offending elements: {{ systemd_netns_links }}
-    quiet: true
-
-- name: "check referenced bridges exist at run time (systemd_netns_state: present)"
-  ansible.builtin.command:
-    argv:
-      - /usr/bin/ip
-      - -o
-      - link
-      - show
-      - dev
-      - "{{ link.bridge }}"
-  changed_when: false
-  failed_when: false
-  register: _systemd_netns_bridge_probe
-  loop: "{{ systemd_netns_links }}"
-  loop_control:
-    loop_var: link
-    label: "{{ link.bridge }}"
+- name: "validate bridged topology (systemd_netns_state: present)"
   when: systemd_netns_state == 'present'
+  block:
+    - name: validate systemd_netns_links type
+      ansible.builtin.assert:
+        that:
+          - systemd_netns_links | ansible.builtin.type_debug == "list"
+        fail_msg: "systemd_netns_links must be a list of {bridge, address, gateway?} dicts."
+        quiet: true
 
-- name: assert referenced bridges exist
-  ansible.builtin.assert:
-    that:
-      - probe.rc == 0
-    fail_msg: >-
-      systemd_netns_links[].bridge must name a bridge that already exists on
-      the host.  Bridges are owned by ak1ra_lab.network.systemd_bridge (or
-      the host's own network configuration); run that role first or create
-      the bridge beforehand.  Missing: {{ probe.link.bridge }}
-    quiet: true
-  loop: "{{ _systemd_netns_bridge_probe.results }}"
-  loop_control:
-    loop_var: probe
-    label: "{{ probe.link.bridge }}"
-  when: systemd_netns_state == 'present'
+    - name: validate systemd_netns_links element keys
+      ansible.builtin.assert:
+        that:
+          - link.bridge is defined
+          - link.address is defined
+        fail_msg: >-
+          systemd_netns_links elements must define bridge and address
+          (got: {{ link }})
+        quiet: true
+      loop: "{{ systemd_netns_links }}"
+      loop_control:
+        loop_var: link
+        label: "{{ link.bridge | ansible.builtin.default('?') }}"
+
+    - name: validate systemd_netns_links addresses, gateways and MACs
+      vars:
+        _link_addr_valid: >-
+          {{ link.address is defined
+             and (link.address | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy }}
+        _link_prefix: "{{ (link.address | ansible.utils.ipaddr('prefix') | ansible.builtin.int) if _link_addr_valid else 0 }}"
+        _gateway_is_host: >-
+          {{ (not (link.gateway is defined))
+             or (((link.gateway | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy)
+                 and not ('/' in link.gateway)) }}
+        _gateway_in_network: >-
+          {{ (not (link.gateway is defined and _link_addr_valid and _gateway_is_host))
+             or (link.gateway is ansible.utils.in_network(link.address | ansible.utils.ipaddr('subnet'))) }}
+      ansible.builtin.assert:
+        that:
+          - _link_addr_valid
+          - _link_prefix >= 1
+          - _link_prefix <= 32
+          - _gateway_is_host
+          - _gateway_in_network
+          - >-
+            (not (link.mac is defined))
+            or (link.mac is ansible.builtin.match('^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$'))
+        fail_msg: >-
+          systemd_netns_links addresses must be canonical IPv4 CIDRs
+          (a.b.c.d/prefix, prefix 1-32); gateway, when set, must be a bare IPv4
+          host address inside the address network (the kernel rejects an
+          off-subnet next hop with 'Nexthop has invalid gateway'); mac, when set,
+          must look like aa:bb:cc:dd:ee:ff.
+          Offending element: {{ link }}
+        quiet: true
+      loop: "{{ systemd_netns_links }}"
+      loop_control:
+        loop_var: link
+        label: "{{ link.address | ansible.builtin.default('?') }}"
+
+    - name: validate at most one default-route leg
+      ansible.builtin.assert:
+        that:
+          - systemd_netns_links | selectattr('gateway', 'defined') | ansible.builtin.list | ansible.builtin.length <= 1
+        fail_msg: >-
+          at most one systemd_netns_links element may declare a gateway: the
+          namespace has a single default route, so only that leg can own it.
+          Offending elements: {{ systemd_netns_links }}
+        quiet: true
+
+    - name: "check referenced bridges exist at run time"
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/ip
+          - -o
+          - link
+          - show
+          - dev
+          - "{{ link.bridge }}"
+      changed_when: false
+      failed_when: false
+      register: _systemd_netns_bridge_probe
+      loop: "{{ systemd_netns_links }}"
+      loop_control:
+        loop_var: link
+        label: "{{ link.bridge }}"
+
+    - name: assert referenced bridges exist
+      ansible.builtin.assert:
+        that:
+          - probe.rc == 0
+        fail_msg: >-
+          systemd_netns_links[].bridge must name a bridge that already exists on
+          the host.  Bridges are owned by ak1ra_lab.network.systemd_bridge (or
+          the host's own network configuration); run that role first or create
+          the bridge beforehand.  Missing: {{ probe.link.bridge }}
+        quiet: true
+      loop: "{{ _systemd_netns_bridge_probe.results }}"
+      loop_control:
+        loop_var: probe
+        label: "{{ probe.link.bridge }}"
+
+    - name: "check referenced bridges carry an enslaved member"
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/ip
+          - -o
+          - link
+          - show
+          - master
+          - "{{ bridge_name }}"
+      changed_when: false
+      failed_when: false
+      register: _systemd_netns_bridge_members_probe
+      loop: "{{ systemd_netns_links | map(attribute='bridge') | ansible.builtin.unique | ansible.builtin.list }}"
+      loop_control:
+        loop_var: bridge_name
+        label: "{{ bridge_name }}"
+
+    - name: assert referenced bridges have at least one enslaved member
+      ansible.builtin.assert:
+        that:
+          - member_probe.rc == 0
+          - member_probe.stdout_lines | length >= 1
+        fail_msg: >-
+          systemd_netns_links[].bridge must name a bridge with at least one
+          enslaved member interface: a bridge without any uplink is an L2
+          island the namespace cannot exit through.  Enslave a physical
+          interface to it (declare it on the bridge in
+          ak1ra_lab.network.systemd_bridge) before running this role.
+          Offending bridge: {{ member_probe.bridge_name }}
+        quiet: true
+      loop: "{{ _systemd_netns_bridge_members_probe.results }}"
+      loop_control:
+        loop_var: member_probe
+        label: "{{ member_probe.bridge_name }}"
 
 - name: validate systemd_netns_hook_services type
   ansible.builtin.assert:

@@ -37,6 +37,12 @@ The format is based on Keep a Changelog, and this project does not currently gua
   own (its veth legs attach at run time, after network-online.target), so it
   stayed required-for-online and systemd-networkd-wait-online could wait for
   it forever - blocking network-online.target at boot.
+- `systemd_netns` validates the bridged topology (links, referenced bridges)
+  only when applying (`systemd_netns_state: present`): teardown (`absent`)
+  needs only the namespace name.  Referenced bridges must now carry at least
+  one enslaved member interface - a bridge without any uplink is an L2
+  island the namespace cannot exit through; the defaults documented this
+  contract but the check was missing.
 
 ## [v0.2.0] - 2026-09-09
 

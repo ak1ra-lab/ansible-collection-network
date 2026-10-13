@@ -23,8 +23,8 @@ L3 stack, so there is no host-port DNAT, no conntrack/NAT state and no
 
 - Managed host: root privileges, systemd with `iproute2`.  The bridges
   referenced by `systemd_netns_links` must already exist (created by
-  `ak1ra_lab.network.systemd_bridge` or otherwise); the role validates their
-  existence at run time.
+  `ak1ra_lab.network.systemd_bridge` or otherwise) and carry at least one
+  enslaved member interface; the role validates both at run time.
 - Control node: `ansible.utils` collection (pulled in as a collection
   dependency) - the `ipaddr` filters used for link validation run on the
   control node.
@@ -145,8 +145,9 @@ Operational notes:
 - Multiple namespaces on one host (`allow_duplicates: true`): run the role
   once per namespace with distinct `systemd_netns_name` / links.
 - Validation runs at play time: `systemd_netns_links[].bridge` must already
-  exist on the host (any owner).  Apply `systemd_bridge` first on fresh
-  hosts.
+  exist on the host (any owner) and carry at least one enslaved member
+  interface - a bridge without any uplink is an L2 island with no exit.
+  Apply `systemd_bridge` first on fresh hosts.
 
 ## Declarative teardown: `systemd_netns_state: absent`
 
