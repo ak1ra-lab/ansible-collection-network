@@ -1,0 +1,12 @@
+---
+# Keep the SHA-pinned GitHub Actions up to date. Version updates wait out a
+# 7-day cooldown (security updates are exempt) so a compromised release is
+# likely to be yanked before Dependabot opens a PR.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

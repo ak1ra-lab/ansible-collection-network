@@ -1,0 +1,95 @@
+---
+# Collection CI: ansible-lint plus the Molecule scenarios.
+#
+# The Molecule scenarios run with rootful Podman on the runner (the same
+# recipe as ak1ra-lab/docker-systemd): the tproxy scenario loads host kernel
+# modules (`modprobe nft_tproxy`, `tcp_bbr`, ...), which a rootless runtime
+# cannot do inside a user namespace.  Rootful Podman also supports the
+# privileged containers every scenario uses.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install ansible-lint and the required collections
+        run: |
+          python -m pip install --upgrade pip
+          # distlib is required by ansible-galaxy to process the collection
+          # manifest in galaxy.yml when installing from source.
+          pip install "ansible-lint==26.8.0" distlib
+          # The repository's ansible.cfg points collections_path at
+          # ./.ansible/collections; install the collection under test (for
+          # the ak1ra_lab.network.* references in playbooks) and the
+          # scenario requirements there.
+          mkdir -p .ansible/collections
+          ansible-galaxy collection install --force --collections-path .ansible/collections .
+          ansible-galaxy collection install -r requirements.yml -p .ansible/collections
+      - name: Run ansible-lint
+        run: ansible-lint
+
+  molecule:
+    name: Molecule
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install Molecule
+        run: |
+          python -m pip install --upgrade pip
+          # distlib is required by ansible-galaxy to process the collection
+          # manifest in galaxy.yml when installing from source (prerun).
+          pip install "molecule==26.8.0" distlib
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+      # The scenarios search the project-local collections path
+      # (ANSIBLE_COLLECTIONS_PATH in extensions/molecule/config.yml), and
+      # the shared default scenario's create/destroy run before
+      # ansible-compat's prerun installs anything. Install the collection
+      # under test and the scenario requirements for root up front.
+      - name: Install the collection under test and scenario requirements
+        run: |
+          mkdir -p .ansible/collections
+          sudo env "PATH=${PATH}" ansible-galaxy collection install --force --collections-path .ansible/collections .
+          sudo env "PATH=${PATH}" ansible-galaxy collection install -r requirements.yml -p .ansible/collections
+      # Rootful Podman is required (see the workflow header). The preserved
+      # PATH lets the root shell use the runner's pip-installed molecule.
+      - name: Run the Molecule scenarios
+        run: >-
+          sudo env "PATH=${PATH}"
+          MOLECULE_GLOB='extensions/molecule/**/molecule.yml'
+          molecule test --all
