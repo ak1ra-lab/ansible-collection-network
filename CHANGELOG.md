@@ -53,6 +53,16 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Fixed
 
+- Jinja2 builtins are no longer written with the `ansible.builtin.` prefix
+  in the `systemd_bridge` / `systemd_netns` tasks and throughout the
+  Molecule playbooks: the FQCN form of a Jinja2 builtin
+  (`ansible.builtin.default`, `ansible.builtin.trim`,
+  `ansible.builtin.list`, `ansible.builtin.int`, ...) only resolves on
+  ansible-core 2.19+, so the roles would fail to render on the declared
+  minimum (2.18).  Collection plugins are qualified in the same sweep
+  (`ansible.builtin.bool`, `ansible.builtin.search`,
+  `ansible.builtin.type_debug`, `ansible.builtin.b64decode`, `is
+  ansible.builtin.version`, ...) in the roles and the Molecule verifies.
 - `systemd_bridge` detects an actual NetworkManager installation by probing
   the unit file instead of `ansible_facts['services']`: on Debian-family
   hosts the packaged apt-daily units reference NetworkManager.service in
