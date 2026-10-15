@@ -16,7 +16,7 @@
     - name: assert the tproxy table is gone
       ansible.builtin.assert:
         that:
-          - _tproxy_tables.stdout is not search('ansible_tproxy')
+          - _tproxy_tables.stdout is not ansible.builtin.search('ansible_tproxy')
         fail_msg: "the tproxy table must be gone, got: {{ _tproxy_tables.stdout }}"
         quiet: true
 
@@ -29,8 +29,8 @@
     - name: assert the fwmark rule is gone
       ansible.builtin.assert:
         that:
-          - _tproxy_ip_rules.stdout is not search('lookup ansible_tproxy')
-          - _tproxy_ip_rules.stdout is not search('lookup 224')
+          - _tproxy_ip_rules.stdout is not ansible.builtin.search('lookup ansible_tproxy')
+          - _tproxy_ip_rules.stdout is not ansible.builtin.search('lookup 224')
         fail_msg: >-
           the ansible-tproxy-routing rules must be gone, got:
           {{ _tproxy_ip_rules.stdout }}

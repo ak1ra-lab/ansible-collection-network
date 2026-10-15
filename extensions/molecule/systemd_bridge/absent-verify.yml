@@ -15,8 +15,8 @@
     - name: assert no test bridge remains
       ansible.builtin.assert:
         that:
-          - _bridges.stdout is not search('br-uplink')
-          - _bridges.stdout is not search('br-svc')
+          - _bridges.stdout is not ansible.builtin.search('br-uplink')
+          - _bridges.stdout is not ansible.builtin.search('br-svc')
         fail_msg: "test bridges must be gone, got: {{ _bridges.stdout }}"
         quiet: true
 

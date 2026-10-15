@@ -16,10 +16,10 @@
     - name: assert the flowtable and its offload rule are loaded
       ansible.builtin.assert:
         that:
-          - _flow_offload_table.stdout is search('table inet ansible_flow_offload')
-          - _flow_offload_table.stdout is search('flowtable bypassed_flowtable')
-          - _flow_offload_table.stdout is search('flow add @bypassed_flowtable')
-          - _flow_offload_table.stdout is search('eth0')
+          - _flow_offload_table.stdout is ansible.builtin.search('table inet ansible_flow_offload')
+          - _flow_offload_table.stdout is ansible.builtin.search('flowtable bypassed_flowtable')
+          - _flow_offload_table.stdout is ansible.builtin.search('flow add @bypassed_flowtable')
+          - _flow_offload_table.stdout is ansible.builtin.search('eth0')
         fail_msg: >-
           the flowtable must be loaded with the auto-detected interfaces,
           got: {{ _flow_offload_table.stdout }}
@@ -50,12 +50,12 @@
         that:
           - >-
             'table inet ansible_flow_offload'
-            in (_flow_offload_dropin.content | b64decode)
+            in (_flow_offload_dropin.content | ansible.builtin.b64decode)
           - >-
             'flowtable bypassed_flowtable'
-            in (_flow_offload_dropin.content | b64decode)
-          - "'eth0' in (_flow_offload_dropin.content | b64decode)"
+            in (_flow_offload_dropin.content | ansible.builtin.b64decode)
+          - "'eth0' in (_flow_offload_dropin.content | ansible.builtin.b64decode)"
         fail_msg: >-
           unexpected drop-in content:
-          {{ _flow_offload_dropin.content | b64decode }}
+          {{ _flow_offload_dropin.content | ansible.builtin.b64decode }}
         quiet: true

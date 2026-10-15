@@ -15,7 +15,7 @@
     - name: assert the test namespace is gone
       ansible.builtin.assert:
         that:
-          - _netns.stdout is not search('molnet')
+          - _netns.stdout is not ansible.builtin.search('molnet')
         fail_msg: "namespace molnet must be gone, got: {{ _netns.stdout }}"
         quiet: true
 
@@ -28,7 +28,7 @@
     - name: assert the test bridge is gone
       ansible.builtin.assert:
         that:
-          - _bridges.stdout is not search('br-test')
+          - _bridges.stdout is not ansible.builtin.search('br-test')
         fail_msg: "bridge br-test must be gone, got: {{ _bridges.stdout }}"
         quiet: true
 

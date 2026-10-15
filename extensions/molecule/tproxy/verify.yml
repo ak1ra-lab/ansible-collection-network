@@ -52,12 +52,12 @@
     - name: assert the tproxy table is loaded with both chains and the custom sets
       ansible.builtin.assert:
         that:
-          - _tproxy_table.stdout is search('table inet ansible_tproxy')
-          - _tproxy_table.stdout is search('chain prerouting_tproxy')
-          - _tproxy_table.stdout is search('chain output_tproxy')
-          - _tproxy_table.stdout is search('tproxy to :7895')
-          - _tproxy_table.stdout is search('198.18.0.0/15')
-          - _tproxy_table.stdout is search('192.0.2.0/24')
+          - _tproxy_table.stdout is ansible.builtin.search('table inet ansible_tproxy')
+          - _tproxy_table.stdout is ansible.builtin.search('chain prerouting_tproxy')
+          - _tproxy_table.stdout is ansible.builtin.search('chain output_tproxy')
+          - _tproxy_table.stdout is ansible.builtin.search('tproxy to :7895')
+          - _tproxy_table.stdout is ansible.builtin.search('198.18.0.0/15')
+          - _tproxy_table.stdout is ansible.builtin.search('192.0.2.0/24')
         fail_msg: >-
           the tproxy table must be loaded from the deployed base config with
           the custom bypass/reject sets, got: {{ _tproxy_table.stdout }}
@@ -72,7 +72,7 @@
     - name: assert the fwmark rule is installed with the named route table
       ansible.builtin.assert:
         that:
-          - _tproxy_ip_rules.stdout is search('fwmark 0xe0 lookup ansible_tproxy')
+          - _tproxy_ip_rules.stdout is ansible.builtin.search('fwmark 0xe0 lookup ansible_tproxy')
         fail_msg: >-
           the ansible-tproxy-routing service must install the fwmark rule,
           got: {{ _tproxy_ip_rules.stdout }}
@@ -87,7 +87,7 @@
     - name: assert the local default route is installed
       ansible.builtin.assert:
         that:
-          - _tproxy_route_table.stdout is search('local default dev ')
+          - _tproxy_route_table.stdout is ansible.builtin.search('local default dev ')
         fail_msg: >-
           the ansible-tproxy-routing service must install the local default
           route, got: {{ _tproxy_route_table.stdout }}
@@ -130,7 +130,7 @@
     - name: assert the route table entry names the table
       ansible.builtin.assert:
         that:
-          - "'224 ansible_tproxy' in (_tproxy_rt_tables.content | b64decode)"
+          - "'224 ansible_tproxy' in (_tproxy_rt_tables.content | ansible.builtin.b64decode)"
         quiet: true
 
     - name: collect the ip_forward sysctl drop-in
@@ -143,13 +143,13 @@
         that:
           - >-
             'net.ipv4.ip_forward=1'
-            in (_tproxy_ip_forward_conf.content | b64decode)
+            in (_tproxy_ip_forward_conf.content | ansible.builtin.b64decode)
           - >-
             'net.ipv4.conf.all.proxy_arp=1'
-            in (_tproxy_ip_forward_conf.content | b64decode)
+            in (_tproxy_ip_forward_conf.content | ansible.builtin.b64decode)
           - >-
             'net.ipv6.conf.all.forwarding=1'
-            in (_tproxy_ip_forward_conf.content | b64decode)
+            in (_tproxy_ip_forward_conf.content | ansible.builtin.b64decode)
         quiet: true
 
     - name: collect the deployed nftables base config
@@ -162,5 +162,5 @@
         that:
           - >-
             '/etc/nftables.d/*.nft'
-            in (_tproxy_base_conf.content | b64decode)
+            in (_tproxy_base_conf.content | ansible.builtin.b64decode)
         quiet: true

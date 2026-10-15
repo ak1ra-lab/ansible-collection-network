@@ -27,7 +27,7 @@
     - name: assert the proxy guard table is gone
       ansible.builtin.assert:
         that:
-          - _proxy_guard_tables.stdout is not search('ansible_proxy_guard')
+          - _proxy_guard_tables.stdout is not ansible.builtin.search('ansible_proxy_guard')
         fail_msg: >-
           the proxy guard table must be gone, got:
           {{ _proxy_guard_tables.stdout }}

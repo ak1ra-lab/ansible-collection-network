@@ -24,7 +24,7 @@
       register: _ns_addrs
       retries: 30
       delay: 1
-      until: _ns_addrs.stdout is search('10.89.0.2/24')
+      until: _ns_addrs.stdout is ansible.builtin.search('10.89.0.2/24')
 
     - name: collect the systemd state of the netns service
       ansible.builtin.systemd_service:
@@ -42,7 +42,7 @@
     - name: assert the namespace leg carries the segment address
       ansible.builtin.assert:
         that:
-          - _ns_addrs.stdout is search('10.89.0.2/24')
+          - _ns_addrs.stdout is ansible.builtin.search('10.89.0.2/24')
         fail_msg: "expected 10.89.0.2/24 inside molnet, got: {{ _ns_addrs.stdout }}"
         quiet: true
 
@@ -61,7 +61,7 @@
     - name: assert the default route points at the bridge gateway
       ansible.builtin.assert:
         that:
-          - _ns_route.stdout is search('default via 10.89.0.1')
+          - _ns_route.stdout is ansible.builtin.search('default via 10.89.0.1')
         fail_msg: "expected default route via 10.89.0.1, got: {{ _ns_route.stdout }}"
         quiet: true
 
@@ -74,7 +74,7 @@
     - name: assert the member and the namespace leg are enslaved
       ansible.builtin.assert:
         that:
-          - _members.stdout is search('vh-ns-a')
+          - _members.stdout is ansible.builtin.search('vh-ns-a')
           - _members.stdout_lines | length >= 2
         fail_msg: >-
           expected the enslaved member and the namespace veth leg on br-test,

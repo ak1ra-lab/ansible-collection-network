@@ -16,8 +16,8 @@
       retries: 30
       delay: 1
       until: >-
-        _bridge_addrs.stdout is search('br-uplink.*10.201.0.1/24')
-        and _bridge_addrs.stdout is search('br-svc.*10.200.0.1/24')
+        _bridge_addrs.stdout is ansible.builtin.search('br-uplink.*10.201.0.1/24')
+        and _bridge_addrs.stdout is ansible.builtin.search('br-svc.*10.200.0.1/24')
 
     - name: collect the bridge device listing
       ansible.builtin.command:
@@ -28,16 +28,16 @@
     - name: assert both bridges exist and are up
       ansible.builtin.assert:
         that:
-          - _bridges.stdout is search('br-uplink.*UP')
-          - _bridges.stdout is search('br-svc.*UP')
+          - _bridges.stdout is ansible.builtin.search('br-uplink.*UP')
+          - _bridges.stdout is ansible.builtin.search('br-svc.*UP')
         fail_msg: "expected both test bridges present and up, got: {{ _bridges.stdout }}"
         quiet: true
 
     - name: assert the configured segment addresses are assigned
       ansible.builtin.assert:
         that:
-          - _bridge_addrs.stdout is search('br-uplink.*10.201.0.1/24')
-          - _bridge_addrs.stdout is search('br-svc.*10.200.0.1/24')
+          - _bridge_addrs.stdout is ansible.builtin.search('br-uplink.*10.201.0.1/24')
+          - _bridge_addrs.stdout is ansible.builtin.search('br-svc.*10.200.0.1/24')
         fail_msg: "expected segment addresses on the bridges, got: {{ _bridge_addrs.stdout }}"
         quiet: true
 
@@ -50,7 +50,7 @@
     - name: assert the veth member is enslaved to br-uplink
       ansible.builtin.assert:
         that:
-          - _uplink_members.stdout is search('vh-br-a')
+          - _uplink_members.stdout is ansible.builtin.search('vh-br-a')
         fail_msg: "vh-br-a must be enslaved to br-uplink, got: {{ _uplink_members.stdout }}"
         quiet: true
 
@@ -63,8 +63,8 @@
     - name: assert the interface-less bridge is configured and not required for online
       ansible.builtin.assert:
         that:
-          - "_svc_netctl.stdout is search('State: (no-carrier|degraded)')"
-          - "_svc_netctl.stdout is search('Required For Online: no')"
+          - "_svc_netctl.stdout is ansible.builtin.search('State: (no-carrier|degraded)')"
+          - "_svc_netctl.stdout is ansible.builtin.search('Required For Online: no')"
         fail_msg: >-
           br-svc must be configured without carrier and excluded from
           wait-online, got: {{ _svc_netctl.stdout }}
@@ -79,7 +79,7 @@
     - name: assert the uplink bridge keeps its default online requirement
       ansible.builtin.assert:
         that:
-          - "_uplink_netctl.stdout is search('Required For Online: yes')"
+          - "_uplink_netctl.stdout is ansible.builtin.search('Required For Online: yes')"
         fail_msg: >-
           br-uplink carries the host-side segment endpoint and must stay
           required for online, got: {{ _uplink_netctl.stdout }}

@@ -49,8 +49,8 @@
         _molecule_created_containers: >-
           {{ ((_molecule_containers_podman.results | default([]))
               + (_molecule_containers_docker.results | default([])))
-             | ansible.builtin.selectattr('container', 'defined')
-             | map(attribute='container') | ansible.builtin.list }}
+             | selectattr('container', 'defined')
+             | map(attribute='container') | list }}
 
     - name: fail when a container did not start
       ansible.builtin.assert:

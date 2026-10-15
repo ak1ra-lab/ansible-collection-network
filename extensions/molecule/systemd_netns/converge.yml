@@ -40,7 +40,7 @@
       register: _bridge_member
       retries: 15
       delay: 1
-      until: _bridge_member.stdout is search('vh-ns-a')
+      until: _bridge_member.stdout is ansible.builtin.search('vh-ns-a')
 
     - name: apply the namespace infrastructure (systemd_netns)
       ansible.builtin.include_role:

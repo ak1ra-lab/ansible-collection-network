@@ -27,7 +27,7 @@
     - name: assert the flow offload table is gone
       ansible.builtin.assert:
         that:
-          - _flow_offload_tables.stdout is not search('ansible_flow_offload')
+          - _flow_offload_tables.stdout is not ansible.builtin.search('ansible_flow_offload')
         fail_msg: >-
           the flow offload table must be gone, got:
           {{ _flow_offload_tables.stdout }}
