@@ -25,7 +25,7 @@
       - >-
         (bridge.name is defined
         and bridge.name is ansible.builtin.match('^[a-zA-Z0-9_.-]+$')
-        and bridge.name | ansible.builtin.length <= 15)
+        and bridge.name | length <= 15)
       - >-
         (not (bridge.interface is defined))
         or (bridge.interface is ansible.builtin.match('^[a-zA-Z0-9_.@:-]+$')
@@ -40,22 +40,22 @@
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:
     loop_var: bridge
-    label: "{{ bridge.name | ansible.builtin.default('?') }}"
+    label: "{{ bridge.name | default('?') }}"
   when: systemd_bridge_state == 'present'
 
 - name: validate unique bridge names and enslaved interfaces
   ansible.builtin.assert:
     that:
       - >-
-        systemd_bridge_bridges | map(attribute='name') | ansible.builtin.list
-        | ansible.builtin.unique | ansible.builtin.length
-        == systemd_bridge_bridges | ansible.builtin.length
+        systemd_bridge_bridges | map(attribute='name') | list
+        | ansible.builtin.unique | length
+        == systemd_bridge_bridges | length
       - >-
         systemd_bridge_bridges | selectattr('interface', 'defined')
-        | map(attribute='interface') | ansible.builtin.list
-        | ansible.builtin.unique | ansible.builtin.length
+        | map(attribute='interface') | list
+        | ansible.builtin.unique | length
         == systemd_bridge_bridges | selectattr('interface', 'defined')
-        | ansible.builtin.list | ansible.builtin.length
+        | list | length
     fail_msg: >-
       each systemd_bridge_bridges name must be unique and each enslaved
       interface must back at most one bridge (bridges without an interface
@@ -69,11 +69,11 @@
     _addr_v4: >-
       {{ bridge.address is defined
          and (bridge.address | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy }}
-    _addr_prefix: "{{ (bridge.address | ansible.utils.ipaddr('prefix') | ansible.builtin.int) if _addr_v4 else 0 }}"
+    _addr_prefix: "{{ (bridge.address | ansible.utils.ipaddr('prefix') | int) if _addr_v4 else 0 }}"
     _ageing_ok: >-
       {{ (not (bridge.ageing_time is defined))
          or (bridge.ageing_time | ansible.builtin.type_debug in ['int', 'float']
-             and (bridge.ageing_time | ansible.builtin.int) >= 1) }}
+             and (bridge.ageing_time | int) >= 1) }}
     _gateway_ok: >-
       {{ (not (bridge.gateway is defined))
          or ((bridge.gateway | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy
@@ -81,10 +81,10 @@
              and bridge.address is defined and _addr_v4
              and bridge.gateway is ansible.utils.in_network(bridge.address | ansible.utils.ipaddr('subnet'))) }}
     _dns_no_slash: >-
-      {{ bridge.dns | ansible.builtin.select('search', '/') | ansible.builtin.list | length == 0 }}
+      {{ bridge.dns | select('search', '/') | list | length == 0 }}
     _dns_ips_valid: >-
-      {{ bridge.dns | ansible.builtin.map('ansible.utils.ipaddr', 'ipv4')
-         | ansible.builtin.select('equalto', false) | ansible.builtin.list | length == 0 }}
+      {{ bridge.dns | map('ansible.utils.ipaddr', 'ipv4')
+         | select('equalto', false) | list | length == 0 }}
     _dns_ok: >-
       {{ (not (bridge.dns is defined))
          or (bridge.address is defined
@@ -112,13 +112,13 @@
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:
     loop_var: bridge
-    label: "{{ bridge.name | ansible.builtin.default('?') }}"
+    label: "{{ bridge.name | default('?') }}"
   when: systemd_bridge_state == 'present'
 
 - name: validate at most one gateway-carrying bridge (single host default route)
   ansible.builtin.assert:
     that:
-      - systemd_bridge_bridges | selectattr('gateway', 'defined') | ansible.builtin.list | ansible.builtin.length <= 1
+      - systemd_bridge_bridges | selectattr('gateway', 'defined') | list | length <= 1
     fail_msg: >-
       at most one systemd_bridge_bridges element may declare a gateway: the
       host has a single default route, and a second gateway would install a
@@ -150,4 +150,4 @@
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:
     loop_var: bridge
-    label: "{{ bridge.name | ansible.builtin.default('?') }}"
+    label: "{{ bridge.name | default('?') }}"

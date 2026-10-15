@@ -51,14 +51,14 @@
       loop: "{{ systemd_netns_links }}"
       loop_control:
         loop_var: link
-        label: "{{ link.bridge | ansible.builtin.default('?') }}"
+        label: "{{ link.bridge | default('?') }}"
 
     - name: validate systemd_netns_links addresses, gateways and MACs
       vars:
         _link_addr_valid: >-
           {{ link.address is defined
              and (link.address | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy }}
-        _link_prefix: "{{ (link.address | ansible.utils.ipaddr('prefix') | ansible.builtin.int) if _link_addr_valid else 0 }}"
+        _link_prefix: "{{ (link.address | ansible.utils.ipaddr('prefix') | int) if _link_addr_valid else 0 }}"
         _gateway_is_host: >-
           {{ (not (link.gateway is defined))
              or (((link.gateway | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy)
@@ -87,12 +87,12 @@
       loop: "{{ systemd_netns_links }}"
       loop_control:
         loop_var: link
-        label: "{{ link.address | ansible.builtin.default('?') }}"
+        label: "{{ link.address | default('?') }}"
 
     - name: validate at most one default-route leg
       ansible.builtin.assert:
         that:
-          - systemd_netns_links | selectattr('gateway', 'defined') | ansible.builtin.list | ansible.builtin.length <= 1
+          - systemd_netns_links | selectattr('gateway', 'defined') | list | length <= 1
         fail_msg: >-
           at most one systemd_netns_links element may declare a gateway: the
           namespace has a single default route, so only that leg can own it.
@@ -143,7 +143,7 @@
       changed_when: false
       failed_when: false
       register: _systemd_netns_bridge_members_probe
-      loop: "{{ systemd_netns_links | map(attribute='bridge') | ansible.builtin.unique | ansible.builtin.list }}"
+      loop: "{{ systemd_netns_links | map(attribute='bridge') | ansible.builtin.unique | list }}"
       loop_control:
         loop_var: bridge_name
         label: "{{ bridge_name }}"

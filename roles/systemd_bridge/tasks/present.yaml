@@ -46,7 +46,7 @@
 - name: ensure NetworkManager conf.d directory exists (when NetworkManager is present)
   when: >-
     systemd_bridge_bridges | length > 0
-    and _systemd_bridge_nm_installed | bool
+    and _systemd_bridge_nm_installed | ansible.builtin.bool
   ansible.builtin.file:
     path: "{{ _systemd_bridge_nm_conf_dir }}"
     state: directory
@@ -55,7 +55,7 @@
 - name: template NetworkManager unmanaged-devices drop-ins on remote
   when: >-
     systemd_bridge_bridges | length > 0
-    and _systemd_bridge_nm_installed | bool
+    and _systemd_bridge_nm_installed | ansible.builtin.bool
     and bridge.interface is defined
   ansible.builtin.template:
     src: etc/NetworkManager/conf.d/ansible-bridge.conf.j2
@@ -64,7 +64,7 @@
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:
     loop_var: bridge
-    label: "{{ bridge.interface | ansible.builtin.default('<no interface>') }}"
+    label: "{{ bridge.interface | default('<no interface>') }}"
   notify:
     - reload NetworkManager
 
@@ -88,7 +88,7 @@
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:
     loop_var: bridge
-    label: "{{ bridge.interface | ansible.builtin.default('<no interface>') }}"
+    label: "{{ bridge.interface | default('<no interface>') }}"
   notify:
     - restart systemd-networkd.service
   when: bridge.interface is defined
@@ -101,6 +101,6 @@
   loop: "{{ systemd_bridge_bridges }}"
   loop_control:
     loop_var: bridge
-    label: "{{ bridge.address | ansible.builtin.default('<no address>') }}"
+    label: "{{ bridge.address | default('<no address>') }}"
   notify:
     - restart systemd-networkd.service

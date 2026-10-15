@@ -25,20 +25,20 @@
   ansible.builtin.set_fact:
     _systemd_bridge_networkd_dir_stats: >-
       {{ _systemd_bridge_networkd_dirs.results
-         | ansible.builtin.map(attribute='stat') | ansible.builtin.list }}
+         | map(attribute='stat') | list }}
 
 - name: derive existing networkd configuration directories and managed devices
   ansible.builtin.set_fact:
     _systemd_bridge_networkd_scan_dirs: >-
-      {{ (_systemd_bridge_networkd_dir_stats | ansible.builtin.reject('equalto', none))
-         | ansible.builtin.selectattr('exists', 'equalto', true)
-         | ansible.builtin.selectattr('isdir', 'equalto', true)
-         | ansible.builtin.map(attribute='path') | ansible.builtin.list }}
+      {{ (_systemd_bridge_networkd_dir_stats | reject('equalto', none))
+         | selectattr('exists', 'equalto', true)
+         | selectattr('isdir', 'equalto', true)
+         | map(attribute='path') | list }}
     _systemd_bridge_devices: >-
       {{ (systemd_bridge_bridges | map(attribute='name')
           + systemd_bridge_bridges | selectattr('interface', 'defined')
             | map(attribute='interface'))
-         | ansible.builtin.list | ansible.builtin.unique }}
+         | list | ansible.builtin.unique }}
 
 - name: find networkd configuration files with Name= matches
   when: _systemd_bridge_networkd_scan_dirs | length > 0
@@ -52,17 +52,17 @@
 - name: read the candidate files
   ansible.builtin.slurp:
     src: "{{ item }}"
-  loop: "{{ _systemd_bridge_networkd_files.files | default([]) | map(attribute='path') | ansible.builtin.list }}"
+  loop: "{{ _systemd_bridge_networkd_files.files | default([]) | map(attribute='path') | list }}"
   register: _systemd_bridge_networkd_contents
 
 - name: determine foreign networkd files claiming the managed devices
   ansible.builtin.set_fact:
     _systemd_bridge_conflict_files_other: >-
       {{ ((_systemd_bridge_networkd_files.files | default([])
-          | ansible.builtin.map(attribute='path') | ansible.builtin.list)
+          | map(attribute='path') | list)
           | ansible.builtin.zip(_systemd_bridge_networkd_contents.results | default([])
-             | ansible.builtin.map(attribute='content') | ansible.builtin.list))
-         | ansible.builtin.map('ansible.builtin.list') | ansible.builtin.list
+             | map(attribute='content') | list))
+         | map('list') | list
          | ak1ra_lab.network.networkd_conflicts(_systemd_bridge_file_marker, _systemd_bridge_devices) }}
 
 - name: fail on conflicting networkd configuration (systemd_bridge_conflict_check)

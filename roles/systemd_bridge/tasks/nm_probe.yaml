@@ -21,6 +21,6 @@
   ansible.builtin.set_fact:
     _systemd_bridge_nm_installed: >-
       {{ _systemd_bridge_nm_unit_stats.results
-         | ansible.builtin.selectattr('stat', 'defined')
-         | ansible.builtin.selectattr('stat.exists', 'equalto', true)
-         | ansible.builtin.list | length > 0 }}
+         | selectattr('stat', 'defined')
+         | selectattr('stat.exists', 'equalto', true)
+         | list | length > 0 }}

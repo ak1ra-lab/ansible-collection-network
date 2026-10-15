@@ -41,12 +41,12 @@
 - name: derive the systemd units joined to the namespace
   ansible.builtin.set_fact:
     _systemd_netns_hooked_units: >-
-      {{ (_systemd_netns_hooked_units | ansible.builtin.default([]))
+      {{ (_systemd_netns_hooked_units | default([]))
          + ([ _systemd_netns_pid_unit ] if _systemd_netns_pid_unit else []) }}
   vars:
-    _cgroup_parts: "{{ (item.stdout | default('')) | ansible.builtin.trim | ansible.builtin.split('/') }}"
+    _cgroup_parts: "{{ (item.stdout | default('')) | trim | ansible.builtin.split('/') }}"
     _systemd_netns_pid_unit: >-
-      {{ ((_cgroup_parts | ansible.builtin.select('equalto', 'system.slice') | ansible.builtin.list | length == 1)
+      {{ ((_cgroup_parts | select('equalto', 'system.slice') | list | length == 1)
           and ((_cgroup_parts[-1] | ansible.builtin.split('.'))[-1] == 'service'))
          | ansible.builtin.ternary(_cgroup_parts[-1], '') }}
   loop: "{{ _systemd_netns_pid_cgroups.results | default([]) }}"
@@ -60,7 +60,7 @@
     name: "{{ unit }}"
     state: stopped
   failed_when: false
-  loop: "{{ _systemd_netns_hooked_units | ansible.builtin.default([]) | ansible.builtin.unique }}"
+  loop: "{{ _systemd_netns_hooked_units | default([]) | ansible.builtin.unique }}"
   loop_control:
     loop_var: unit
     label: "{{ unit }}"
@@ -137,13 +137,13 @@
   ansible.builtin.set_fact:
     _systemd_netns_veth_names: "{{ _systemd_netns_veth_list.stdout_lines \
       | map('ansible.builtin.regex_replace', '^\\d+: ([^:@]+)(@[^:]+)?: .*$', '\\1') \
-      | ansible.builtin.list }}"
+      | list }}"
 
 - name: keep leftover host veth legs of this namespace by naming prefix
   ansible.builtin.set_fact:
     _systemd_netns_leftover_veth: "{{ _systemd_netns_veth_names \
-      | ansible.builtin.select('match', '^' ~ _systemd_netns_veth_host_prefix ~ '-[0-9]+$') \
-      | ansible.builtin.list }}"
+      | select('match', '^' ~ _systemd_netns_veth_host_prefix ~ '-[0-9]+$') \
+      | list }}"
 
 - name: remove leftover host veth legs (fallback for already-deleted unit files)
   ansible.builtin.command:
@@ -162,7 +162,7 @@
       - "{{ item }}"
   changed_when: false
   failed_when: false
-  loop: "{{ _systemd_netns_dropins.stdout_lines | map('dirname') | ansible.builtin.list | ansible.builtin.unique }}"
+  loop: "{{ _systemd_netns_dropins.stdout_lines | map('dirname') | list | ansible.builtin.unique }}"
   loop_control:
     loop_var: item
     label: "{{ item }}"

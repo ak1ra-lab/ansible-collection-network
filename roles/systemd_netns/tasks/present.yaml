@@ -105,5 +105,5 @@
     - name: report egress addresses
       ansible.builtin.debug:
         msg: >-
-          namespace egress IP: {{ _systemd_netns_verify_ns.stdout | ansible.builtin.default('unreachable', true) }};
-          host egress IP: {{ _systemd_netns_verify_host.stdout | ansible.builtin.default('unreachable', true) }}
+          namespace egress IP: {{ _systemd_netns_verify_ns.stdout | default('unreachable', true) }};
+          host egress IP: {{ _systemd_netns_verify_host.stdout | default('unreachable', true) }}
