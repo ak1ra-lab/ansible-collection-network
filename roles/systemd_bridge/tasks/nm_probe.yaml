@@ -11,10 +11,12 @@
 
 - name: probe NetworkManager unit files
   ansible.builtin.stat:
-    path: "{{ item }}"
+    path: "{{ unit_file }}"
   loop:
     - /usr/lib/systemd/system/NetworkManager.service
     - /lib/systemd/system/NetworkManager.service
+  loop_control:
+    loop_var: unit_file
   register: _systemd_bridge_nm_unit_stats
 
 - name: derive NetworkManager installation state

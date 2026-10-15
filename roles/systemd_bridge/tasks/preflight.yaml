@@ -14,11 +14,13 @@
 
 - name: probe networkd configuration directories
   ansible.builtin.stat:
-    path: "{{ item }}"
+    path: "{{ network_dir }}"
   loop:
     - "{{ _systemd_bridge_network_dir }}"
     - /run/systemd/network
     - /usr/lib/systemd/network
+  loop_control:
+    loop_var: network_dir
   register: _systemd_bridge_networkd_dirs
 
 - name: derive directory stat results
@@ -51,8 +53,10 @@
 
 - name: read the candidate files
   ansible.builtin.slurp:
-    src: "{{ item }}"
+    src: "{{ networkd_file }}"
   loop: "{{ _systemd_bridge_networkd_files.files | default([]) | map(attribute='path') | list }}"
+  loop_control:
+    loop_var: networkd_file
   register: _systemd_bridge_networkd_contents
 
 - name: determine foreign networkd files claiming the managed devices
