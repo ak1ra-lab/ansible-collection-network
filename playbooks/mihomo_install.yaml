@@ -1,0 +1,21 @@
+---
+# ak1ra_lab.network.mihomo_install - collection playbook entry point.
+#
+# Deploys the static mihomo binary only: no service identity, no unit, no
+# configuration (the service roles own those, and their playbooks -
+# playbooks/mihomo_client.yaml / playbooks/mihomo_server.yaml - apply the
+# installer themselves).  The archive payload is a statically linked ELF, so
+# this runs on any systemd-based Linux host with `gzip`.
+#
+# The contract is the mihomo_install_* variable namespace documented in
+# roles/mihomo_install/README.md; override it via group_vars/host_vars or
+# extra-vars - role defaults apply otherwise.  A standalone run does not
+# restart a service unless the play defines the handler named by
+# mihomo_install_restart_handler.
+
+- name: mihomo static binary
+  hosts: "{{ playbook_hosts | default('localhost') }}"
+  become: true
+  gather_facts: true
+  roles:
+    - ak1ra_lab.network.mihomo_install

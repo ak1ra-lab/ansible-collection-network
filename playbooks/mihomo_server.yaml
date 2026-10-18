@@ -1,0 +1,28 @@
+---
+# ak1ra_lab.network.mihomo_server - collection playbook entry point.
+#
+# Orchestrates the two roles the server needs:
+#   - ak1ra_lab.network.mihomo_install deploys the static binary (the
+#     mihomo_install_* contract: version policy, GitHub-proxy prefix, amd64
+#     microarchitecture selection);
+#   - ak1ra_lab.network.mihomo_server owns the service identity, the
+#     listeners configuration, the systemd unit, the generated credentials
+#     and the controller-local client artifacts (the mihomo_server_* contract).
+# The install role's restart hook points at the server role's handler, so a
+# binary install/upgrade restarts mihomo.service at the end of the play.
+#
+# Override the contracts via group_vars/host_vars or extra-vars - role
+# defaults apply otherwise.  Set mihomo_install_enabled=false when the binary
+# is managed out of band:
+#
+#   ansible-playbook ak1ra_lab.network.mihomo_server -e mihomo_install_version=latest
+
+- name: mihomo proxy server
+  hosts: "{{ playbook_hosts | default('mihomo-server') }}"
+  become: true
+  gather_facts: true
+  roles:
+    - role: ak1ra_lab.network.mihomo_install
+      vars:
+        mihomo_install_restart_handler: systemctl restart mihomo.service
+    - ak1ra_lab.network.mihomo_server
