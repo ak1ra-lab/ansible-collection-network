@@ -1,24 +1,26 @@
 ---
-# ansible-lint configuration
-# https://ansible.readthedocs.io/projects/lint/configuring/
-#
-# Run with:  ansible-lint
+# .ansible-lint
 
+# Profiles in ascending order of strictness:
+#   min → basic → moderate → safety → shared → production
 profile: production
 
+# Paths to exclude from linting.
 exclude_paths:
-  - .venv/
   - .git/
-  - dist/
+  - .venv/
+  # Controller-local generated data (mihomo_server client nodes, profile
+  # mirrors): not Ansible source.  The directory is gitignored (config/*),
+  # but ansible-lint does not read .gitignore.
+  - config/
 
-warn_list: []
-
+# Rules to skip entirely.
 skip_list:
   - name[casing]
 
-kinds:
-  - tasks: "roles/*/tasks/*.yaml"
-  - handlers: "roles/*/handlers/*.yaml"
-  - vars: "roles/*/vars/*.yaml"
-  - defaults: "roles/*/defaults/*.yaml"
-  - meta: "roles/*/meta/*.yaml"
+# Do not add a `kinds:` mapping back.  The default kind detection already
+# covers every path in this repository, and remapping role `defaults/` or
+# `vars/` files to a custom kind silently disables
+# `var-naming[no-role-prefix]` for that role.  Remapping playbooks (e.g. the
+# Molecule scenarios) to the plain "yaml" kind also skips the rules that only
+# run for playbook files.
