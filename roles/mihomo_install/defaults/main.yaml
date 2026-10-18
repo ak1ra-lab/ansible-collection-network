@@ -1,0 +1,69 @@
+---
+# ak1ra_lab.network.mihomo_install - public variable contract
+#
+# Installs the static mihomo binary from the MetaCubeX/mihomo GitHub releases
+# (the official mihomo-linux-<arch>[-<level>]-<version>.gz archive) as
+# /usr/local/bin/mihomo.  The payload is a statically linked ELF, so the role
+# is distribution-neutral on systemd-based Linux hosts and touches neither the
+# package manager nor a service identity: the service roles
+# (ak1ra_lab.network.mihomo_client / mihomo_server) own the `mihomo` user/group
+# and their own systemd unit, and the playbooks orchestrate this role before
+# them.
+#
+# Version policy (`mihomo_install_version`):
+#   present         install the latest release when the binary is missing,
+#                   otherwise do nothing (repeated runs need no network);
+#   latest          converge to the latest release (upgrade or downgrade);
+#   X.Y.Z / vX.Y.Z  converge to that release.
+#
+# The role deliberately does NOT manage the configuration, the systemd unit,
+# the service identity or service restarts: the calling playbook passes
+# `mihomo_install_restart_handler` (e.g. `systemctl restart mihomo.service`)
+# to have the service role's handler notified after an install/upgrade.
+
+# ── Behavior ─────────────────────────────────────────────────────────────────
+
+mihomo_install_enabled: true
+mihomo_install_version: present
+
+# Archive override: the `.gz` release archive to install, given either as a
+# controller-local file path or as an `http(s)`/`ftp` URL (a mirror).  Local
+# paths are copied to the target (relative paths resolve like any copy source
+# - the role and playbook directories), URLs are fetched with get_url; the
+# value shape picks the transport.  When set, the version policy degrades to
+# "install when the binary is missing" and no release metadata is queried.
+mihomo_install_package_src: ""
+
+# Reinstall the resolved release even when the installed version already
+# matches (e.g. after switching mihomo_install_microarch).
+mihomo_install_force: false
+
+# x86-64 microarchitecture build preference (mihomo publishes
+# mihomo-linux-amd64-v1/-v2/-v3-... archives next to the portable baseline):
+#   auto             detect the level with ak1ra_lab.general.cpu_info and use
+#                    the matching build when the release provides it
+#                    (falling back to the baseline); skipped on non-amd64
+#   none / baseline  always use the portable baseline build
+#   v1..v4 / x86-64-vN
+#                    force a level (amd64 only)
+mihomo_install_microarch: auto
+
+# GitHub release repository; override for forks.  The release metadata query
+# goes straight to api.github.com and authenticates with the controller's
+# GITHUB_TOKEN environment variable when present (rate limits); there is no
+# variable - export GITHUB_TOKEN for the playbook run.
+mihomo_install_repo: MetaCubeX/mihomo
+
+# Handler notified after the binary is installed/upgraded (empty = none).
+# The service roles own that handler; standalone installs leave it empty
+# unless the play defines one.
+mihomo_install_restart_handler: ""
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+
+# Installed binary; /usr/local/bin is the FHS location for unpackaged software.
+mihomo_install_binary: /usr/local/bin/mihomo
+
+# Parent directory of the role-owned mkdtemp download directory (the private
+# directory is created with mode 0700 and removed again after every run).
+mihomo_install_tmp_dir: /var/tmp

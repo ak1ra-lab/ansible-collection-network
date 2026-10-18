@@ -1,0 +1,62 @@
+---
+# ak1ra_lab.network.mihomo_install - internal variables.
+#
+# Do not override these; override the public variables in defaults/main.yaml
+# (or pass -e) instead.
+
+# Accepted values of mihomo_install_version; anything else must be a pinned
+# version tag such as 1.19.32 / v1.19.32.
+mihomo_install_version_available:
+  - present
+  - latest
+
+# The value shape of mihomo_install_package_src picks the transport: a
+# `scheme://` value is a URL (get_url), anything else is a controller-local
+# file path (copy).
+_mihomo_install_package_is_url: >-
+  {{ mihomo_install_package_src is ansible.builtin.match('^[a-zA-Z][a-zA-Z0-9+.-]*://') }}
+
+# Architecture token used in the mihomo release asset names.  Only the
+# architectures whose archives carry no extra flavour token are mapped;
+# loong64 (abi1/abi2) and mips (hardfloat/softfloat) need an explicit
+# mihomo_install_package_src override.
+_mihomo_install_asset_arch_map:
+  x86_64: amd64
+  i386: "386"
+  i686: "386"
+  aarch64: arm64
+  armv6l: armv6
+  armv7l: armv7
+  ppc64le: ppc64le
+  ppc64el: ppc64le
+  riscv64: riscv64
+  s390x: s390x
+_mihomo_install_asset_arch: >-
+  {{ _mihomo_install_asset_arch_map.get(
+       ansible_facts.architecture | default(''), '') }}
+
+# Microarchitecture token passed to github_releases_info (empty = portable
+# baseline build).  `auto` uses the level detected by ak1ra_lab.general.
+# cpu_info, which is empty on architectures without a level table; `none`,
+# `baseline` and an empty value force the baseline.
+_mihomo_install_microarch_resolved: >-
+  {{ '' if (not mihomo_install_microarch)
+          or mihomo_install_microarch in ['none', 'baseline']
+     else (mihomo_install_microarch if mihomo_install_microarch != 'auto'
+           else (_mihomo_install_cpu_info.cpu.microarch_level | default(''))) }}
+
+# Selects the baseline (portable) archive of the release when no
+# microarchitecture level is used: the microarchitecture variants
+# (mihomo-linux-amd64-v1-..., -v2-, -v3-) carry an extra level token between
+# the architecture and the version and do not match.  With a level, the
+# variant assets are admitted and github_releases_info prefers the requested
+# level.
+_mihomo_install_asset_name_regex: >-
+  {{ ('^mihomo-linux-' ~ _mihomo_install_asset_arch ~ '(?:-v[0-9])?-v\d+(?:\.\d+)+\.gz$')
+     if _mihomo_install_microarch_resolved | length > 0
+     else ('^mihomo-linux-' ~ _mihomo_install_asset_arch ~ '-v\d+(?:\.\d+)+\.gz$') }}
+
+# `mihomo_install_version` without a leading `v`, for installed-version
+# comparisons.
+_mihomo_install_wanted_version: >-
+  {{ mihomo_install_version | ansible.builtin.regex_replace('^v', '') }}

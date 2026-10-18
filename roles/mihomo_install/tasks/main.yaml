@@ -1,0 +1,9 @@
+---
+# tasks file for ak1ra_lab.network.mihomo_install
+
+- name: validate contract variables
+  ansible.builtin.import_tasks: validation.yaml
+
+- name: "install/upgrade the mihomo binary (mihomo_install_enabled: true)"
+  when: mihomo_install_enabled | ansible.builtin.bool
+  ansible.builtin.import_tasks: install.yaml

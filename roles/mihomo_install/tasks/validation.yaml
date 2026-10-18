@@ -1,0 +1,34 @@
+---
+# tasks/validation.yaml - fail fast on contract violations before anything
+# on the host is touched.
+
+- name: validate the mihomo_install contract
+  ansible.builtin.assert:
+    that:
+      - >-
+        mihomo_install_version in mihomo_install_version_available
+        or mihomo_install_version is ansible.builtin.regex('^v?\d+(\.\d+)+$')
+      - >-
+        (not mihomo_install_microarch)
+        or mihomo_install_microarch in ['auto', 'none', 'baseline']
+        or mihomo_install_microarch is ansible.builtin.regex('^v?[1-4]$|^x86-64-v[1-4]$')
+      - mihomo_install_binary is ansible.builtin.match('^/')
+      - >-
+        (not mihomo_install_enabled | ansible.builtin.bool)
+        or (mihomo_install_package_src | length > 0)
+        or (_mihomo_install_asset_arch | length > 0)
+      - >-
+        (not mihomo_install_enabled | ansible.builtin.bool)
+        or (not mihomo_install_microarch)
+        or mihomo_install_microarch in ['auto', 'none', 'baseline']
+        or (_mihomo_install_asset_arch == 'amd64')
+    fail_msg: |
+      mihomo_install variables violate the role contract:
+        mihomo_install_version must be 'present', 'latest' or a version such
+        as '1.19.32' / 'v1.19.32'
+        mihomo_install_microarch must be 'auto', 'none'/'baseline' or a level
+        such as 'v3' / 'x86-64-v3' (levels apply to amd64 only)
+        mihomo_install_binary must be an absolute path
+        a supported architecture (x86_64/aarch64/...) is required unless
+        mihomo_install_package_src overrides the release lookup
+    quiet: true

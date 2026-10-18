@@ -1,0 +1,173 @@
+---
+# tasks/install.yaml - resolve the wanted mihomo release, download its static
+# .gz archive, decompress it and install the binary.  The release metadata
+# comes from ak1ra_lab.general.github_releases_info: platform asset selection
+# plus the GitHub asset digest used as the get_url checksum.  A
+# `mihomo_install_package_src` override replaces the release lookup: a
+# controller-local file is copied to the target, a URL is fetched.
+#
+# The deployment steps do not run in check mode: get_url cannot download into
+# a download directory that tempfile has not created, and the binary payload
+# is only observable after the fact.  A check run still probes the installed
+# version and resolves the wanted release metadata.
+
+- name: check the installed mihomo binary
+  ansible.builtin.stat:
+    path: "{{ mihomo_install_binary }}"
+  register: _mihomo_install_binary_state
+
+- name: read the installed mihomo version
+  when: _mihomo_install_binary_state.stat.exists
+  ansible.builtin.command:
+    argv:
+      - "{{ mihomo_install_binary }}"
+      - -v
+  check_mode: false
+  changed_when: false
+  failed_when: false
+  register: _mihomo_install_probe
+
+- name: record the installed mihomo version
+  ansible.builtin.set_fact:
+    _mihomo_install_installed: >-
+      {{ ((_mihomo_install_probe.stdout | default(''))
+          | ansible.builtin.regex_search('v\d+(?:\.\d+)+'))
+         | default('', true)
+         | ansible.builtin.regex_replace('^v', '') }}
+
+- name: detect the target CPU microarchitecture level
+  when:
+    - mihomo_install_microarch == 'auto'
+    - _mihomo_install_asset_arch == 'amd64'
+    - mihomo_install_package_src | length == 0
+  ak1ra_lab.general.cpu_info:
+  register: _mihomo_install_cpu_info
+
+# Resolve when the wanted version is a moving target (`latest`), when the
+# binary is missing (`present`) or when the installed version does not match
+# a pinned one.  A matching installation is left alone without any network
+# access unless mihomo_install_force re-resolves and reinstalls it.
+- name: decide whether the release metadata must be queried
+  ansible.builtin.set_fact:
+    _mihomo_install_resolve: >-
+      {{ (mihomo_install_package_src | length == 0)
+         and (
+           (mihomo_install_force | ansible.builtin.bool)
+           or (mihomo_install_version == 'latest')
+           or (mihomo_install_version == 'present' and _mihomo_install_installed == '')
+           or (mihomo_install_version not in mihomo_install_version_available
+               and _mihomo_install_installed != _mihomo_install_wanted_version)
+         ) }}
+
+- name: query the mihomo release metadata
+  when: _mihomo_install_resolve | ansible.builtin.bool
+  ak1ra_lab.general.github_releases_info:
+    repo: "{{ mihomo_install_repo }}"
+    release_tag: >-
+      {{ ('v' + _mihomo_install_wanted_version)
+         if mihomo_install_version not in mihomo_install_version_available
+         else '' }}
+    asset_name_regex: "{{ _mihomo_install_asset_name_regex }}"
+    asset_microarch: "{{ _mihomo_install_microarch_resolved }}"
+    asset_os: linux
+    asset_arch: "{{ _mihomo_install_asset_arch }}"
+    token: "{{ lookup('ansible.builtin.env', 'GITHUB_TOKEN', default='') }}"
+  register: _mihomo_install_release
+
+- name: record the resolved release metadata
+  when: _mihomo_install_resolve | ansible.builtin.bool
+  ansible.builtin.set_fact:
+    _mihomo_install_target_version: >-
+      {{ _mihomo_install_release.release.tag_name | ansible.builtin.regex_replace('^v', '') }}
+    _mihomo_install_download_url: "{{ _mihomo_install_release.download_url }}"
+    _mihomo_install_download_checksum: "{{ _mihomo_install_release.download_checksum }}"
+
+- name: record the explicit archive override (package_src)
+  when: mihomo_install_package_src | length > 0
+  ansible.builtin.set_fact:
+    _mihomo_install_download_url: "{{ mihomo_install_package_src }}"
+    _mihomo_install_download_checksum: ""
+
+- name: decide whether the mihomo binary must be installed
+  ansible.builtin.set_fact:
+    _mihomo_install_needs_install: >-
+      {{ ((mihomo_install_package_src | length > 0)
+          and ((mihomo_install_force | ansible.builtin.bool)
+               or (_mihomo_install_installed == '')))
+         or ((_mihomo_install_resolve | ansible.builtin.bool)
+             and ((mihomo_install_force | ansible.builtin.bool)
+                  or (_mihomo_install_target_version != _mihomo_install_installed))) }}
+
+- name: create the role-owned download directory
+  when:
+    - _mihomo_install_needs_install | ansible.builtin.bool
+    - not ansible_check_mode
+  ansible.builtin.tempfile:
+    state: directory
+    path: "{{ mihomo_install_tmp_dir }}"
+    prefix: ansible-mihomo-install.
+  register: _mihomo_install_download_dir
+
+- name: copy the mihomo archive from the controller (package_src)
+  when:
+    - _mihomo_install_needs_install | ansible.builtin.bool
+    - mihomo_install_package_src | length > 0
+    - not (_mihomo_install_package_is_url | ansible.builtin.bool)
+    - not ansible_check_mode
+  ansible.builtin.copy:
+    src: "{{ mihomo_install_package_src }}"
+    dest: "{{ _mihomo_install_download_dir.path }}/mihomo.gz"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: download the mihomo archive
+  when:
+    - _mihomo_install_needs_install | ansible.builtin.bool
+    - >-
+      (mihomo_install_package_src | length == 0)
+      or (_mihomo_install_package_is_url | ansible.builtin.bool)
+    - not ansible_check_mode
+  ansible.builtin.get_url:
+    url: "{{ _mihomo_install_download_url }}"
+    dest: "{{ _mihomo_install_download_dir.path }}/mihomo.gz"
+    checksum: "{{ _mihomo_install_download_checksum | default(omit, true) }}"
+    owner: root
+    group: root
+    mode: "0644"
+    force: true
+
+- name: decompress the mihomo archive
+  when:
+    - _mihomo_install_needs_install | ansible.builtin.bool
+    - not ansible_check_mode
+  ansible.builtin.command:
+    argv:
+      - gzip
+      - -d
+      - "{{ _mihomo_install_download_dir.path }}/mihomo.gz"
+    creates: "{{ _mihomo_install_download_dir.path }}/mihomo"
+
+- name: install the mihomo binary
+  when:
+    - _mihomo_install_needs_install | ansible.builtin.bool
+    - not ansible_check_mode
+  ansible.builtin.copy:
+    src: "{{ _mihomo_install_download_dir.path }}/mihomo"
+    dest: "{{ mihomo_install_binary }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+  notify: >-
+    {{ [mihomo_install_restart_handler]
+       if mihomo_install_restart_handler | length > 0 else [] }}
+
+- name: remove the role-owned download directory
+  when:
+    - _mihomo_install_needs_install | ansible.builtin.bool
+    - not ansible_check_mode
+  changed_when: false
+  ansible.builtin.file:
+    path: "{{ _mihomo_install_download_dir.path }}"
+    state: absent
