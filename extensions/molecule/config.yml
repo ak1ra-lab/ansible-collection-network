@@ -14,7 +14,7 @@
 # The collection under test and its galaxy.yml dependencies are installed
 # automatically by ansible-compat's prerun before each component scenario.
 # The default scenario's create/destroy run earlier than that, so the
-# collections their playbooks use (requirements.yml) must already be
+# collections their playbooks use (requirements.yaml) must already be
 # installed on the control node; the dependency action is disabled to avoid
 # a second, redundant install.
 

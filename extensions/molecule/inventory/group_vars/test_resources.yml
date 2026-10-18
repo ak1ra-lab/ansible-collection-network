@@ -9,7 +9,7 @@
 #   MOLECULE_CONTAINER_RUNTIME=docker \
 #     MOLECULE_GLOB='extensions/molecule/**/molecule.yml' molecule test --all
 #
-# Docker needs the community.docker collection (root requirements.yml) and
+# Docker needs the community.docker collection (root requirements.yaml) and
 # its Python SDK on the control node.  Both runtimes run the containers
 # privileged: systemd needs the capabilities anyway, and a privileged
 # container also gets a writable /sys, which the shared prepare needs for

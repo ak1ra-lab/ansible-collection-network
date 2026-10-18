@@ -8,9 +8,14 @@
 #                       used when MOLECULE_CONTAINER_RUNTIME=docker
 #   ansible.utils     - ipaddr/in_network filters used by the systemd_*
 #                       roles (also a galaxy.yml dependency)
-#   ansible.posix     - sysctl used by the tproxy role, and the profile_tasks
-#                       callback enabled by ansible.cfg
+#   ansible.posix     - sysctl used by the tproxy and mihomo_client roles,
+#                       and the profile_tasks callback enabled by ansible.cfg
 #   community.general - modprobe used by the tproxy role
+#
+# ak1ra_lab.general (github_releases_info / cpu_info, used by the mihomo_*
+# roles) is not on Galaxy yet and is installed separately from git; the
+# justfile dev recipes use the local GENERAL_COLLECTION checkout instead
+# (see README.md).
 collections:
   - name: containers.podman
   - name: community.docker
