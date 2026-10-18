@@ -1,0 +1,113 @@
+---
+# mihomo_client scenario - assert the teardown the cleanup action performed:
+# the role-managed artifacts are gone, while the node data the role
+# deliberately leaves alone (providers, data files) remains.
+
+- name: verify the mihomo client teardown
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the teardown state of the role's artifacts
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/mihomo/config.yaml
+        - /etc/mihomo/providers/selfhost.yaml
+        - /etc/systemd/system/mihomo.service
+        - /etc/modules-load.d/ansible-mihomo-client.conf
+        - /etc/sysctl.d/90-ansible-mihomo-client-gateway.conf
+      register: _mihomo_client_artifacts_after
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert no role artifact is left behind
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_client_artifacts_after.results | selectattr('stat.exists') | list | length
+            == 0
+        fail_msg: >-
+          leftover mihomo_client artifacts:
+          {{ _mihomo_client_artifacts_after.results | selectattr('stat.exists') | map(attribute='item') | list }}
+        quiet: true
+
+    - name: collect the service state after teardown
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-enabled, mihomo.service]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_client_enabled_after
+
+    - name: assert the mihomo service is no longer enabled
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_enabled_after.stdout | default('') != 'enabled'
+        fail_msg: "mihomo.service must not stay enabled after teardown"
+        quiet: true
+
+    - name: collect the restored systemd-resolved state
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, systemd-resolved.service]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_client_resolved_active_after
+
+    - name: collect the restored systemd-resolved enablement
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-enabled, systemd-resolved.service]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_client_resolved_enabled_after
+
+    - name: assert systemd-resolved is restored by the teardown
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_resolved_active_after.stdout == 'active'
+          - _mihomo_client_resolved_enabled_after.stdout == 'enabled'
+        fail_msg: >-
+          the teardown must re-enable and start systemd-resolved, got:
+          active={{ _mihomo_client_resolved_active_after.stdout }}
+          enabled={{ _mihomo_client_resolved_enabled_after.stdout }}
+        quiet: true
+
+    - name: collect the DNS listeners after the teardown
+      ansible.builtin.command:
+        argv: [/usr/bin/ss, -luntp]
+      changed_when: false
+      register: _mihomo_client_dns_listeners_after
+
+    - name: assert the stub listener is back and the mihomo listener is gone
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_client_dns_listeners_after.stdout
+            is ansible.builtin.search('127\.0\.0\.53\S*:53\s.*systemd-resolve')
+          - >-
+            _mihomo_client_dns_listeners_after.stdout
+            is not ansible.builtin.search('(\*|0\.0\.0\.0):53\s.*mihomo')
+        fail_msg: >-
+          systemd-resolved must own 127.0.0.53:53 again after the teardown
+          and the mihomo listener must be gone, got:
+          {{ _mihomo_client_dns_listeners_after.stdout }}
+        quiet: true
+
+    - name: collect the node data the role deliberately leaves alone
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/mihomo/providers
+        - /etc/mihomo/BundleMRS.7z
+      register: _mihomo_client_data_after
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert the deliberately untouched node data remains
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_client_data_after.results | selectattr('stat.exists') | list | length
+            == _mihomo_client_data_after.results | length
+        fail_msg: >-
+          node data removed by the mihomo_client teardown:
+          {{ _mihomo_client_data_after.results | rejectattr('stat.exists') | map(attribute='item') | list }}
+        quiet: true

@@ -1,0 +1,68 @@
+---
+# mihomo_client scenario - one-time container preparation.
+#
+# The shared preparation brings up udev and refreshes apt; this scenario adds
+# the tooling the verify playbook needs, installs systemd-resolved (the role
+# stops/disables it and the teardown restores it) and proves the containers
+# can host the TUN inbound (privileged containers share the host
+# /dev/net/tun).
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml
+
+- name: prepare the mihomo client prerequisites
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: ensure the verify tooling is installed
+      ansible.builtin.package:
+        name:
+          - iproute2
+          - curl
+          - nftables
+        state: present
+
+    # Debian/Ubuntu cloud images run systemd-resolved; the role's :53
+    # takeover is exercised against it (the service is stopped/disabled by
+    # the role, restored by the teardown).  The container's /etc/resolv.conf
+    # is a bind-mounted file, so the converge switches
+    # mihomo_client_dns_manage_resolv_conf off.
+    - name: install systemd-resolved (the :53 takeover target)
+      ansible.builtin.package:
+        name: systemd-resolved
+        state: present
+
+    - name: enable and start systemd-resolved (stub listener on 127.0.0.53:53)
+      ansible.builtin.systemd_service:
+        name: systemd-resolved.service
+        state: started
+        enabled: true
+
+    - name: collect the systemd-resolved state
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, systemd-resolved.service]
+      changed_when: false
+      register: _mihomo_client_resolved_state
+
+    - name: assert systemd-resolved is running in the container
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_resolved_state.stdout == 'active'
+        fail_msg: >-
+          systemd-resolved must be active for the :53 takeover scenario,
+          got: {{ _mihomo_client_resolved_state.stdout }}
+        quiet: true
+
+    - name: check the container can open a TUN device
+      ansible.builtin.stat:
+        path: /dev/net/tun
+      register: _mihomo_client_tun_device
+
+    - name: assert /dev/net/tun is available in the container
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_tun_device.stat.exists
+        fail_msg: >-
+          /dev/net/tun is not available in the container; the shared
+          containers must run privileged (see the inventory).
+        quiet: true

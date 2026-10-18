@@ -1,0 +1,4 @@
+---
+# mihomo_server scenario - exercises the proxy-server role (listeners +
+# generated client artifacts) on the shared containers; inherits the base
+# config.

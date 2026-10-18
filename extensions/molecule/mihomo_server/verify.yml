@@ -1,0 +1,159 @@
+---
+# mihomo_server scenario - assert the converged state: the service is up,
+# every configured protocol listens, the generated listeners carry the
+# per-protocol user shape and the flat TLS fields, and the controller-local
+# artifacts (credentials + clash-format client nodes) are correct.
+
+- name: verify the converged mihomo server state
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the mihomo service activity state
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, mihomo.service]
+      changed_when: false
+      register: _mihomo_server_active
+
+    - name: assert the mihomo service is active
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_active.stdout == 'active'
+        fail_msg: "mihomo.service must be active, got: {{ _mihomo_server_active.stdout }}"
+        quiet: true
+
+    - name: collect the listening TCP ports
+      ansible.builtin.command:
+        argv: [/usr/bin/ss, -H, -ltn]
+      changed_when: false
+      register: _mihomo_server_tcp
+
+    - name: collect the listening UDP ports
+      ansible.builtin.command:
+        argv: [/usr/bin/ss, -H, -lun]
+      changed_when: false
+      register: _mihomo_server_udp
+
+    - name: assert every enabled listener is bound
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_tcp.stdout is ansible.builtin.search(':8388')
+          - _mihomo_server_tcp.stdout is ansible.builtin.search(':8443')
+          - _mihomo_server_udp.stdout is ansible.builtin.search(':8845')
+          - _mihomo_server_tcp.stdout is ansible.builtin.search(':8447')
+        fail_msg: >-
+          the enabled listeners must be bound (ss 8388/trojan 8443/hy2 8845/
+          anytls 8447), got TCP: {{ _mihomo_server_tcp.stdout }} UDP:
+          {{ _mihomo_server_udp.stdout }}
+        quiet: true
+
+    - name: read the generated server configuration
+      ansible.builtin.slurp:
+        src: /etc/mihomo/config.yaml
+      register: _mihomo_server_config
+
+    - name: parse the generated server configuration
+      ansible.builtin.set_fact:
+        _mihomo_server_config_data: >-
+          {{ _mihomo_server_config.content | ansible.builtin.b64decode | ansible.builtin.from_yaml }}
+
+    - name: assert the generated listeners match the mihomo schema
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_config_data['listeners'] | map(attribute='name') | list
+            == ['ss-in', 'trojan-in', 'hysteria2-in', 'anytls-in']
+          - _mihomo_server_config_data['rules'] == ['MATCH,DIRECT']
+          - "'users' not in _mihomo_server_config_data['listeners'][0]"
+          - _mihomo_server_config_data['listeners'][0]['cipher'] == '2022-blake3-aes-128-gcm'
+          - _mihomo_server_config_data['listeners'][1]['users'] | length == 2
+          - "'username' in _mihomo_server_config_data['listeners'][1]['users'][0]"
+          - _mihomo_server_config_data['listeners'][2]['users'] | length == 2
+          - _mihomo_server_config_data['listeners'][2]['users'] is mapping
+          - _mihomo_server_config_data['listeners'][2]['certificate'] == '/etc/mihomo/tls/fullchain.pem'
+          - _mihomo_server_config_data['listeners'][2]['private-key'] == '/etc/mihomo/tls/privkey.pem'
+          - _mihomo_server_config_data['listeners'][3]['users'] | length == 2
+          - _mihomo_server_config_data['listeners'][3]['users'] is mapping
+        fail_msg: >-
+          the generated listeners must follow the per-protocol mihomo shape,
+          got: {{ _mihomo_server_config_data['listeners'] | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: read the generated client nodes on the controller
+      delegate_to: localhost
+      become: false
+      ansible.builtin.slurp:
+        src: >-
+          /tmp/molecule-mihomo-server/artifacts/{{ inventory_hostname }}.proxies.yaml
+      register: _mihomo_server_proxies
+
+    - name: parse the generated client nodes
+      ansible.builtin.set_fact:
+        _mihomo_server_proxies_data: >-
+          {{ _mihomo_server_proxies.content | ansible.builtin.b64decode | ansible.builtin.from_yaml }}
+
+    - name: assert the client nodes follow the naming contract
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_proxies_data['proxies'] | map(attribute='name') | list
+            == ['selfhost-US-molecule-node01-ss',
+                'selfhost-US-molecule-node01-alice-trojan',
+                'selfhost-US-molecule-node01-bob-trojan',
+                'selfhost-US-molecule-node01-alice-hy2',
+                'selfhost-US-molecule-node01-bob-hy2',
+                'selfhost-US-molecule-node01-alice-anytls',
+                'selfhost-US-molecule-node01-bob-anytls']
+        fail_msg: >-
+          the generated client nodes must be named
+          <prefix>-<REGION>-<host>[-<user>]-<proto>, got:
+          {{ _mihomo_server_proxies_data['proxies'] | map(attribute='name') | list }}
+        quiet: true
+
+    - name: collect the generated credentials artifact on the controller
+      delegate_to: localhost
+      become: false
+      ansible.builtin.slurp:
+        src: >-
+          {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yaml
+      register: _mihomo_server_host_vars
+
+    - name: parse the generated credentials artifact
+      ansible.builtin.set_fact:
+        _mihomo_server_host_vars_data: >-
+          {{ _mihomo_server_host_vars.content | ansible.builtin.b64decode | ansible.builtin.from_yaml }}
+
+    - name: assert the credentials artifact carries the generated secrets
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_host_vars_data['mihomo_server_shadowsocks_password'] | length > 0
+          - _mihomo_server_host_vars_data['mihomo_server_trojan_users'] | length == 2
+          - _mihomo_server_host_vars_data['mihomo_server_hysteria2_users'] | length == 2
+          - _mihomo_server_host_vars_data['mihomo_server_anytls_users'] | length == 2
+        fail_msg: >-
+          the generated credentials must be persisted to host_vars, got:
+          {{ _mihomo_server_host_vars_data | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: assert the same credentials are reused across every artifact
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_config_data['listeners'][0]['password']
+            == _mihomo_server_host_vars_data['mihomo_server_shadowsocks_password']
+          - >-
+            _mihomo_server_proxies_data['proxies'][0]['password']
+            == _mihomo_server_host_vars_data['mihomo_server_shadowsocks_password']
+          - >-
+            _mihomo_server_proxies_data['proxies'][1]['password']
+            == _mihomo_server_config_data['listeners'][1]['users'][0]['password']
+          - >-
+            _mihomo_server_proxies_data['proxies'][3]['password']
+            == _mihomo_server_config_data['listeners'][2]['users']['alice']
+        fail_msg: >-
+          the server listeners, the client nodes and the host_vars artifact
+          must carry the same generated credentials (server config, client
+          nodes, credentials):
+          {{ _mihomo_server_config_data['listeners'] | ansible.builtin.to_json }}
+          {{ _mihomo_server_proxies_data | ansible.builtin.to_json }}
+          {{ _mihomo_server_host_vars_data | ansible.builtin.to_json }}
+        quiet: true

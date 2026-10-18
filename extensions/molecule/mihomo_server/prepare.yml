@@ -1,0 +1,57 @@
+---
+# mihomo_server scenario - one-time container preparation.
+#
+# The shared preparation brings up udev and refreshes apt; this scenario adds
+# the tooling the verify playbook needs and provisions a throwaway
+# self-signed certificate, because mihomo TLS is manual-paths only (no
+# built-in ACME).
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml
+
+- name: prepare the mihomo server prerequisites
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: ensure the verify tooling is installed
+      ansible.builtin.package:
+        name:
+          - iproute2
+          - openssl
+          - curl
+        state: present
+
+    - name: ensure the test certificate directory exists
+      ansible.builtin.file:
+        path: /etc/mihomo/tls
+        state: directory
+        mode: "0755"
+
+    - name: generate a self-signed test certificate
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - req
+          - -x509
+          - -newkey
+          - rsa:2048
+          - -nodes
+          - -days
+          - "1"
+          - -subj
+          - /CN=molecule.local
+          - -keyout
+          - /etc/mihomo/tls/privkey.pem
+          - -out
+          - /etc/mihomo/tls/fullchain.pem
+        creates: /etc/mihomo/tls/fullchain.pem
+
+    - name: make the test certificate readable by the service user
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: "0644"
+      loop:
+        - /etc/mihomo/tls/fullchain.pem
+        - /etc/mihomo/tls/privkey.pem
+      loop_control:
+        label: "{{ item }}"

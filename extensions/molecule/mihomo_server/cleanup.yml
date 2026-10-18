@@ -1,0 +1,34 @@
+---
+# mihomo_server scenario - reset the shared containers and remove the
+# controller-local artifacts.
+#
+# Runs at the start of the scenario (leftovers from an interrupted run), at
+# the end, and before destroy, so it must tolerate a fresh host: the role's
+# absent state is idempotent and only touches its own files.  Fact gathering
+# is skipped so an already-removed container stays tolerable.
+
+- name: "tear down the test mihomo server (mihomo_server_state: absent)"
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true
+  vars:
+    mihomo_server_state: absent
+  tasks:
+    - name: tear down the mihomo server
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.mihomo_server
+
+- name: remove the controller-local artifacts
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: remove the temporary artifact directory
+      ansible.builtin.file:
+        path: /tmp/molecule-mihomo-server
+        state: absent
+
+    - name: remove the playbook-adjacent credential artifacts
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/host_vars"
+        state: absent

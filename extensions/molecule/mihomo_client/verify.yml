@@ -1,0 +1,347 @@
+---
+# mihomo_client scenario - assert the converged state an operator observes:
+# the service is up with the generated profile loaded, the TUN link and the
+# policy routes exist, the data files are provisioned and the role's
+# artifacts are in place.
+
+- name: verify the converged mihomo client state
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the mihomo service activity state
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, mihomo.service]
+      changed_when: false
+      register: _mihomo_client_active
+
+    - name: assert the mihomo service is active
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_active.stdout == 'active'
+        fail_msg: "mihomo.service must be active, got: {{ _mihomo_client_active.stdout }}"
+        quiet: true
+
+    - name: collect the mihomo service enablement
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-enabled, mihomo.service]
+      changed_when: false
+      register: _mihomo_client_enabled
+
+    - name: assert the mihomo service is enabled
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_enabled.stdout == 'enabled'
+        fail_msg: "mihomo.service must be enabled, got: {{ _mihomo_client_enabled.stdout }}"
+        quiet: true
+
+    - name: collect the TUN link
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -br, link, show, mihomo0]
+      changed_when: false
+      register: _mihomo_client_tun_link
+
+    - name: assert the TUN device exists
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_tun_link.stdout is ansible.builtin.search('mihomo0')
+        fail_msg: >-
+          the mihomo0 TUN device must exist, got:
+          {{ _mihomo_client_tun_link.stdout }}
+        quiet: true
+
+    - name: collect the IPv4 policy routing rules
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -4, rule, show]
+      changed_when: false
+      register: _mihomo_client_ip_rules
+
+    - name: assert the mihomo policy routing table is installed
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_ip_rules.stdout is ansible.builtin.search('lookup 2022')
+        fail_msg: >-
+          auto-route must install the table-2022 ip rules, got:
+          {{ _mihomo_client_ip_rules.stdout }}
+        quiet: true
+
+    - name: collect the nftables tables
+      ansible.builtin.command:
+        argv: [/usr/sbin/nft, list, tables]
+      changed_when: false
+      register: _mihomo_client_nft_tables
+
+    - name: assert the auto-redirect table exists
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_nft_tables.stdout is ansible.builtin.search('table inet mihomo')
+        fail_msg: >-
+          auto-redirect must install the inet mihomo nftables table, got:
+          {{ _mihomo_client_nft_tables.stdout }}
+        quiet: true
+
+    - name: collect the mihomo policy routing table
+      ansible.builtin.command:
+        argv: [/usr/bin/ip, -4, route, show, table, "2022"]
+      changed_when: false
+      register: _mihomo_client_route_table
+
+    - name: assert the TUN default route is installed
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_route_table.stdout is ansible.builtin.search('dev mihomo0')
+        fail_msg: >-
+          table 2022 must carry the mihomo0 default route, got:
+          {{ _mihomo_client_route_table.stdout }}
+        quiet: true
+
+    - name: read the generated profile
+      ansible.builtin.slurp:
+        src: /etc/mihomo/config.yaml
+      register: _mihomo_client_profile
+
+    - name: parse the generated profile
+      ansible.builtin.set_fact:
+        _mihomo_client_profile_data: >-
+          {{ _mihomo_client_profile.content | ansible.builtin.b64decode | ansible.builtin.from_yaml }}
+
+    - name: assert the generated profile matches the contract
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_profile_data['proxy-groups'] | length == 31
+          - _mihomo_client_profile_data['proxy-groups'][0]['name'] == 'PROXY'
+          - _mihomo_client_profile_data['proxy-groups'][0]['default-selected'] == '🚀 所有节点'
+          - _mihomo_client_profile_data['proxy-groups'][0]['proxies'][0] == '🇸🇬 新加坡节点 - 自建'
+          - _mihomo_client_profile_data['proxy-groups'][1]['name'] == 'FINAL'
+          - _mihomo_client_profile_data['proxy-groups'][2]['name'] == 'AI'
+          - _mihomo_client_profile_data['proxy-groups'][4]['name'] == 'Telegram'
+          # 13 bundled .mrs providers (incl. the Steam-CN download split) plus
+          # the two custom sets exercised above.
+          - _mihomo_client_profile_data['rule-providers'] | length == 15
+          - >-
+            _mihomo_client_profile_data['rule-providers']['custom-internal-rule-set']['payload']
+            == ['corp.internal']
+          - "'custom-direct-rule-set' in _mihomo_client_profile_data['rule-providers']"
+          - "'custom-rejected-rule-set' not in _mihomo_client_profile_data['rule-providers']"
+          - >-
+            _mihomo_client_profile_data['rules'][:2]
+            == ['RULE-SET,custom-internal-rule-set,DIRECT',
+                'RULE-SET,custom-direct-rule-set,DIRECT']
+          - "'RULE-SET,geosite-steam@cn,DIRECT' in _mihomo_client_profile_data['rules']"
+          - _mihomo_client_profile_data['rules'][-1] == 'MATCH,FINAL'
+          - _mihomo_client_profile_data['tun']['auto-route'] | ansible.builtin.bool
+          - _mihomo_client_profile_data['tun']['auto-redirect'] | ansible.builtin.bool
+          - _mihomo_client_profile_data['dns']['listen'] == '0.0.0.0:53'
+          - >-
+            _mihomo_client_profile_data['dns']['nameserver']
+            == ['https://1.1.1.1/dns-query#RULES', 'https://8.8.8.8/dns-query#RULES']
+          - _mihomo_client_profile_data['dns']['default-nameserver'] == ['223.5.5.5', '119.29.29.29']
+          - >-
+            _mihomo_client_profile_data['dns']['nameserver-policy'] | list
+            == ['rule-set:custom-internal-rule-set', 'rule-set:custom-direct-rule-set',
+                'rule-set:geosite-private', 'rule-set:geosite-cn',
+                'rule-set:geosite-steam@cn']
+          - >-
+            _mihomo_client_profile_data['dns']['nameserver-policy']['rule-set:custom-internal-rule-set']
+            == ['192.168.1.1']
+          - >-
+            _mihomo_client_profile_data['dns']['nameserver-policy']['rule-set:geosite-cn']
+            == ['https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query']
+          - "'fallback' not in _mihomo_client_profile_data['dns']"
+          - "'fallback-filter' not in _mihomo_client_profile_data['dns']"
+          - _mihomo_client_profile_data['secret'] | length > 0
+        fail_msg: >-
+          the generated profile must carry the mihomo-setup topology, got:
+          {{ _mihomo_client_profile_data | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: collect the generated API secret artifact on the controller
+      delegate_to: localhost
+      become: false
+      ansible.builtin.slurp:
+        src: >-
+          {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yaml
+      register: _mihomo_client_host_vars
+
+    - name: parse the generated API secret artifact
+      ansible.builtin.set_fact:
+        _mihomo_client_host_vars_data: >-
+          {{ _mihomo_client_host_vars.content | ansible.builtin.b64decode | ansible.builtin.from_yaml }}
+
+    - name: assert the API secret is generated and persisted to host_vars
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_host_vars_data['mihomo_client_api_secret'] | length > 0
+          - >-
+            _mihomo_client_profile_data['secret']
+            == _mihomo_client_host_vars_data['mihomo_client_api_secret']
+        fail_msg: >-
+          the generated Clash API secret must be persisted to host_vars and
+          match the deployed profile, got:
+          {{ _mihomo_client_host_vars_data | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: query the mihomo API for the loaded selfhost provider nodes
+      ansible.builtin.uri:
+        url: http://127.0.0.1:9090/providers/proxies/selfhost
+        headers:
+          Authorization: "Bearer {{ _mihomo_client_profile_data['secret'] }}"
+        return_content: true
+      register: _mihomo_client_provider
+      retries: 15
+      delay: 2
+      until: >-
+        _mihomo_client_provider.status == 200
+        and 'selfhost-US-molecule-node01-ss' in _mihomo_client_provider.content
+
+    - name: assert the self-hosted nodes are loaded from the provider
+      vars:
+        _mihomo_client_provider_nodes: >-
+          {{ (_mihomo_client_provider.content | ansible.builtin.from_json)['proxies']
+             | map(attribute='name') | list }}
+      ansible.builtin.assert:
+        that:
+          - "'selfhost-US-molecule-node01-ss' in _mihomo_client_provider_nodes"
+          - "'自建-HK-molecule-node02-trojan' in _mihomo_client_provider_nodes"
+          - "'selfhost-JP-molecule-node03-vless' in _mihomo_client_provider_nodes"
+        fail_msg: >-
+          providers/selfhost.yaml nodes (inline and artifact-merged) must be
+          loaded, got: {{ _mihomo_client_provider_nodes }}
+        quiet: true
+
+    - name: query the mihomo API for the proxy groups
+      ansible.builtin.uri:
+        url: http://127.0.0.1:9090/proxies
+        headers:
+          Authorization: "Bearer {{ _mihomo_client_profile_data['secret'] }}"
+        return_content: true
+      register: _mihomo_client_proxies
+      retries: 15
+      delay: 2
+      until: >-
+        _mihomo_client_proxies.status == 200
+        and 'selfhost-US-molecule-node01-ss' in _mihomo_client_proxies.content
+
+    - name: assert the self-hosted nodes land in their region groups
+      vars:
+        _mihomo_client_groups: >-
+          {{ (_mihomo_client_proxies.content | ansible.builtin.from_json)['proxies'] }}
+      ansible.builtin.assert:
+        that:
+          - >-
+            'selfhost-US-molecule-node01-ss'
+            in _mihomo_client_groups['🇺🇸 美国节点 - 自建']['all']
+          - >-
+            '自建-HK-molecule-node02-trojan'
+            in _mihomo_client_groups['🇭🇰 香港节点 - 自建']['all']
+          - >-
+            'selfhost-JP-molecule-node03-vless'
+            in _mihomo_client_groups['🇯🇵 日本节点 - 自建']['all']
+        fail_msg: >-
+          the self-hosted nodes must match the template's region filters and
+          reach the *-自建 groups, got:
+          {{ _mihomo_client_groups | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: collect the systemd-resolved state after the takeover
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, systemd-resolved.service]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_client_resolved_active
+
+    - name: collect the systemd-resolved enablement after the takeover
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-enabled, systemd-resolved.service]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_client_resolved_enabled
+
+    - name: assert systemd-resolved is stopped and disabled
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_resolved_active.stdout != 'active'
+          - _mihomo_client_resolved_enabled.stdout != 'enabled'
+        fail_msg: >-
+          the role must stop and disable systemd-resolved before mihomo
+          binds :53, got: active={{ _mihomo_client_resolved_active.stdout }}
+          enabled={{ _mihomo_client_resolved_enabled.stdout }}
+        quiet: true
+
+    - name: collect the DNS listeners
+      ansible.builtin.command:
+        argv: [/usr/bin/ss, -luntp]
+      changed_when: false
+      register: _mihomo_client_dns_listeners
+
+    - name: assert mihomo owns the DNS listen sockets
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_dns_listeners.stdout is ansible.builtin.search('(\*|0\.0\.0\.0):53\s.*mihomo')
+        fail_msg: >-
+          0.0.0.0:53 must be bound by mihomo (freed from systemd-resolved),
+          got: {{ _mihomo_client_dns_listeners.stdout }}
+        quiet: true
+
+    - name: collect the role's deployed artifacts
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/mihomo/config.yaml
+        - /etc/mihomo/providers/selfhost.yaml
+        - /etc/mihomo/BundleMRS.7z
+        - /etc/systemd/system/mihomo.service
+        - /etc/modules-load.d/ansible-mihomo-client.conf
+      register: _mihomo_client_artifacts
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert every role artifact is in place
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_client_artifacts.results | selectattr('stat.exists') | list | length
+            == _mihomo_client_artifacts.results | length
+        fail_msg: >-
+          missing mihomo_client artifacts:
+          {{ _mihomo_client_artifacts.results | rejectattr('stat.exists') | map(attribute='item') | list }}
+        quiet: true
+
+    - name: read the LAN-gateway sysctl drop-in
+      ansible.builtin.slurp:
+        src: /etc/sysctl.d/90-ansible-mihomo-client-gateway.conf
+      register: _mihomo_client_sysctl
+
+    - name: assert the gateway sysctl drop-in is deployed
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_sysctl.content | ansible.builtin.b64decode is ansible.builtin.search('net\.ipv4\.ip_forward\s*=\s*1')
+          - _mihomo_client_sysctl.content | ansible.builtin.b64decode is ansible.builtin.search('net\.ipv4\.conf\.all\.rp_filter\s*=\s*0')
+        fail_msg: >-
+          the default gateway mode must deploy the LAN-gateway sysctl drop-in
+          (ip_forward=1, rp_filter=0), got:
+          {{ _mihomo_client_sysctl.content | ansible.builtin.b64decode }}
+        quiet: true
+
+- name: verify the controller-local profile mirrors
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: check the controller-local profile mirror
+      ansible.builtin.stat:
+        path: "/tmp/molecule-mihomo-client/artifacts/{{ item }}.config.yaml"
+      register: _mihomo_client_local_artifacts
+      loop: "{{ groups['test_resources'] }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert every controller-local profile mirror exists
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_client_local_artifacts.results | selectattr('stat.exists') | list | length
+            == _mihomo_client_local_artifacts.results | length
+        fail_msg: >-
+          missing controller-local profile mirrors (mihomo_client_local_artifacts_dir):
+          {{ _mihomo_client_local_artifacts.results | rejectattr('stat.exists') | map(attribute='item') | list }}
+        quiet: true

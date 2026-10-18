@@ -1,0 +1,58 @@
+---
+# mihomo_server scenario - assert the teardown the cleanup action performed:
+# the role-managed artifacts are gone and the service is stopped; the
+# scenario's cleanup play also removes its temporary controller-local
+# artifact directory (the role deliberately leaves its artifacts alone).
+
+- name: verify the mihomo server teardown
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the teardown state of the role's artifacts
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/mihomo/config.yaml
+        - /etc/systemd/system/mihomo.service
+      register: _mihomo_server_artifacts_after
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert no role artifact is left behind
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_artifacts_after.results | selectattr('stat.exists') | list | length
+            == 0
+        fail_msg: >-
+          leftover mihomo_server artifacts:
+          {{ _mihomo_server_artifacts_after.results | selectattr('stat.exists') | map(attribute='item') | list }}
+        quiet: true
+
+    - name: collect the service state after teardown
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, mihomo.service]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_server_active_after
+
+    - name: assert the mihomo service is no longer running
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_active_after.stdout | default('') != 'active'
+        fail_msg: "mihomo.service must not stay active after teardown"
+        quiet: true
+
+    - name: collect the controller-local artifact directory state
+      delegate_to: localhost
+      become: false
+      ansible.builtin.stat:
+        path: /tmp/molecule-mihomo-server
+      register: _mihomo_server_local_after
+
+    - name: assert the scenario's controller-local artifact directory is gone
+      ansible.builtin.assert:
+        that:
+          - not _mihomo_server_local_after.stat.exists
+        fail_msg: "the scenario's temporary artifact directory must be removed"
+        quiet: true

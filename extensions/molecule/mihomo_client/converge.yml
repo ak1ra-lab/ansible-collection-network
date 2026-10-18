@@ -1,0 +1,95 @@
+---
+# mihomo_client scenario - converge the role on the shared containers.
+#
+# The containers run privileged with a real /dev/net/tun, so the TUN inbound
+# (auto-route, ip rules, table 2022) is exercised end to end.  The role is
+# converged with the default gateway mode, so the LAN-gateway sysctl drop-in
+# is deployed and asserted in verify.yml (and removed again by cleanup.yml).
+#
+# Two synthetic inline self-hosted nodes plus one node loaded from a
+# controller-local artifact exercise the providers/selfhost.yaml rendering,
+# the artifact merge path and the naming contract (they are never dialed).
+#
+# The Clash API secret is left unset: the role generates it and writes the
+# playbook-adjacent host_vars file, which Ansible auto-loads on the
+# idempotence re-run (cleanup.yml removes it again).
+
+- name: write the controller-local client artifact
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: ensure the artifact directory exists
+      ansible.builtin.file:
+        path: /tmp/molecule-mihomo-client
+        state: directory
+        mode: "0755"
+
+    - name: write the generated client artifact
+      ansible.builtin.copy:
+        content: |
+          ---
+          # Synthetic artifact (molecule); shape of a mihomo_server
+          # config/client_outbounds/<host>.proxies.yaml file.
+          proxies:
+            - name: selfhost-JP-molecule-node03-vless
+              type: vless
+              server: 192.0.2.12
+              port: 8444
+              uuid: 11111111-1111-1111-1111-111111111111
+              tls: true
+              udp: true
+              servername: 192.0.2.12
+              skip-cert-verify: true
+        dest: /tmp/molecule-mihomo-client/molecule-node03.proxies.yaml
+        mode: "0644"
+
+- name: "apply the mihomo client (mihomo_client_state: present)"
+  hosts: all
+  gather_facts: true
+  vars:
+    mihomo_client_selfhost_proxies:
+      - name: selfhost-US-molecule-node01-ss
+        type: ss
+        server: 192.0.2.10
+        port: 8388
+        cipher: 2022-blake3-aes-128-gcm
+        password: "bW9sZWN1bGUtdGVzdC0wMQ=="
+        udp: true
+      - name: 自建-HK-molecule-node02-trojan
+        type: trojan
+        server: 192.0.2.11
+        port: 8443
+        password: molecule-trojan-password
+        udp: true
+        sni: 192.0.2.11
+        skip-cert-verify: true
+    mihomo_client_selfhost_files:
+      - /tmp/molecule-mihomo-client/molecule-node03.proxies.yaml
+    # Exercise the conditional inline custom rule sets: the internal set
+    # (with its nameservers) and the direct set (provider, rule and DNS
+    # policy entry) must appear; the other custom sets must stay out.
+    mihomo_client_custom_internal_rule_set_payload:
+      - corp.internal
+    mihomo_client_custom_internal_nameservers:
+      - 192.168.1.1
+    mihomo_client_custom_direct_rule_set_payload:
+      - direct.example.com
+    # Exercise the optional controller-local profile mirror; verify.yml
+    # asserts the rendered files afterwards.
+    mihomo_client_local_artifacts_dir: /tmp/molecule-mihomo-client/artifacts
+    # /etc/resolv.conf is a bind-mounted file inside the containers, so the
+    # atomic replace the template module performs fails with EBUSY; the
+    # systemd-resolved handover (installed by prepare.yml) is still
+    # exercised.
+    mihomo_client_dns_manage_resolv_conf: false
+  tasks:
+    - name: install the mihomo binary
+      ansible.builtin.import_role:
+        name: ak1ra_lab.network.mihomo_install
+      vars:
+        mihomo_install_restart_handler: systemctl restart mihomo.service
+
+    - name: apply the mihomo client
+      ansible.builtin.import_role:
+        name: ak1ra_lab.network.mihomo_client

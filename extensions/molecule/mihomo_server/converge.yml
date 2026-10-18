@@ -1,0 +1,31 @@
+---
+# mihomo_server scenario - converge the role on the shared containers.
+#
+# Defaults cover shadowsocks + trojan + hysteria2, anytls is switched on for
+# the sixth protocol shape, and two users exercise the credential
+# generation.  The config/client copies are redirected into /tmp so the run
+# does not touch the repository tree; the credentials go to the default
+# playbook-adjacent host_vars path, which Ansible auto-loads on the
+# idempotence re-run (cleanup.yml removes it again).
+
+- name: "apply the mihomo server (mihomo_server_state: present)"
+  hosts: all
+  gather_facts: true
+  vars:
+    mihomo_server_hostname: molecule-node01.example.com
+    mihomo_server_region: US
+    mihomo_server_user_count: 2
+    mihomo_server_enable_anytls: true
+    mihomo_server_tls_certificate_path: /etc/mihomo/tls/fullchain.pem
+    mihomo_server_tls_key_path: /etc/mihomo/tls/privkey.pem
+    mihomo_server_local_artifacts_dir: /tmp/molecule-mihomo-server/artifacts
+  tasks:
+    - name: install the mihomo binary
+      ansible.builtin.import_role:
+        name: ak1ra_lab.network.mihomo_install
+      vars:
+        mihomo_install_restart_handler: systemctl restart mihomo.service
+
+    - name: apply the mihomo server
+      ansible.builtin.import_role:
+        name: ak1ra_lab.network.mihomo_server
