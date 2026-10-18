@@ -1,0 +1,87 @@
+---
+# ak1ra_lab.network.mihomo_server - internal variables.
+#
+# Do not override these; override the public variables in defaults/main.yaml
+# (or pass -e) instead.
+
+# Accepted values of the mihomo_server_state switch.
+mihomo_server_state_available:
+  - present
+  - absent
+
+# Service identity and fixed paths.  The role owns the `mihomo` user/group and
+# the /etc/mihomo + binary layout; the binary itself is deployed by
+# ak1ra_lab.network.mihomo_install and only asserted here.  Role conventions
+# rather than knobs: override them with role params or `-e` if they really
+# must differ.
+mihomo_server_user: mihomo
+mihomo_server_group: mihomo
+mihomo_server_etc_dir: /etc/mihomo
+mihomo_server_binary: /usr/local/bin/mihomo
+
+# Predefined user pool for credential auto-generation (first N names).
+mihomo_server_user_names:
+  - alice
+  - bob
+  - charlie
+  - david
+  - eve
+  - frank
+  - grace
+  - henry
+  - iris
+  - jack
+
+# Shadowsocks 2022 ciphers -> required base64 key length (bytes) for the
+# password auto-generation.  Classic ciphers take an arbitrary passphrase and
+# are generated as a random 32-char string.
+_mihomo_server_shadowsocks_2022_key_length:
+  2022-blake3-aes-128-gcm: 16
+  2022-blake3-aes-256-gcm: 32
+  2022-blake3-chacha20-poly1305: 32
+
+# Single source for the filter-plugin input, shared by the server config,
+# the client artifact and the credential artifacts.  The generated
+# credentials (set_fact in generate_credentials.yaml) are picked up because
+# the expression is evaluated when the templates render.
+_mihomo_server_spec: >-
+  {{
+    {
+      'log_level': mihomo_server_log_level,
+      'listen': mihomo_server_listen,
+      'enable_shadowsocks': mihomo_server_enable_shadowsocks,
+      'shadowsocks_port': mihomo_server_shadowsocks_port,
+      'shadowsocks_method': mihomo_server_shadowsocks_method,
+      'shadowsocks_password': mihomo_server_shadowsocks_password,
+      'enable_trojan': mihomo_server_enable_trojan,
+      'trojan_port': mihomo_server_trojan_port,
+      'trojan_users': mihomo_server_trojan_users,
+      'enable_hysteria2': mihomo_server_enable_hysteria2,
+      'hysteria2_port': mihomo_server_hysteria2_port,
+      'hysteria2_users': mihomo_server_hysteria2_users,
+      'hysteria2_up_mbps': mihomo_server_hysteria2_up_mbps,
+      'hysteria2_down_mbps': mihomo_server_hysteria2_down_mbps,
+      'hysteria2_obfs_enabled': mihomo_server_hysteria2_obfs_enabled,
+      'hysteria2_obfs_password': mihomo_server_hysteria2_obfs_password,
+      'hysteria2_masquerade_enabled': mihomo_server_hysteria2_masquerade_enabled,
+      'hysteria2_masquerade_url': mihomo_server_hysteria2_masquerade_url,
+      'enable_vless': mihomo_server_enable_vless,
+      'vless_port': mihomo_server_vless_port,
+      'vless_users': mihomo_server_vless_users,
+      'vless_flow': mihomo_server_vless_flow,
+      'enable_tuic': mihomo_server_enable_tuic,
+      'tuic_port': mihomo_server_tuic_port,
+      'tuic_users': mihomo_server_tuic_users,
+      'tuic_congestion_control': mihomo_server_tuic_congestion_control,
+      'enable_anytls': mihomo_server_enable_anytls,
+      'anytls_port': mihomo_server_anytls_port,
+      'anytls_users': mihomo_server_anytls_users,
+      'anytls_padding_scheme': mihomo_server_anytls_padding_scheme,
+      'tls_certificate_path': mihomo_server_tls_certificate_path,
+      'tls_key_path': mihomo_server_tls_key_path,
+      'external_controller': mihomo_server_external_controller,
+      'external_controller_secret': mihomo_server_external_controller_secret,
+      'alpn': mihomo_server_alpn,
+      'extra_listeners': mihomo_server_extra_listeners,
+    }
+  }}

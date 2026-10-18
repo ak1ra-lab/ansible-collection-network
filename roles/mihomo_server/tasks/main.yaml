@@ -1,0 +1,13 @@
+---
+# tasks file for ak1ra_lab.network.mihomo_server
+
+- name: validate contract variables
+  ansible.builtin.import_tasks: validation.yaml
+
+- name: "tear down managed artifacts (mihomo_server_state: absent)"
+  when: mihomo_server_state == 'absent'
+  ansible.builtin.import_tasks: reset.yaml
+
+- name: "apply the mihomo server (mihomo_server_state: present)"
+  when: mihomo_server_state == 'present'
+  ansible.builtin.import_tasks: present.yaml

@@ -1,0 +1,52 @@
+---
+# tasks/validation.yaml - fail fast on contract violations before anything
+# is touched.  The filter plugins re-validate the generated structures at
+# render time; this file checks the role-level shape (and the facts that
+# must fail clearly before credential generation).
+
+- name: validate the mihomo_server contract
+  ansible.builtin.assert:
+    that:
+      - mihomo_server_state in mihomo_server_state_available
+      - >-
+        (mihomo_server_state == 'absent')
+        or (mihomo_server_hostname | length > 0)
+      - >-
+        (mihomo_server_state == 'absent')
+        or (mihomo_server_region | length > 0)
+      - >-
+        (mihomo_server_state == 'absent')
+        or (mihomo_server_region is not ansible.builtin.search('\s'))
+      - mihomo_server_user_count | int >= 1
+      - mihomo_server_user_count | int <= 10
+      - mihomo_server_trojan_users | ansible.builtin.type_debug == 'list'
+      - mihomo_server_hysteria2_users | ansible.builtin.type_debug == 'list'
+      - mihomo_server_vless_users | ansible.builtin.type_debug == 'list'
+      - mihomo_server_tuic_users | ansible.builtin.type_debug == 'list'
+      - mihomo_server_anytls_users | ansible.builtin.type_debug == 'list'
+      - mihomo_server_extra_listeners | ansible.builtin.type_debug == 'list'
+      - mihomo_server_alpn | ansible.builtin.type_debug == 'list'
+      - >-
+        (mihomo_server_state == 'absent')
+        or (not mihomo_server_enable_shadowsocks | ansible.builtin.bool)
+        or (mihomo_server_shadowsocks_method | length > 0)
+      - >-
+        (mihomo_server_state == 'absent')
+        or (not (mihomo_server_enable_trojan | ansible.builtin.bool
+                 or mihomo_server_enable_hysteria2 | ansible.builtin.bool
+                 or mihomo_server_enable_vless | ansible.builtin.bool
+                 or mihomo_server_enable_tuic | ansible.builtin.bool
+                 or mihomo_server_enable_anytls | ansible.builtin.bool))
+        or ((mihomo_server_tls_certificate_path | length > 0)
+            and (mihomo_server_tls_key_path | length > 0))
+    fail_msg: |
+      mihomo_server variables violate the role contract:
+        state in {{ mihomo_server_state_available }} (got: {{ mihomo_server_state }})
+        mihomo_server_region must be a whitespace-free token (e.g. US/HK) that
+        the client region regex can match
+        mihomo_server_user_count must be within 1..10
+        *_users must be lists of {name, password, uuid?} mappings
+        shadowsocks_method must not be empty
+        TLS-using protocols require mihomo_server_tls_certificate_path and
+        mihomo_server_tls_key_path (mihomo has no built-in ACME)
+    quiet: true

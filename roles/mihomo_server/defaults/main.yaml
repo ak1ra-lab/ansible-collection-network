@@ -1,0 +1,122 @@
+---
+# ak1ra_lab.network.mihomo_server - public variable contract
+#
+# Deploys mihomo on a VPS as a proxy server (the `listeners:` schema) and
+# writes the matching client artifacts for ak1ra_lab.network.mihomo_client:
+#   - <local artifacts dir>/<host>.config.yaml   server config copy
+#   - <local artifacts dir>/<host>.proxies.yaml  clash-format client nodes
+#   - <host_vars file>                           generated credentials
+#
+# mihomo schema facts the contract is built on:
+#   - the shadowsocks listener is single-user (one cipher + password, no
+#     users field), so mihomo_server_shadowsocks_users does not exist;
+#   - trojan takes a users list, hysteria2/tuic/anytls a name/uuid -> password
+#     mapping - users are declared here in one uniform shape
+#     ({name, password, uuid?}) and mapped by the filter plugin;
+#   - TLS is flat certificate/private-key paths and mihomo has no built-in
+#     ACME, so certificates are provisioned out of band (manual mode).
+
+# ── Lifecycle ────────────────────────────────────────────────────────────────
+
+mihomo_server_state: present
+
+# ── Server identity (TLS SNI / region token) ─────────────────────────────────
+
+# TLS SNI and the client node's server address.
+mihomo_server_hostname: "{{ ansible_facts['fqdn'] }}"
+
+# Region token embedded in the generated client node names
+# (selfhost-<REGION>-<host>[-<user>]-<proto>).  Must be a token the client's
+# region regex matches, e.g. "US", "HK", "JP"; required when state=present.
+mihomo_server_region: ""
+
+# ── General ──────────────────────────────────────────────────────────────────
+
+mihomo_server_log_level: warning
+mihomo_server_listen: "0.0.0.0"
+# Optional Clash API on the server; empty disables it.  Set
+# mihomo_server_external_controller_secret when exposing it beyond localhost.
+mihomo_server_external_controller: ""
+mihomo_server_external_controller_secret: ""
+
+# ── Protocol switches and ports ──────────────────────────────────────────────
+#
+# Port numbers follow the collection's server-role convention (the
+# sing_box_server role uses the same set) so the two backends stay easy to
+# compare; they are plain defaults, not a compatibility contract, and every
+# value maps to mihomo's own listener schema.
+
+mihomo_server_user_count: 1
+
+mihomo_server_enable_shadowsocks: true
+mihomo_server_shadowsocks_port: 8388
+mihomo_server_shadowsocks_method: "2022-blake3-aes-128-gcm"
+# Server password (base64, decoded length = cipher key length); generated
+# when empty.  Single-user: no per-user shadowsocks passwords.
+mihomo_server_shadowsocks_password: ""
+
+mihomo_server_enable_trojan: true
+mihomo_server_trojan_port: 8443
+# Users: [{name, password}] (generated when empty)
+mihomo_server_trojan_users: []
+
+mihomo_server_enable_hysteria2: true
+mihomo_server_hysteria2_port: 8845
+# Users: [{name, password}] (generated when empty)
+mihomo_server_hysteria2_users: []
+mihomo_server_hysteria2_up_mbps: 1000
+mihomo_server_hysteria2_down_mbps: 1000
+mihomo_server_hysteria2_obfs_enabled: false
+mihomo_server_hysteria2_obfs_password: ""
+mihomo_server_hysteria2_masquerade_enabled: true
+mihomo_server_hysteria2_masquerade_url: "https://www.bing.com"
+
+mihomo_server_enable_vless: false
+mihomo_server_vless_port: 8444
+# Users: [{name, uuid}] (generated when empty)
+mihomo_server_vless_users: []
+mihomo_server_vless_flow: ""
+
+mihomo_server_enable_tuic: false
+mihomo_server_tuic_port: 8846
+# Users: [{name, uuid, password}] (generated when empty)
+mihomo_server_tuic_users: []
+mihomo_server_tuic_congestion_control: bbr
+
+mihomo_server_enable_anytls: false
+mihomo_server_anytls_port: 8447
+# Users: [{name, password}] (generated when empty)
+mihomo_server_anytls_users: []
+mihomo_server_anytls_padding_scheme: ""
+
+# Raw extra listeners appended to the generated ones (escape hatch for
+# protocols the generated contract does not cover yet).  Each entry needs
+# `name` and `type`; names must not collide with the generated listeners.
+mihomo_server_extra_listeners: []
+
+# ── TLS (manual certificate paths only) ──────────────────────────────────────
+
+# Required when any TLS-using protocol is enabled (trojan/hysteria2/vless/
+# tuic/anytls) and state=present.  Both paths must be readable by the
+# mihomo service user.  Renew/provision the certificates out of band.
+mihomo_server_tls_certificate_path: ""
+mihomo_server_tls_key_path: ""
+mihomo_server_alpn:
+  - h3
+
+# ── Client artifacts ─────────────────────────────────────────────────────────
+
+# Prefix of the generated client node names
+# (<prefix>-<REGION>-<host>[-<user>]-<proto>).  The client's self-hosted tag
+# (`selfhost|自建` by default) and region regexes are what pick the nodes up.
+mihomo_server_client_node_prefix: selfhost
+
+# Controller-local output locations.  The artifacts dir mirrors the
+# sing-box-tproxy flow (`<repo>/config/client_outbounds/`); host_vars must
+# live next to the playbook (the default does) so Ansible auto-loads the
+# generated credentials on later runs - a file outside the auto-load
+# locations is treated as absent and regenerated every run.
+mihomo_server_local_artifacts_dir: >-
+  {{ playbook_dir | ansible.builtin.dirname }}/config/client_outbounds
+mihomo_server_host_vars_file: >-
+  {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yaml

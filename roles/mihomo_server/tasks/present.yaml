@@ -1,0 +1,92 @@
+---
+# tasks/present.yaml - apply the mihomo server (mihomo_server_state:
+# present): service identity, generated credentials/client artifacts, the
+# listeners configuration and the service.  The binary itself is deployed by
+# ak1ra_lab.network.mihomo_install, which the playbook entry point
+# (playbooks/mihomo_server.yaml) applies before this role.
+
+- name: ensure the mihomo system group exists
+  ansible.builtin.group:
+    name: "{{ mihomo_server_group }}"
+    system: true
+    state: present
+
+- name: ensure the mihomo system user exists
+  ansible.builtin.user:
+    name: "{{ mihomo_server_user }}"
+    group: "{{ mihomo_server_group }}"
+    system: true
+    state: present
+
+- name: assert the mihomo binary is available
+  ansible.builtin.stat:
+    path: "{{ mihomo_server_binary }}"
+  register: _mihomo_server_binary
+
+- name: fail when the mihomo binary is missing
+  ansible.builtin.assert:
+    that:
+      - _mihomo_server_binary.stat.exists
+    fail_msg: >-
+      mihomo binary not found at {{ mihomo_server_binary }}; apply
+      ak1ra_lab.network.mihomo_install first (playbooks/mihomo_server.yaml
+      does) or install it on the host out of band
+    quiet: true
+
+- name: ensure the mihomo configuration directory exists
+  ansible.builtin.file:
+    path: "{{ mihomo_server_etc_dir }}"
+    owner: "{{ mihomo_server_user }}"
+    group: "{{ mihomo_server_group }}"
+    mode: "0750"
+    state: directory
+
+- name: generate credentials and client artifacts
+  ansible.builtin.import_tasks: generate_credentials.yaml
+
+- name: template the mihomo server configuration locally
+  delegate_to: localhost
+  become: false
+  no_log: true
+  ansible.builtin.template:
+    src: etc/mihomo/config.yaml.j2
+    dest: "{{ mihomo_server_local_artifacts_dir }}/{{ inventory_hostname }}.config.yaml"
+    mode: "0600"
+
+- name: template the mihomo server configuration
+  no_log: true
+  ansible.builtin.template:
+    src: etc/mihomo/config.yaml.j2
+    dest: "{{ mihomo_server_etc_dir }}/config.yaml"
+    owner: "{{ mihomo_server_user }}"
+    group: "{{ mihomo_server_group }}"
+    mode: "0640"
+  notify:
+    - systemctl restart mihomo.service
+
+- name: template the mihomo.service unit
+  ansible.builtin.template:
+    src: etc/systemd/system/mihomo.service.j2
+    dest: /etc/systemd/system/mihomo.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - systemctl daemon-reload
+    - systemctl restart mihomo.service
+
+- name: validate the deployed mihomo server configuration
+  ansible.builtin.command:
+    argv:
+      - "{{ mihomo_server_binary }}"
+      - -t
+      - -d
+      - "{{ mihomo_server_etc_dir }}"
+  changed_when: false
+
+- name: ensure mihomo.service is enabled and started
+  ansible.builtin.systemd_service:
+    name: mihomo.service
+    state: started
+    enabled: true
+    daemon_reload: true

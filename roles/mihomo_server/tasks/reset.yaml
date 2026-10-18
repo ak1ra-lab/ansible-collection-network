@@ -1,0 +1,29 @@
+---
+# tasks/reset.yaml - atomic teardown of the role-managed artifacts
+# (mihomo_server_state: absent).
+#
+# Deliberately left in place:
+#   - the mihomo binary                     - managed by
+#     ak1ra_lab.network.mihomo_install
+#   - the controller-local artifacts        - remove them manually when the
+#     credentials/nodes are no longer needed
+#   - the TLS certificate/key files         - not owned by this role
+
+- name: stop and disable mihomo.service
+  ansible.builtin.systemd_service:
+    name: mihomo.service
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: remove the mihomo.service unit file
+  ansible.builtin.file:
+    path: /etc/systemd/system/mihomo.service
+    state: absent
+  notify:
+    - systemctl daemon-reload
+
+- name: remove the mihomo server configuration
+  ansible.builtin.file:
+    path: "{{ mihomo_server_etc_dir }}/config.yaml"
+    state: absent
