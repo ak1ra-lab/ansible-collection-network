@@ -8,6 +8,94 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Added
 
+- `ak1ra_lab.network.mihomo_install`: shared mihomo binary installer - the
+  official **statically linked** `.gz` archive from the MetaCubeX/mihomo
+  GitHub releases, resolved with `ak1ra_lab.general.github_releases_info`
+  (platform asset selection and the GitHub asset digest as the `get_url`
+  checksum), decompressed on the target and installed as
+  `/usr/local/bin/mihomo`.  Distribution-neutral on systemd-based Linux: no
+  `apt`/`dnf`, no package-manager bookkeeping, no service identity.  Version
+  policy `present` (install only when the binary is missing, repeated runs
+  need no network), `latest`, or a pinned version such as `1.19.32`, with a
+  controller-local `mihomo_install_package_src` (file or URL) archive
+  override.  On amd64 the
+  microarchitecture build (`-v1-`/`-v2-`/`-v3-` variants) is selected from
+  the level detected by `ak1ra_lab.general.cpu_info` (baseline fallback, a
+  forced level, or `none` to disable), and `mihomo_install_force` reinstalls
+  a matching version when needed.  The mihomo roles now require the
+  `ak1ra_lab.general` collection (not on Galaxy yet; see `README.md`).
+- `ak1ra_lab.network.mihomo_client`: mihomo TUN transparent-proxy client
+  (LAN gateway or host-only), reproducing the hand-written
+  [mihomo-setup](https://github.com/ak1ra-lab/mihomo-setup) profile.  The
+  role owns the service identity (`mihomo` user/group), the generated profile
+  and the systemd unit (the binary comes from `mihomo_install`, applied by
+  the playbook), provisions the data file the profile depends on
+  (`BundleMRS.7z`) from the MetaCubeX/meta-rules-dat release with the asset
+  digest as the checksum (a controller-local `*_src` override skips the
+  lookup; the release lookup authenticates with the controller's
+  `$GITHUB_TOKEN` when present), renders the profile
+  (TUN `auto-route`/`auto-redirect`, an explicit rule-set DNS split instead
+  of the deprecated `fallback`/`fallback-filter`, interface sniffer),
+  persists the `tun` module at boot, frees `:53` from systemd-resolved
+  (stopped/disabled when present, `/etc/resolv.conf` replaced with the
+  mihomo listener) and (in `gateway` mode) deploys the `ip_forward` /
+  `rp_filter` sysctl drop-in; `absent` removes the role-managed artifacts,
+  restores systemd-resolved and the distro `/etc/resolv.conf` stub symlink,
+  and keeps providers, caches and the data file.  At least one node source
+  (`mihomo_client_proxy_providers`, `mihomo_client_selfhost_proxies`,
+  `mihomo_client_selfhost_files`) is required when applying, and an optional
+  `mihomo_client_local_artifacts_dir` mirrors the rendered profile on the
+  controller for backup/diff.  The profile itself is a hand-maintained
+  template (static proxy-group topology, rule providers, rules and DNS
+  split; only a handful of `mihomo_client_*` values are rendered into it),
+  reproducing the mihomo-setup deployment shape with the sing-box-tproxy
+  group topology (top-level selectors, per-region selector / url-test /
+  self-hosted tiers, explicit default selection, no group-level fallback on
+  the default path) and pre-filled inline custom rule sets driven by
+  payload lists.
+- `ak1ra_lab.network.mihomo_server`: mihomo proxy server on the VPS side
+  (`listeners:` schema, shadowsocks/trojan/hysteria2/vless/tuic/anytls,
+  manual TLS certificate paths because mihomo has no built-in ACME) with
+  the credential workflow reused from `sing_box_server`: the first N names of
+  a user pool get generated passwords/UUIDs when the `*_users` lists are
+  empty, every reference (server address, region token, user mapping) is
+  reused by the client artifacts, and the run persists the credentials to
+  `playbooks/host_vars/<host>/mihomo_server.yaml` (mode 0600, auto-loaded by
+  Ansible on later runs) plus clash-format client nodes to
+  `config/client_outbounds/<host>.proxies.yaml` for the client's
+  `providers/selfhost.yaml`; an optional external-controller secret and a
+  configurable client-node prefix are available.
+- Playbook entry points `ak1ra_lab.network.mihomo_install`,
+  `ak1ra_lab.network.mihomo_client` and `ak1ra_lab.network.mihomo_server`:
+  the mihomo roles never call each other, the client/server playbooks apply
+  `mihomo_install` first and wire its restart hook to the service role's
+  handler.
+- Custom filter plugins shared by the mihomo roles: `mihomo_providers`
+  normalizes the subscription providers (derived cache paths, the reserved
+  `selfhost` provider) and validates the self-hosted node naming contract
+  (tag, unique names, optional region check), `mihomo_server` generates the
+  per-protocol listener user shapes and the clash-format client nodes, and
+  `to_pretty_yaml` renders the YAML with the pure-Python emitter so the
+  astral-plane emoji stay literal (libyaml escapes them) and block
+  sequences are indented like the hand-written files.  Contract violations
+  raise `AnsibleFilterError` instead of producing a broken profile.
+- Custom lookup plugins for the credential generation used by
+  `mihomo_server`: `random_password` (`secrets.choice` over an
+  ASCII-alphanumeric alphabet), `random_base64_key`
+  (`secrets.token_bytes` base64 key material for the shadowsocks 2022
+  ciphers) and `random_uuid` (`uuid.uuid4()`).
+- Unit tests for the filter and lookup plugins and the profile template
+  (`tests/unit/`, run by a new `unit` CI job with pytest) covering the
+  template rendering (the 31-group topology, the conditional inline custom
+  rule sets, the rule order and the DNS policy), the provider
+  normalization, the self-hosted naming contract, the six listener shapes,
+  the client-node naming contract and the switch/null-input hardening, plus
+  Molecule scenarios for both mihomo roles that converge the real binary
+  and data files on the shared containers (the `mihomo_client` scenario
+  proves the TUN device, the table-2022 policy routes, the live nftables
+  `auto-redirect` table, the DNS `:53` takeover from systemd-resolved, the
+  gateway sysctl drop-in and the live Clash API, including the artifact
+  merge path and the region-group membership of the self-hosted nodes).
 - `systemd_netns` per-netns sysctls (`systemd_netns_sysctl_params`),
   re-applied after every namespace (re)creation through the unit's
   `ExecStart`, documented with evidence-driven BitTorrent tuning
@@ -23,7 +111,7 @@ The format is based on Keep a Changelog, and this project does not currently gua
   `default` scenario the lifecycle manager of the shared containers.
   Component scenarios run prepare, converge, idempotence, verify, the
   role's teardown via `cleanup.yml` and a post-cleanup verification; root
-  `requirements.yml` and justfile recipes cover the control-node setup,
+  `requirements.yaml` and justfile recipes cover the control-node setup,
   the container runtime is selectable via `MOLECULE_CONTAINER_RUNTIME`
   (Podman default, rootful Docker opt-in), the host kernel module tree is
   bind-mounted read-only into the containers for the `tproxy` modprobe
@@ -31,9 +119,66 @@ The format is based on Keep a Changelog, and this project does not currently gua
   GitHub Actions workflow runs ansible-lint and every scenario (rootful
   Podman) on pull requests and pushes to `master`/`dev`, with Dependabot
   keeping the SHA-pinned actions current.
+- `mihomo_install_package_src`: a `.gz` archive override for
+  `ak1ra_lab.network.mihomo_install`, given as a controller-local file
+  (copied to the target) or an `http(s)`/`ftp` URL (fetched with get_url) -
+  the value shape picks the transport.  It takes precedence over the release
+  download, the escape hatch when the GitHub asset download is unreachable;
+  `mihomo_client_bundle_src` accepts the same two shapes.
 
 ### Changed
 
+- `mihomo_client` profile reworked around a hand-maintained template
+  (`mihomo_client_config_template`, shipped as
+  `templates/etc/mihomo/config.yaml.j2`): the static mihomo YAML (group
+  topology, rule providers, rules, DNS split) is no longer generated from
+  role variables, and only the necessary values are rendered - mixed port,
+  API secret, the TUN/DNS switches, the provider mapping and the custom
+  rule-set payloads; copying the template is the customization path.  The
+  sing-box-tproxy topology stays (no fallback / include-all auto group on
+  the default path, `PROXY` pinned to `🚀 所有节点` through
+  `default-selected`, 31 groups), with `PROXY` ordering the tiers
+  self-hosted -> AUTO -> selector and every top-level group (incl. `FINAL`,
+  the application groups and `SSH`) listing all three tiers; `TELEGRAM` was
+  renamed `Telegram`.  The bundled rule providers gain the
+  `geosite-steam@cn` split (the Steam CDN/download domains route `DIRECT`
+  and resolve through the domestic DoH pair while the store/community
+  domains keep the `Steam` group), and the pre-filled inline rule providers
+  (`custom-internal` / `custom-rejected` / `custom-direct` / `custom-proxied`;
+  the internal set renders with `mihomo_client_custom_internal_nameservers`,
+  the others have a domain and an `-ip` variant) render from
+  `mihomo_client_custom_*_payload` lists only when non-empty.
+- The mihomo install contract moved out of the service roles:
+  `mihomo_install` is a standalone, distribution-neutral binary installer
+  (static `.gz` archive to `/usr/local/bin/mihomo`), `mihomo_client` /
+  `mihomo_server` own their service identity and systemd unit, and the new
+  playbook entry points orchestrate them.  The service roles' install
+  variables (`mihomo_client_install` / `_version` / `_package_url` and the
+  matching `mihomo_server_*` set) were replaced by the `mihomo_install_*`
+  contract.
+- `mihomo_*` enumeration lists (`mihomo_install_version_available`,
+  `mihomo_client_state_available` / `_mode_available`,
+  `mihomo_server_state_available`) moved from `defaults/main.yaml` into
+  `vars/main.yaml`, keeping the overridable contract short (same convention
+  as `systemd_netns`).
+- Renamed the scenario collection requirements file from `requirements.yml`
+  to `requirements.yaml`; `ak1ra_lab.general` is not listed there (it is not
+  on Galaxy yet) and is installed from git instead - the justfile dev
+  recipes use the local `GENERAL_COLLECTION` sibling checkout to test
+  unpushed changes, and CI installs the git source.
+- Simplified `.ansible-lint` to `profile`, `exclude_paths` and `skip_list`;
+  dropping the explicit `kinds:` mapping restores the default kind detection,
+  which had been silently disabling `var-naming[no-role-prefix]` for role
+  defaults (and lints the Molecule playbooks as playbooks again).
+- Added the uv-managed development tooling (`pyproject.toml`, `ruff.toml`):
+  `just sync`, `just lint` (ruff check + format on `plugins/` and `tests/`),
+  `just typecheck` (ty) and `just unit-test` (pytest).  `ruff.toml` keeps
+  the ruff default rule set with `line-length = 120`.  The justfile `lint`
+  recipe now runs ansible-lint as `just ansible-lint`.
+- Collection filters and tests are written with their `ansible.builtin.`
+  prefix in the `mihomo_*` roles and scenarios (`bool`, `to_json`,
+  `from_yaml`, `b64decode`, `type_debug`, `search`, ...), while Jinja2
+  builtins (`default`, `trim`, `indent`, `map`, `list`, ...) stay bare.
 - `systemd_netns` convention values and derived names (enumeration lists,
   verification URL, veth prefix/service names) move from
   `defaults/main.yaml` into `vars/main.yaml`, keeping the overridable
@@ -50,19 +195,116 @@ The format is based on Keep a Changelog, and this project does not currently gua
   off (the removal notifies the nftables service restart).  Before, the
   documented switch was never read and applying either role always deployed
   the table.
+- `mihomo_client` / `mihomo_server` service identity defaults are now
+  `mihomo`/`mihomo` (was `proxy`/`proxy`), and both systemd units pin
+  `LimitNOFILE=1000000`, following the upstream mihomo service file:
+  `infinity` resolves to an excessive 2^30 soft+hard limit since systemd
+  v240 (the same reason the AOSC OS package overrides the value).
+- `mihomo_client` fetches both profile data files from the single
+  `mihomo_client_data_repo` variable (the per-file
+  `mihomo_client_geoip_repo` / `mihomo_client_bundle_repo` overrides are
+  gone - the assets ship in the same release).
+- `mihomo_server` relies on Ansible's host_vars auto-loading instead of
+  reading the stored credential artifact back (`stat` + `slurp` + merge):
+  the role generates only the values that are still empty, and a custom
+  `mihomo_server_host_vars_file` outside the auto-load locations (next to
+  the playbook or the inventory) is treated as absent and regenerated every
+  run.
+- `mihomo_client` generates `mihomo_client_api_secret` with the
+  `random_password` lookup when it is empty and persists it to
+  `mihomo_client_host_vars_file` (default
+  `playbooks/host_vars/<host>/mihomo_client.yaml`, mode 0600, auto-loaded on
+  later runs) - the same workflow as the `mihomo_server` credentials; an
+  explicit non-empty value always wins.
+- The per-tier rule-set behavior documented for `dns.nameserver-policy`
+  (an `ipcidr` rule-set is rejected at load, a `classical` set matches only
+  its domain rules) keeps the `mihomo_client` custom domain/IP payload
+  lists separate.
+- The mihomo release lookups authenticate with the controller's
+  `GITHUB_TOKEN` environment variable when present (rate limits); export it
+  for the playbook run instead of setting a role variable.
+- `mihomo_client` / `mihomo_server`: the service identity and paths
+  (`*_user` / `*_group` / `*_etc_dir` / `*_binary`) moved from
+  `defaults/main.yaml` into `vars/main.yaml` as role conventions, keeping
+  the overridable contract short (override with role params or `-e`).
+
+### Removed
+
+- The mihomo profile-generation filter plugins (`mihomo_proxy_groups`,
+  `mihomo_rule_providers` / `mihomo_rules` and the `mihomo_dns`
+  `mihomo_nameserver_policy`) with the `mihomo_client_profile` spec, and the
+  per-field profile variables that became template content
+  (`mihomo_client_log_level`, `mihomo_client_allow_lan` /
+  `_bind_address`, `mihomo_client_ipv6`, `mihomo_client_store_selected`,
+  `mihomo_client_external_ui`, the TUN detail variables, the DNS detail
+  variables and the sniffer variables).  `mihomo_client_proxy_providers` and
+  the `mihomo_client_selfhost_*` flow stay;
+  `mihomo_selfhost_proxies`' region check is now optional (the region
+  regexes live in the template).
+- `mihomo_server_client_proxies_dialer_proxy`: whether to chain a node is a
+  client routing decision, and a fixed front-group name baked into every
+  generated node cannot express it (nor keep the direct variant); clients
+  can declare `dialer-proxy` on their own inline nodes instead.
+- The GitHub-proxy download prefixes `mihomo_install_github_proxy` /
+  `mihomo_client_github_proxy` (they only prefixed the asset download - the
+  release metadata query was always direct - and a broken proxy made the
+  download fail) and the `mihomo_install_github_token` /
+  `mihomo_client_github_token` variables (the lookups read the
+  `GITHUB_TOKEN` environment variable directly); use
+  `mihomo_install_package_src` / `mihomo_client_bundle_src` (a local file or
+  a URL) for an offline download.
+- `mihomo_client_tun_enable` / `mihomo_client_dns_enable`: the profile
+  template always renders the TUN and DNS sections and the matching host
+  state (the `tun` modules-load entry and the resolver takeover) always
+  applies; the takeover keeps its `mihomo_client_dns_manage_resolved` /
+  `_manage_resolv_conf` controls.
 
 ### Fixed
 
 - Jinja2 builtins are no longer written with the `ansible.builtin.` prefix
-  in the `systemd_bridge` / `systemd_netns` tasks and throughout the
-  Molecule playbooks: the FQCN form of a Jinja2 builtin
-  (`ansible.builtin.default`, `ansible.builtin.trim`,
+  in the `systemd_bridge` / `systemd_netns` tasks, the `mihomo_*` role
+  tasks/templates and throughout the Molecule playbooks: the FQCN form of a
+  Jinja2 builtin (`ansible.builtin.default`, `ansible.builtin.trim`,
   `ansible.builtin.list`, `ansible.builtin.int`, ...) only resolves on
   ansible-core 2.19+, so the roles would fail to render on the declared
   minimum (2.18).  Collection plugins are qualified in the same sweep
   (`ansible.builtin.bool`, `ansible.builtin.search`,
   `ansible.builtin.type_debug`, `ansible.builtin.b64decode`, `is
   ansible.builtin.version`, ...) in the roles and the Molecule verifies.
+- `mihomo_client` reads the `mihomo_client_selfhost_files` artifacts in a
+  dedicated task: the file lookup ran inside the node-list expression, so a
+  missing/mistyped entry failed with ansible-core's opaque
+  `CapturedExceptionMarker` concat error instead of naming the file.  The
+  read now surfaces the lookup error (with the file path and the failing
+  item), and the variable documentation spells out that relative entries
+  resolve against the role/playbook directories, not the working directory
+  (anchor them with `{{ playbook_dir }}`-based or absolute paths).
+- `mihomo_server` generates the credentials with the new
+  `ak1ra_lab.network.random_password` / `random_base64_key` / `random_uuid`
+  lookup plugins (control-node CSPRNG) instead of inline Jinja: the
+  shadowsocks 2022 key is base64 key material from `secrets.token_bytes`
+  (full entropy per byte, decoded length equal to the cipher key length),
+  and the vless/tuic identifiers are real `uuid.uuid4()` values - the inline
+  `ansible.builtin.password` + `regex_replace` chain produced 36 random hex
+  digits reformatted as a UUID without the RFC 4122 version/variant bits.
+- `mihomo_client` gateway mode deployed `net.ipv4.conf.all.rp_filter=1` (the
+  `mihomo_client_sysctl_rp_filter` default was `true`, meaning the value 1)
+  while its documentation, the mihomo-setup baseline and the Molecule
+  scenario all expect `0`: strict reverse-path filtering drops the
+  asymmetric policy-routed proxy path.  The default now writes 0 (the
+  booleans map to the sysctl values 1/0).
+- `mihomo_client` downloaded the profile data files (`geoip.metadb`,
+  `BundleMRS.7z`) with the wrong loop item reference (`item.item` while the
+  release lookup loop had renamed its variable to `data_file`), so the first
+  run on a host without the data files failed while rendering the download
+  destination; the download task now reads its `release` loop variable
+  (`release.data_file.dest` / `release.data_file.name`).
+- `mihomo_install` no longer rewrites the shared `/var/tmp` directory (the
+  old "ensure the deb cache directory exists" task forced `mode: 0755`
+  root:root onto the public path, stripping the sticky bit and the world
+  write permission); the archive now downloads into a role-owned
+  `ansible.builtin.tempfile` directory (mode 0700) that is removed after
+  every run.
 - `systemd_bridge` detects an actual NetworkManager installation by probing
   the unit file instead of `ansible_facts['services']`: on Debian-family
   hosts the packaged apt-daily units reference NetworkManager.service in
