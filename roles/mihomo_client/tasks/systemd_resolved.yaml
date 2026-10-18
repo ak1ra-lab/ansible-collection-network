@@ -1,0 +1,49 @@
+---
+# tasks/systemd_resolved.yaml - free the DNS stub port before mihomo binds
+# :53 and point the host resolver at the mihomo DNS module.
+#
+# Debian/Ubuntu cloud images run systemd-resolved: the stub listener owns
+# 127.0.0.53:53, so the kernel refuses to bind mihomo's wildcard 0.0.0.0:53
+# next to it (mihomo logs "Start DNS server error" and keeps running), and
+# /etc/resolv.conf (a symlink into /run, recreated at boot) would bypass the
+# mihomo DNS module.  The role stops/disables the service
+# (mihomo_client_dns_manage_resolved) and replaces the file with a static
+# resolver entry (mihomo_client_dns_manage_resolv_conf); reset.yaml
+# re-enables the service and restores the distro stub symlink.  Hosts
+# without systemd-resolved are left untouched - the service is absent, but
+# the resolv.conf takeover still applies when enabled.
+
+- name: collect the systemd service facts
+  ansible.builtin.service_facts:
+
+- name: stop and disable systemd-resolved (stub listener on 127.0.0.53:53)
+  when:
+    - mihomo_client_dns_manage_resolved | ansible.builtin.bool
+    - "'systemd-resolved.service' in ansible_facts.services"
+  ansible.builtin.systemd_service:
+    name: systemd-resolved.service
+    state: stopped
+    enabled: false
+
+- name: check the current resolver configuration
+  when: mihomo_client_dns_manage_resolv_conf | ansible.builtin.bool
+  ansible.builtin.stat:
+    path: "{{ _mihomo_client_resolv_conf }}"
+  register: _mihomo_client_resolv_conf_state
+
+- name: remove the /etc/resolv.conf symlink before replacing it
+  when:
+    - mihomo_client_dns_manage_resolv_conf | ansible.builtin.bool
+    - _mihomo_client_resolv_conf_state.stat.islnk | default(false)
+  ansible.builtin.file:
+    path: "{{ _mihomo_client_resolv_conf }}"
+    state: absent
+
+- name: point /etc/resolv.conf at the mihomo DNS listener
+  when: mihomo_client_dns_manage_resolv_conf | ansible.builtin.bool
+  ansible.builtin.template:
+    src: etc/resolv.conf.j2
+    dest: "{{ _mihomo_client_resolv_conf }}"
+    owner: root
+    group: root
+    mode: "0644"

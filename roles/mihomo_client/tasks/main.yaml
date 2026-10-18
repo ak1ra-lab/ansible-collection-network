@@ -1,0 +1,13 @@
+---
+# tasks file for ak1ra_lab.network.mihomo_client
+
+- name: validate contract variables
+  ansible.builtin.import_tasks: validation.yaml
+
+- name: "tear down managed artifacts (mihomo_client_state: absent)"
+  when: mihomo_client_state == 'absent'
+  ansible.builtin.import_tasks: reset.yaml
+
+- name: "apply the mihomo client (mihomo_client_state: present)"
+  when: mihomo_client_state == 'present'
+  ansible.builtin.import_tasks: present.yaml

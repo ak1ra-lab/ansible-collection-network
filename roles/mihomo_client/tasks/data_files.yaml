@@ -1,0 +1,94 @@
+---
+# tasks/data_files.yaml - provision the data files the profile depends on: an
+# explicit `src` when set (a controller-local file copied to the target, or a
+# URL fetched with get_url - the value shape picks the transport), otherwise
+# a MetaCubeX/meta-rules-dat release asset resolved by
+# ak1ra_lab.general.github_releases_info (the asset digest is passed to
+# get_url as the checksum).  A changed file restarts mihomo: the engine
+# extracts BundleMRS.7z while booting and the rule providers read the .mrs
+# members through `path-in-bundle`.
+
+- name: check the profile data files
+  ansible.builtin.stat:
+    path: "{{ data_file.dest }}"
+  register: _mihomo_client_data_file_state
+  loop: "{{ _mihomo_client_data_files }}"
+  loop_control:
+    loop_var: data_file
+    label: "{{ data_file.name }}"
+
+- name: replicate a profile data file from the controller
+  when:
+    - data_file.src | length > 0
+    - not (data_file.src_is_url | ansible.builtin.bool)
+  ansible.builtin.copy:
+    src: "{{ data_file.src }}"
+    dest: "{{ data_file.dest }}"
+    owner: "{{ mihomo_client_user }}"
+    group: "{{ mihomo_client_group }}"
+    mode: "0644"
+  loop: "{{ _mihomo_client_data_files }}"
+  loop_control:
+    loop_var: data_file
+    label: "{{ data_file.name }}"
+  notify:
+    - systemctl restart mihomo.service
+
+- name: download a profile data file from its source URL
+  when:
+    - data_file.src | length > 0
+    - data_file.src_is_url | ansible.builtin.bool
+    - >-
+      (data_file.force | ansible.builtin.bool)
+      or not (_mihomo_client_data_file_state.results[index].stat.exists)
+  ansible.builtin.get_url:
+    url: "{{ data_file.src }}"
+    dest: "{{ data_file.dest }}"
+    owner: "{{ mihomo_client_user }}"
+    group: "{{ mihomo_client_group }}"
+    mode: "0644"
+    force: true
+  loop: "{{ _mihomo_client_data_files }}"
+  loop_control:
+    loop_var: data_file
+    index_var: index
+    label: "{{ data_file.name }}"
+  notify:
+    - systemctl restart mihomo.service
+
+- name: resolve the release assets of the profile data files
+  when:
+    - data_file.src | length == 0
+    - >-
+      (data_file.force | ansible.builtin.bool)
+      or not (_mihomo_client_data_file_state.results[index].stat.exists)
+  ak1ra_lab.general.github_releases_info:
+    repo: "{{ data_file.repo }}"
+    asset_name: "{{ data_file.asset }}"
+    token: "{{ lookup('ansible.builtin.env', 'GITHUB_TOKEN', default='') }}"
+  # github_releases_info resolves exactly one release asset (with its
+  # checksum) per call, so every data file gets its own call (the list
+  # currently holds BundleMRS.7z only).
+  loop: "{{ _mihomo_client_data_files }}"
+  loop_control:
+    loop_var: data_file
+    index_var: index
+    label: "{{ data_file.name }}"
+  register: _mihomo_client_data_releases
+
+- name: download the profile data files
+  when: release is not ansible.builtin.skipped
+  ansible.builtin.get_url:
+    url: "{{ release.download_url }}"
+    dest: "{{ release.data_file.dest }}"
+    checksum: "{{ release.download_checksum | default(omit, true) }}"
+    owner: "{{ mihomo_client_user }}"
+    group: "{{ mihomo_client_group }}"
+    mode: "0644"
+    force: true
+  loop: "{{ _mihomo_client_data_releases.results }}"
+  loop_control:
+    loop_var: release
+    label: "{{ release.data_file.name }}"
+  notify:
+    - systemctl restart mihomo.service

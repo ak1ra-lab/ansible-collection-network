@@ -1,0 +1,55 @@
+---
+# tasks/validation.yaml - fail fast on contract violations before anything
+# on the host is touched.  The profile template renders its own content; this
+# file checks the role-level shape (and the payload lists, because a string
+# would silently render as a character list through `| list`).
+
+- name: validate the mihomo_client contract
+  ansible.builtin.assert:
+    that:
+      - mihomo_client_state in mihomo_client_state_available
+      - mihomo_client_mode in mihomo_client_mode_available
+      - mihomo_client_etc_dir is ansible.builtin.match('^/')
+      - mihomo_client_config_template | length > 0
+      - mihomo_client_mixed_port | int > 0
+      - mihomo_client_mixed_port | int < 65536
+      - mihomo_client_user | length > 0
+      - mihomo_client_group | length > 0
+      - mihomo_client_proxy_providers | ansible.builtin.type_debug == 'dict'
+      - mihomo_client_selfhost_proxies | ansible.builtin.type_debug == 'list'
+      - mihomo_client_selfhost_files | ansible.builtin.type_debug == 'list'
+      - mihomo_client_custom_internal_nameservers | ansible.builtin.type_debug == 'list'
+      - mihomo_client_custom_internal_rule_set_payload | ansible.builtin.type_debug == 'list'
+      - mihomo_client_custom_rejected_rule_set_payload | ansible.builtin.type_debug == 'list'
+      - mihomo_client_custom_rejected_rule_set_ip_payload | ansible.builtin.type_debug == 'list'
+      - mihomo_client_custom_direct_rule_set_payload | ansible.builtin.type_debug == 'list'
+      - mihomo_client_custom_direct_rule_set_ip_payload | ansible.builtin.type_debug == 'list'
+      - mihomo_client_custom_proxied_rule_set_payload | ansible.builtin.type_debug == 'list'
+      - mihomo_client_custom_proxied_rule_set_ip_payload | ansible.builtin.type_debug == 'list'
+      # An internal rule set without nameservers would route its domains
+      # DIRECT but resolve them through the foreign DoH pair.
+      - >-
+        (mihomo_client_custom_internal_rule_set_payload | length == 0)
+        or (mihomo_client_custom_internal_nameservers | length > 0)
+      # The profile renders unconditionally, but it can only carry traffic
+      # when at least one node source exists (airport subscriptions or
+      # self-hosted nodes/artifacts).
+      - >-
+        (mihomo_client_state == 'absent')
+        or (mihomo_client_proxy_providers | length > 0)
+        or (mihomo_client_selfhost_proxies | length > 0)
+        or (mihomo_client_selfhost_files | length > 0)
+    fail_msg: |
+      mihomo_client variables violate the role contract:
+        mihomo_client_state in {{ mihomo_client_state_available }} (got: {{ mihomo_client_state }})
+        mihomo_client_mode in {{ mihomo_client_mode_available }} (got: {{ mihomo_client_mode }})
+        mihomo_client_config_template must be a non-empty template path
+        mihomo_client_proxy_providers must be a mapping;
+        mihomo_client_selfhost_proxies/selfhost_files and every
+        mihomo_client_custom_*_payload must be lists, and a non-empty
+        mihomo_client_custom_internal_rule_set_payload requires
+        mihomo_client_custom_internal_nameservers
+        at least one node source is required when state=present:
+        mihomo_client_proxy_providers, mihomo_client_selfhost_proxies or
+        mihomo_client_selfhost_files
+    quiet: true

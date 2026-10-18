@@ -1,0 +1,22 @@
+[Unit]
+Description=mihomo Daemon, Another Clash Kernel.
+Documentation=https://wiki.metacubex.one
+After=network.target nss-lookup.target network-online.target
+
+[Service]
+Type=simple
+User={{ mihomo_client_user }}
+Group={{ mihomo_client_group }}
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BIND_SERVICE CAP_SYS_TIME CAP_SYS_PTRACE CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BIND_SERVICE CAP_SYS_TIME CAP_SYS_PTRACE CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE
+ExecStartPre={{ mihomo_client_binary }} -t -d {{ mihomo_client_etc_dir }}
+ExecStart={{ mihomo_client_binary }} -d {{ mihomo_client_etc_dir }}
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=10
+# Concrete value, following the upstream mihomo service file: `infinity`
+# resolves to an excessive 2^30 soft+hard limit since systemd v240.
+LimitNOFILE=1000000
+
+[Install]
+WantedBy=multi-user.target

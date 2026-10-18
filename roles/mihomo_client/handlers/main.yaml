@@ -1,0 +1,10 @@
+---
+# handlers file for ak1ra_lab.network.mihomo_client
+- name: systemctl daemon-reload
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: systemctl restart mihomo.service
+  ansible.builtin.systemd_service:
+    name: mihomo.service
+    state: restarted

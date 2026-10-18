@@ -1,0 +1,58 @@
+---
+# ak1ra_lab.network.mihomo_client - internal variables.
+#
+# Do not override these; override the public variables in defaults/main.yaml
+# (or pass -e) instead.  Anything with a leading underscore is an
+# implementation detail of the role.
+
+# Accepted values of the mihomo_client_state / mihomo_client_mode switches.
+mihomo_client_state_available:
+  - present
+  - absent
+mihomo_client_mode_available:
+  - gateway
+  - local
+
+# Service identity and fixed paths.  The role owns the `mihomo` user/group and
+# the /etc/mihomo + binary layout; the binary itself is deployed by
+# ak1ra_lab.network.mihomo_install and only asserted here.  Role conventions
+# rather than knobs: override them with role params or `-e` if they really
+# must differ.
+mihomo_client_user: mihomo
+mihomo_client_group: mihomo
+mihomo_client_etc_dir: /etc/mihomo
+mihomo_client_binary: /usr/local/bin/mihomo
+
+# Role-owned drop-ins; the names are what reset.yaml removes.
+_mihomo_client_sysctl_file: /etc/sysctl.d/90-ansible-mihomo-client-gateway.conf
+_mihomo_client_modules_file: /etc/modules-load.d/ansible-mihomo-client.conf
+
+# The selfhost provider file is written by the role from the inline list and
+# the mihomo_server artifacts; mihomo hot-reloads it (fswatch), no restart.
+_mihomo_client_selfhost_provider: "{{ mihomo_client_etc_dir }}/providers/selfhost.yaml"
+
+# Naming contract of the self-hosted nodes: the tag is what the profile
+# template's `selfhost|自建` group filters match (keep the two in sync when
+# editing a copied template); the role only validates the nodes it renders,
+# not the region tokens (the region regexes live in the template).
+_mihomo_client_selfhost_pattern: "selfhost|自建"
+
+# Loop input for tasks/data_files.yaml: the release data file(s) the profile
+# depends on.  `src` (an explicit controller-local path or URL) takes
+# precedence over the GitHub release download and `src_is_url` picks the
+# copy/get_url transport; `force` re-downloads when the destination exists.
+_mihomo_client_data_files:
+  - name: bundle
+    repo: "{{ mihomo_client_data_repo }}"
+    asset: "{{ mihomo_client_bundle_asset }}"
+    dest: "{{ mihomo_client_etc_dir }}/{{ mihomo_client_bundle_asset }}"
+    src: "{{ mihomo_client_bundle_src }}"
+    src_is_url: >-
+      {{ mihomo_client_bundle_src is ansible.builtin.match('^[a-zA-Z][a-zA-Z0-9+.-]*://') }}
+    force: "{{ mihomo_client_bundle_force }}"
+
+# Local resolver paths shared by the present and reset DNS tasks (see
+# tasks/systemd_resolved.yaml): the file the role takes over and the distro
+# stub symlink teardown restores.
+_mihomo_client_resolv_conf: /etc/resolv.conf
+_mihomo_client_resolved_stub_resolv_conf: /run/systemd/resolve/stub-resolv.conf

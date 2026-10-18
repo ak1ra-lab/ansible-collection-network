@@ -1,0 +1,75 @@
+---
+# tasks/reset.yaml - atomic teardown of the role-managed artifacts
+# (mihomo_client_state: absent).
+#
+# Deliberately left in place:
+#   - /etc/mihomo/providers/  - subscription caches and node data (and any
+#                               manually maintained providers)
+#   - /etc/mihomo/cache.db    - store-selected history
+#   - /etc/mihomo/BundleMRS.7z, rules/
+#                             - downloaded data file and the extraction
+#                               cache; re-downloaded on the next present run
+#   - the mihomo binary       - managed by ak1ra_lab.network.mihomo_install
+#
+# The local resolver is restored (the inverse of tasks/systemd_resolved.yaml):
+# the distro stub symlink first, so systemd-resolved starts as the provider
+# rather than as a consumer of the static file, then the service.  The
+# takeover is only reversible where systemd-resolved exists; a custom
+# /etc/resolv.conf content that predates the deploy is not restored, and on
+# a host without systemd-resolved the static file stays in place.
+
+- name: stop and disable mihomo.service
+  ansible.builtin.systemd_service:
+    name: mihomo.service
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: remove the mihomo.service unit file
+  ansible.builtin.file:
+    path: /etc/systemd/system/mihomo.service
+    state: absent
+  notify:
+    - systemctl daemon-reload
+
+- name: remove the mihomo client profile
+  ansible.builtin.file:
+    path: "{{ mihomo_client_etc_dir }}/config.yaml"
+    state: absent
+
+- name: remove the self-hosted provider file
+  ansible.builtin.file:
+    path: "{{ _mihomo_client_selfhost_provider }}"
+    state: absent
+
+- name: remove the LAN-gateway sysctl drop-in
+  ansible.builtin.file:
+    path: "{{ _mihomo_client_sysctl_file }}"
+    state: absent
+
+- name: remove the tun modules-load entry
+  ansible.builtin.file:
+    path: "{{ _mihomo_client_modules_file }}"
+    state: absent
+
+- name: collect the systemd service facts
+  ansible.builtin.service_facts:
+
+- name: restore the distro /etc/resolv.conf stub symlink
+  when:
+    - mihomo_client_dns_manage_resolv_conf | ansible.builtin.bool
+    - "'systemd-resolved.service' in ansible_facts.services"
+  ansible.builtin.file:
+    src: "{{ _mihomo_client_resolved_stub_resolv_conf }}"
+    dest: "{{ _mihomo_client_resolv_conf }}"
+    state: link
+    force: true
+
+- name: re-enable and start systemd-resolved
+  when:
+    - mihomo_client_dns_manage_resolved | ansible.builtin.bool
+    - "'systemd-resolved.service' in ansible_facts.services"
+  ansible.builtin.systemd_service:
+    name: systemd-resolved.service
+    state: started
+    enabled: true

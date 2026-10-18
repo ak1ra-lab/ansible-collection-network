@@ -1,0 +1,185 @@
+---
+# tasks/present.yaml - apply the mihomo client (mihomo_client_state: present):
+# service identity, data files, profile, tun persistence, gateway sysctl and
+# the service.  The binary itself is deployed by
+# ak1ra_lab.network.mihomo_install, which the playbook entry point
+# (playbooks/mihomo_client.yaml) applies before this role.  Changing
+# providers/selfhost.yaml alone is hot-reloaded by mihomo (fswatch);
+# config.yaml changes restart the service via handlers.
+
+- name: ensure the mihomo system group exists
+  ansible.builtin.group:
+    name: "{{ mihomo_client_group }}"
+    system: true
+    state: present
+
+- name: ensure the mihomo system user exists
+  ansible.builtin.user:
+    name: "{{ mihomo_client_user }}"
+    group: "{{ mihomo_client_group }}"
+    system: true
+    state: present
+
+- name: ensure the mihomo configuration directories exist
+  ansible.builtin.file:
+    path: "{{ directory }}"
+    owner: "{{ mihomo_client_user }}"
+    group: "{{ mihomo_client_group }}"
+    mode: "0750"
+    state: directory
+  loop:
+    - "{{ mihomo_client_etc_dir }}"
+    - "{{ mihomo_client_etc_dir }}/providers"
+  loop_control:
+    loop_var: directory
+
+- name: assert the mihomo binary is available
+  ansible.builtin.stat:
+    path: "{{ mihomo_client_binary }}"
+  register: _mihomo_client_binary
+
+- name: fail when the mihomo binary is missing
+  ansible.builtin.assert:
+    that:
+      - _mihomo_client_binary.stat.exists
+    fail_msg: >-
+      mihomo binary not found at {{ mihomo_client_binary }}; apply
+      ak1ra_lab.network.mihomo_install first (playbooks/mihomo_client.yaml
+      does) or install it on the host out of band
+    quiet: true
+
+- name: fetch the profile data files (BundleMRS.7z)
+  ansible.builtin.import_tasks: data_files.yaml
+
+# The file lookup is the whole set_fact expression on purpose: ansible-core
+# 2.19+ defers plugin errors inside a larger expression behind an opaque
+# CapturedExceptionMarker, while the plain form reports the unreadable file
+# by path (relative entries resolve against the role/playbook directories,
+# not the working directory).
+- name: read the self-hosted artifact files
+  when: mihomo_client_selfhost_files | length > 0
+  ansible.builtin.set_fact:
+    _mihomo_client_artifact_file: >-
+      {{ lookup('ansible.builtin.file', selfhost_file) | ansible.builtin.from_yaml }}
+  loop: "{{ mihomo_client_selfhost_files }}"
+  loop_control:
+    loop_var: selfhost_file
+    label: "{{ selfhost_file | ansible.builtin.basename }}"
+  register: _mihomo_client_artifact_reads
+
+- name: set the effective self-hosted node list
+  ansible.builtin.set_fact:
+    _mihomo_client_selfhost_nodes: >-
+      {{ mihomo_client_selfhost_proxies
+         + (_mihomo_client_artifact_reads.results | default([])
+            | map(attribute='ansible_facts._mihomo_client_artifact_file.proxies', default=[])
+            | ansible.builtin.flatten) }}
+
+- name: generate the Clash API secret and persist it
+  ansible.builtin.import_tasks: generate_api_secret.yaml
+
+- name: template the mihomo client profile
+  no_log: true
+  ansible.builtin.template:
+    src: "{{ mihomo_client_config_template }}"
+    dest: "{{ mihomo_client_etc_dir }}/config.yaml"
+    owner: "{{ mihomo_client_user }}"
+    group: "{{ mihomo_client_group }}"
+    mode: "0640"
+  notify:
+    - systemctl restart mihomo.service
+
+- name: template the self-hosted provider
+  no_log: true
+  ansible.builtin.template:
+    src: etc/mihomo/providers/selfhost.yaml.j2
+    dest: "{{ _mihomo_client_selfhost_provider }}"
+    owner: "{{ mihomo_client_user }}"
+    group: "{{ mihomo_client_group }}"
+    mode: "0640"
+
+- name: ensure the controller-local artifacts directory exists
+  when: mihomo_client_local_artifacts_dir | length > 0
+  delegate_to: localhost
+  become: false
+  ansible.builtin.file:
+    path: "{{ mihomo_client_local_artifacts_dir }}"
+    state: directory
+    mode: "0750"
+
+- name: template the mihomo client profile locally
+  when: mihomo_client_local_artifacts_dir | length > 0
+  delegate_to: localhost
+  become: false
+  no_log: true
+  ansible.builtin.template:
+    src: "{{ mihomo_client_config_template }}"
+    dest: "{{ mihomo_client_local_artifacts_dir }}/{{ inventory_hostname }}.config.yaml"
+    mode: "0600"
+
+# Before the service starts: free the systemd-resolved stub port and take
+# over /etc/resolv.conf (see tasks/systemd_resolved.yaml).
+- name: resolve the local DNS stub conflict (systemd-resolved, :53)
+  when:
+    - >-
+      (mihomo_client_dns_manage_resolved | ansible.builtin.bool)
+      or (mihomo_client_dns_manage_resolv_conf | ansible.builtin.bool)
+  ansible.builtin.import_tasks: systemd_resolved.yaml
+
+- name: persist the tun kernel module at boot
+  ansible.builtin.template:
+    src: etc/modules-load.d/ansible-mihomo-client.conf.j2
+    dest: "{{ _mihomo_client_modules_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "enable LAN forwarding (mihomo_client_mode: gateway)"
+  when: mihomo_client_mode == 'gateway'
+  ansible.posix.sysctl:
+    name: "{{ param.name }}"
+    value: "{{ param.value }}"
+    sysctl_file: "{{ _mihomo_client_sysctl_file }}"
+    sysctl_set: true
+    reload: true
+  loop:
+    - name: net.ipv4.ip_forward
+      value: "{{ mihomo_client_sysctl_ip_forward | int }}"
+    - name: net.ipv4.conf.all.rp_filter
+      value: "{{ mihomo_client_sysctl_rp_filter | int }}"
+  loop_control:
+    loop_var: param
+    label: "{{ param.name }}"
+
+- name: "remove the LAN-gateway sysctl drop-in (mihomo_client_mode: local)"
+  when: mihomo_client_mode == 'local'
+  ansible.builtin.file:
+    path: "{{ _mihomo_client_sysctl_file }}"
+    state: absent
+
+- name: template the mihomo.service unit
+  ansible.builtin.template:
+    src: etc/systemd/system/mihomo.service.j2
+    dest: /etc/systemd/system/mihomo.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - systemctl daemon-reload
+    - systemctl restart mihomo.service
+
+- name: validate the deployed mihomo profile
+  ansible.builtin.command:
+    argv:
+      - "{{ mihomo_client_binary }}"
+      - -t
+      - -d
+      - "{{ mihomo_client_etc_dir }}"
+  changed_when: false
+
+- name: ensure mihomo.service is enabled and started
+  ansible.builtin.systemd_service:
+    name: mihomo.service
+    state: started
+    enabled: true
+    daemon_reload: true
