@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Filter plugin: networkd files that actually claim a managed device.
 
 systemd-networkd .network/.netdev files match devices through [Match]
@@ -30,9 +29,7 @@ def _claims_device(text: str, devices: list[str]) -> bool:
 
 def _decode(content) -> str:
     try:
-        return base64.b64decode((content or "").strip(), validate=False).decode(
-            "utf-8", errors="replace"
-        )
+        return base64.b64decode((content or "").strip(), validate=False).decode("utf-8", errors="replace")
     except (ValueError, TypeError):
         return ""
 

@@ -274,6 +274,10 @@ __marimo__/
 # The default root path for Ansible config files on the controller
 .ansible/
 
+# Adjacent collections symlink farm created by ansible-compat/ansible-lint
+# while linting the collection in place
+/collections/
+
 # Retry files generated for failed Ansible playbook runs
 *.retry
 
@@ -281,6 +285,11 @@ __marimo__/
 inventory/*.yaml
 playbooks/host_vars/**/*.yaml
 playbooks/group_vars/**/*.yaml
+
+# Molecule scenario host_vars: the mihomo_server scenario writes the generated
+# credentials next to the scenario playbook so Ansible auto-loads them on the
+# idempotence re-run; cleanup.yml removes them again.
+extensions/molecule/**/host_vars/
 
 # Ansible runtime scripts and templates
 playbooks/scripts/*

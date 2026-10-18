@@ -1,0 +1,29 @@
+[project]
+name = "ansible-collection-network"
+version = "0.1.0"
+description = "Development tooling for the ak1ra_lab.network Ansible collection"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv]
+package = false
+
+# The unit tests import the filter and lookup plugins as top-level modules
+# (the same sys.path entries tests/unit/conftest.py adds at runtime).
+[tool.ty.environment]
+extra-paths = ["plugins/filter", "plugins/lookup"]
+
+[dependency-groups]
+lint = [
+    "ansible-core>=2.19.12",
+    "ruff>=0.17.0",
+    "ty>=0.0.40",
+]
+test = [
+    "ansible-core>=2.19.12",
+    "pytest>=9.1.1",
+]
+dev = [
+    { include-group = "lint" },
+    { include-group = "test" },
+]
