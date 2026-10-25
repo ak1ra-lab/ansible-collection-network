@@ -375,6 +375,14 @@ def mihomo_server_client_proxies(
     shadowsocks is single-user, so it emits exactly one ``-ss`` node using
     the server password; every other protocol emits one node per user.
 
+    Hysteria2 bandwidth is deliberately **not** emitted on the client nodes:
+    the ``up``/``down`` values on the server listener are per-client Brutal
+    caps (server upload/download direction, not the client's), and copying
+    them into the client made asymmetric links impossible to express and
+    forced every client into Brutal at an arbitrary rate.  A client node
+    without bandwidth lets mihomo fall back to BBR; clients that want Brutal
+    set their own ``up``/``down`` in the client profile.
+
     Args:
         config: the server mapping (as for ``mihomo_server_config``) plus
             ``hostname``, ``region`` and ``client_node_prefix``.
@@ -397,8 +405,6 @@ def mihomo_server_client_proxies(
         enable_hysteria2=False,
         hysteria2_port=8845,
         hysteria2_users=[],
-        hysteria2_up_mbps=0,
-        hysteria2_down_mbps=0,
         hysteria2_obfs_enabled=False,
         hysteria2_obfs_password="",
         enable_vless=False,
@@ -483,12 +489,6 @@ def mihomo_server_client_proxies(
             if _truthy(c["hysteria2_obfs_enabled"]):
                 proxy["obfs"] = "salamander"
                 proxy["obfs-password"] = c["hysteria2_obfs_password"]
-            up = c["hysteria2_up_mbps"]
-            down = c["hysteria2_down_mbps"]
-            if up:
-                proxy["up"] = f"{up} Mbps"
-            if down:
-                proxy["down"] = f"{down} Mbps"
             proxy["alpn"] = list(c["alpn"])
             proxies.append(proxy)
 

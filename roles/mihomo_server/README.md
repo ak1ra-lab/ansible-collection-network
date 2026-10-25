@@ -108,7 +108,7 @@ groups; `<host-label>` is the first DNS label of `mihomo_server_hostname`
 | `mihomo_server_enable_hysteria2` | `true` | hysteria2 listener switch |
 | `mihomo_server_hysteria2_port` | `8845` | Port |
 | `mihomo_server_hysteria2_users` | `[]` | `[{name, password}]`; generated when empty |
-| `mihomo_server_hysteria2_up_mbps` / `_down_mbps` | `1000` / `1000` | Bandwidth hints (each `0` hint is omitted from the client nodes) |
+| `mihomo_server_hysteria2_up_mbps` / `_down_mbps` | `0` / `0` | Server-side Brutal caps in Mbps (`0` omits them). Generated client nodes never carry bandwidth, so clients use BBR unless they set their own; these caps only apply when a client opts into Brutal |
 | `mihomo_server_hysteria2_obfs_enabled` / `_obfs_password` | `false` / `""` | salamander obfuscation (password generated when enabled and empty) |
 | `mihomo_server_hysteria2_masquerade_enabled` / `_url` | `true` / bing.com | HTTP/3 masquerade |
 | `mihomo_server_enable_vless` | `false` | vless listener switch |

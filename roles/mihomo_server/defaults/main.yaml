@@ -64,8 +64,12 @@ mihomo_server_enable_hysteria2: true
 mihomo_server_hysteria2_port: 8845
 # Users: [{name, password}] (generated when empty)
 mihomo_server_hysteria2_users: []
-mihomo_server_hysteria2_up_mbps: 1000
-mihomo_server_hysteria2_down_mbps: 1000
+# Server-side Brutal bandwidth caps in Mbps (0 = omit).  These are the
+# *server's* upload/download rates and apply per client; the generated client
+# nodes never inherit them.  With no client bandwidth mihomo uses BBR, where
+# these caps are inert - set them only when clients opt into Brutal.
+mihomo_server_hysteria2_up_mbps: 0
+mihomo_server_hysteria2_down_mbps: 0
 mihomo_server_hysteria2_obfs_enabled: false
 mihomo_server_hysteria2_obfs_password: ""
 mihomo_server_hysteria2_masquerade_enabled: true

@@ -307,6 +307,14 @@ The format is based on Keep a Changelog, and this project does not currently gua
   and the vless/tuic identifiers are real `uuid.uuid4()` values - the inline
   `ansible.builtin.password` + `regex_replace` chain produced 36 random hex
   digits reformatted as a UUID without the RFC 4122 version/variant bits.
+- `mihomo_server` no longer copies the hysteria2 `up`/`down` server caps
+  into the generated client nodes.  The same pair was interpreted as
+  server-side caps by the listener and as client-side hints by the client,
+  so an asymmetric client link could not be represented, and the old
+  `1000`/`1000` default put every client on Brutal at an arbitrary rate.
+  Client nodes now omit bandwidth (mihomo falls back to BBR), and the
+  server-side variables default to `0` (omitted); set them only when
+  clients opt into Brutal and the server should enforce a per-client cap.
 - `mihomo_client` gateway mode deployed `net.ipv4.conf.all.rp_filter=1` (the
   `mihomo_client_sysctl_rp_filter` default was `true`, meaning the value 1)
   while its documentation, the mihomo-setup baseline and the Molecule

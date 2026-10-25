@@ -127,6 +127,14 @@ def test_hysteria2_obfs_and_masquerade() -> None:
     assert hy2["masquerade"] == "https://www.bing.com"
 
 
+def test_hysteria2_server_bandwidth_is_optional() -> None:
+    config = mihomo_server_config(all_protocols(hysteria2_up_mbps=0, hysteria2_down_mbps=0))
+    hy2 = next(listener for listener in config["listeners"] if listener["name"] == "hysteria2-in")
+    assert "up" not in hy2
+    assert "down" not in hy2
+    assert "ignore-client-bandwidth" not in hy2
+
+
 def test_anytls_padding_scheme() -> None:
     config = mihomo_server_config(all_protocols(anytls_padding_scheme="stop=8"))
     anytls = next(listener for listener in config["listeners"] if listener["name"] == "anytls-in")
@@ -266,8 +274,8 @@ def test_client_proxy_shapes() -> None:
     assert trojan["skip-cert-verify"] is False
 
     hy2 = proxies["selfhost-US-node01-alice-hy2"]
-    assert hy2["up"] == "100 Mbps"
-    assert hy2["down"] == "200 Mbps"
+    assert "up" not in hy2
+    assert "down" not in hy2
 
     vless = proxies["selfhost-US-node01-alice-vless"]
     assert vless["servername"] == "node01.example.com"
@@ -291,11 +299,11 @@ def test_tuic_alpn_follows_the_server_spec() -> None:
     assert tuic["alpn"] == ["h3", "h2"]
 
 
-def test_hysteria2_client_bandwidth_is_independent() -> None:
-    proxies = client_config(hysteria2_up_mbps=0, hysteria2_down_mbps=200)["proxies"]
+def test_hysteria2_client_bandwidth_is_never_emitted() -> None:
+    proxies = client_config(hysteria2_up_mbps=100, hysteria2_down_mbps=200)["proxies"]
     hy2 = next(proxy for proxy in proxies if proxy["name"].endswith("-hy2"))
     assert "up" not in hy2
-    assert hy2["down"] == "200 Mbps"
+    assert "down" not in hy2
     assert hy2["alpn"] == ["h3"]
 
 
