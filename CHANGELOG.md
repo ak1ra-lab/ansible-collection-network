@@ -55,7 +55,8 @@ The format is based on Keep a Changelog, and this project does not currently gua
   payload lists.
 - `ak1ra_lab.network.mihomo_server`: mihomo proxy server on the VPS side
   (`listeners:` schema, shadowsocks/trojan/hysteria2/vless/tuic/anytls,
-  manual TLS certificate paths because mihomo has no built-in ACME) with
+  TLS paths that are either operator-managed or copied from an external
+  source because mihomo has no built-in ACME) with
   the credential workflow reused from `sing_box_server`: the first N names of
   a user pool get generated passwords/UUIDs when the `*_users` lists are
   empty, every reference (server address, region token, user mapping) is
@@ -65,6 +66,20 @@ The format is based on Keep a Changelog, and this project does not currently gua
   `config/client_outbounds/<host>.proxies.yaml` for the client's
   `providers/selfhost.yaml`; an optional external-controller secret and a
   configurable client-node prefix are available.
+- `mihomo_server` can consume an externally managed TLS pair:
+  `mihomo_server_tls_source_certificate_path` / `_key_path` are copied into
+  `mihomo_server_tls_dir` (`0640 root:mihomo`) on every apply, and
+  `mihomo_server_tls_renewal_hook_enabled` installs an independent certbot
+  deploy hook (`renewal-hooks/deploy/mihomo-server.sh`) that re-copies the
+  pair and reloads mihomo after a renewal.  The role still owns the initial
+  copy; the hook only covers `certbot renew`, and it does not replace the
+  certbot role's own deploy hooks.
+- The `ak1ra_lab.network.mihomo_server` playbook can orchestrate
+  `ak1ra_lab.general.certbot` before the server role
+  (`mihomo_server_tls_certbot_enabled`): it leaves the certificate list and
+  challenge/provider configuration to the normal `certbot_*` contract,
+  derives the role's source paths from `live/<lineage>` and enables the
+  independent renewal hook.  The default remains manual TLS paths.
 - Playbook entry points `ak1ra_lab.network.mihomo_install`,
   `ak1ra_lab.network.mihomo_client` and `ak1ra_lab.network.mihomo_server`:
   the mihomo roles never call each other, the client/server playbooks apply

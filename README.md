@@ -47,6 +47,9 @@ The `mihomo_install` / `mihomo_client` / `mihomo_server` roles resolve GitHub
 release assets with the `ak1ra_lab.general.github_releases_info` module and
 detect the amd64 microarchitecture level with
 `ak1ra_lab.general.cpu_info`.
+The optional certbot orchestration in `mihomo_server` also needs the
+`ak1ra_lab.general.certbot` role (general >= 0.3.0).
+
 `ak1ra_lab.general` is not published to Galaxy yet; consumers add it to their
 requirements and install it from git:
 
@@ -70,7 +73,7 @@ from a git worktree.
 | `ak1ra_lab.network.systemd_netns` | Entry point for the `systemd_netns` role: applies the host bridges declared for the run (`systemd_bridge_bridges`) first, then the namespace (root privileges, fact gathering); the `systemd_netns_*` contract drives the namespace. |
 | `ak1ra_lab.network.mihomo_install` | Thin wrapper around the `mihomo_install` role (binary only, root privileges, fact gathering); the `mihomo_install_*` contract drives it. |
 | `ak1ra_lab.network.mihomo_client` | Entry point for the `mihomo_client` role: applies `mihomo_install` (the `mihomo_install_*` contract) first, then the client role (`mihomo_client_*`); a binary upgrade restarts `mihomo.service` through the client role's handler. |
-| `ak1ra_lab.network.mihomo_server` | Entry point for the `mihomo_server` role: applies `mihomo_install` first, then the server role (root privileges, fact gathering; the `mihomo_server_*` contract). |
+| `ak1ra_lab.network.mihomo_server` | Entry point for the `mihomo_server` role: applies `mihomo_install` first, optionally applies `ak1ra_lab.general.certbot` (`mihomo_server_tls_certbot_enabled`), then the server role (root privileges, fact gathering; the `mihomo_server_*` contract). |
 
 ```shell
 ansible-playbook ak1ra_lab.network.systemd_bridge -e systemd_bridge_bridges='[{"name": "br_wan", "interface": "enp36s0"}]'
