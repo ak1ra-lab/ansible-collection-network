@@ -13,10 +13,21 @@
   ignore_unreachable: true
   vars:
     mihomo_server_state: absent
+    mihomo_server_tls_renewal_hook_path: /tmp/molecule-mihomo-server-hook/mihomo-server.sh
   tasks:
     - name: tear down the mihomo server
       ansible.builtin.include_role:
         name: ak1ra_lab.network.mihomo_server
+
+    - name: remove the scenario's TLS source and hook directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/molecule-mihomo-server-source
+        - /tmp/molecule-mihomo-server-hook
+      loop_control:
+        label: "{{ item }}"
 
 - name: remove the controller-local artifacts
   hosts: localhost

@@ -1,0 +1,84 @@
+---
+# tasks/tls.yaml - deploy an externally managed certificate/key pair into a
+# location the mihomo service user can read, and optionally install a certbot
+# renewal hook.
+#
+# The source pair is never consumed in place: certbot's /etc/letsencrypt/live/
+# is root-only, while mihomo runs as an unprivileged service user.  The copy
+# runs on every apply; the hook covers renewals between Ansible runs.
+#
+# Both source variables are empty in manual mode, so every task here is
+# skipped and the listener paths keep pointing at the operator-managed files.
+
+- name: collect the TLS source certificate/key state
+  when: mihomo_server_tls_source_certificate_path | length > 0
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    follow: true
+  loop:
+    - "{{ mihomo_server_tls_source_certificate_path }}"
+    - "{{ mihomo_server_tls_source_key_path }}"
+  register: _mihomo_server_tls_sources
+  loop_control:
+    label: "{{ item }}"
+
+- name: validate the TLS source certificate/key
+  when: mihomo_server_tls_source_certificate_path | length > 0
+  ansible.builtin.assert:
+    that:
+      - _mihomo_server_tls_sources.results[0].stat.exists | default(false)
+      - _mihomo_server_tls_sources.results[1].stat.exists | default(false)
+      - _mihomo_server_tls_sources.results[0].stat.isreg | default(false)
+      - _mihomo_server_tls_sources.results[1].stat.isreg | default(false)
+    fail_msg: >-
+      mihomo_server_tls_source_certificate_path and
+      mihomo_server_tls_source_key_path must point at regular files on the
+      target before the mihomo service can be configured
+    quiet: true
+
+- name: ensure the TLS destination directory exists
+  when: mihomo_server_tls_source_certificate_path | length > 0
+  ansible.builtin.file:
+    path: "{{ mihomo_server_tls_dir }}"
+    state: directory
+    owner: root
+    group: "{{ mihomo_server_group }}"
+    mode: "0750"
+
+- name: copy the TLS certificate and key
+  when: mihomo_server_tls_source_certificate_path | length > 0
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    remote_src: true
+    follow: true
+    owner: root
+    group: "{{ mihomo_server_group }}"
+    mode: "0640"
+  loop:
+    - src: "{{ mihomo_server_tls_source_certificate_path }}"
+      dest: "{{ mihomo_server_tls_certificate_path }}"
+    - src: "{{ mihomo_server_tls_source_key_path }}"
+      dest: "{{ mihomo_server_tls_key_path }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  notify:
+    - systemctl restart mihomo.service
+
+- name: ensure the certbot renewal hook directory exists
+  when: mihomo_server_tls_renewal_hook_enabled | ansible.builtin.bool
+  ansible.builtin.file:
+    path: "{{ mihomo_server_tls_renewal_hook_path | ansible.builtin.dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: install the certbot renewal hook
+  when: mihomo_server_tls_renewal_hook_enabled | ansible.builtin.bool
+  ansible.builtin.template:
+    src: etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh.j2
+    dest: "{{ mihomo_server_tls_renewal_hook_path }}"
+    owner: root
+    group: root
+    mode: "0755"

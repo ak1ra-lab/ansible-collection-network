@@ -26,6 +26,37 @@
       - mihomo_server_anytls_users | ansible.builtin.type_debug == 'list'
       - mihomo_server_extra_listeners | ansible.builtin.type_debug == 'list'
       - mihomo_server_alpn | ansible.builtin.type_debug == 'list'
+      - mihomo_server_tls_dir is string
+      - mihomo_server_tls_source_certificate_path is string
+      - mihomo_server_tls_source_key_path is string
+      - mihomo_server_tls_renewal_hook_path is string
+      - >-
+        (mihomo_server_state == 'absent')
+        or ((mihomo_server_tls_source_certificate_path | length > 0)
+            == (mihomo_server_tls_source_key_path | length > 0))
+      - >-
+        (mihomo_server_state == 'absent')
+        or (mihomo_server_tls_source_certificate_path | length == 0)
+        or (mihomo_server_tls_dir is ansible.builtin.match('^/')
+            and mihomo_server_tls_certificate_path | length > 0
+            and mihomo_server_tls_key_path | length > 0)
+      - >-
+        (mihomo_server_state == 'absent')
+        or (mihomo_server_tls_certificate_path | length == 0)
+        or (mihomo_server_tls_certificate_path is ansible.builtin.match('^/'))
+      - >-
+        (mihomo_server_state == 'absent')
+        or (mihomo_server_tls_key_path | length == 0)
+        or (mihomo_server_tls_key_path is ansible.builtin.match('^/'))
+      - >-
+        (mihomo_server_state == 'absent')
+        or not (mihomo_server_tls_renewal_hook_enabled | ansible.builtin.bool)
+        or ((mihomo_server_tls_source_certificate_path | length > 0)
+            and (mihomo_server_tls_source_key_path | length > 0))
+      - >-
+        (mihomo_server_state == 'absent')
+        or not (mihomo_server_tls_renewal_hook_enabled | ansible.builtin.bool)
+        or (mihomo_server_tls_renewal_hook_path is ansible.builtin.match('^/'))
       - >-
         (mihomo_server_state == 'absent')
         or (not mihomo_server_enable_shadowsocks | ansible.builtin.bool)
@@ -49,4 +80,10 @@
         shadowsocks_method must not be empty
         TLS-using protocols require mihomo_server_tls_certificate_path and
         mihomo_server_tls_key_path (mihomo has no built-in ACME)
+        mihomo_server_tls_source_certificate_path and
+        mihomo_server_tls_source_key_path must be set together; when set, the
+        role copies them to the destination paths under an absolute
+        mihomo_server_tls_dir
+        mihomo_server_tls_renewal_hook_enabled requires the source pair and an
+        absolute mihomo_server_tls_renewal_hook_path
     quiet: true

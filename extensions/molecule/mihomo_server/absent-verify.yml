@@ -14,6 +14,7 @@
       loop:
         - /etc/mihomo/config.yaml
         - /etc/systemd/system/mihomo.service
+        - /tmp/molecule-mihomo-server-hook/mihomo-server.sh
       register: _mihomo_server_artifacts_after
       loop_control:
         label: "{{ item }}"
@@ -27,6 +28,28 @@
         fail_msg: >-
           leftover mihomo_server artifacts:
           {{ _mihomo_server_artifacts_after.results | selectattr('stat.exists') | map(attribute='item') | list }}
+        quiet: true
+
+    - name: collect the retained TLS copies
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/mihomo/tls/fullchain.pem
+        - /etc/mihomo/tls/privkey.pem
+      register: _mihomo_server_tls_after
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert the TLS copies are deliberately retained
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_tls_after.results | selectattr('stat.exists') | list | length
+            == 2
+        fail_msg: >-
+          the certificate/key copies are deliberately left in place on
+          teardown; missing:
+          {{ _mihomo_server_tls_after.results | rejectattr('stat.exists') | map(attribute='item') | list }}
         quiet: true
 
     - name: collect the service state after teardown

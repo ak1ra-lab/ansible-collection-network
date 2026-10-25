@@ -1,0 +1,17 @@
+#!/bin/sh
+# Managed by ak1ra_lab.network.mihomo_server - do not edit.
+#
+# certbot executes every executable in renewal-hooks/deploy after a
+# successful renewal.  This hook is independent of the certbot role's own
+# certbot-deploy-hooks.sh, so both can coexist.
+set -eu
+
+install -d -m 0750 -o root -g {{ mihomo_server_group | ansible.builtin.quote }} \
+  {{ mihomo_server_tls_dir | ansible.builtin.quote }}
+install -m 0640 -o root -g {{ mihomo_server_group | ansible.builtin.quote }} \
+  {{ mihomo_server_tls_source_certificate_path | ansible.builtin.quote }} \
+  {{ mihomo_server_tls_certificate_path | ansible.builtin.quote }}
+install -m 0640 -o root -g {{ mihomo_server_group | ansible.builtin.quote }} \
+  {{ mihomo_server_tls_source_key_path | ansible.builtin.quote }} \
+  {{ mihomo_server_tls_key_path | ansible.builtin.quote }}
+systemctl try-reload-or-restart mihomo.service

@@ -7,7 +7,13 @@
 #     ak1ra_lab.network.mihomo_install
 #   - the controller-local artifacts        - remove them manually when the
 #     credentials/nodes are no longer needed
-#   - the TLS certificate/key files         - not owned by this role
+#   - the TLS certificate/key material      - the source lineage is owned by
+#     certbot/operator; the role's copies are left in place
+
+- name: remove the certbot renewal hook
+  ansible.builtin.file:
+    path: "{{ mihomo_server_tls_renewal_hook_path }}"
+    state: absent
 
 - name: stop and disable mihomo.service
   ansible.builtin.systemd_service:

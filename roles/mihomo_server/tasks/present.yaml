@@ -41,6 +41,9 @@
     mode: "0750"
     state: directory
 
+- name: deploy the TLS certificate material
+  ansible.builtin.import_tasks: tls.yaml
+
 - name: generate credentials and client artifacts
   ansible.builtin.import_tasks: generate_credentials.yaml
 

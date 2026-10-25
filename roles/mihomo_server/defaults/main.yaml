@@ -94,13 +94,36 @@ mihomo_server_anytls_padding_scheme: ""
 # `name` and `type`; names must not collide with the generated listeners.
 mihomo_server_extra_listeners: []
 
-# ── TLS (manual certificate paths only) ──────────────────────────────────────
+# ── TLS material ─────────────────────────────────────────────────────────────
 
-# Required when any TLS-using protocol is enabled (trojan/hysteria2/vless/
-# tuic/anytls) and state=present.  Both paths must be readable by the
-# mihomo service user.  Renew/provision the certificates out of band.
-mihomo_server_tls_certificate_path: ""
-mihomo_server_tls_key_path: ""
+# Destination paths referenced by the mihomo listeners.  In manual mode set
+# them to an existing certificate/key pair readable by the mihomo service
+# user.  When a source pair is configured below, the destination paths default
+# to the role-managed copies under mihomo_server_tls_dir; the role deploys
+# them with the service group (0640 root:mihomo).
+mihomo_server_tls_dir: /etc/mihomo/tls
+mihomo_server_tls_certificate_path: >-
+  {{ (mihomo_server_tls_dir ~ '/fullchain.pem')
+     if mihomo_server_tls_source_certificate_path | length > 0 else '' }}
+mihomo_server_tls_key_path: >-
+  {{ (mihomo_server_tls_dir ~ '/privkey.pem')
+     if mihomo_server_tls_source_key_path | length > 0 else '' }}
+
+# Optional source pair on the target.  Set both to let the role copy the
+# certificate/key into the destination paths above; this is the certbot
+# integration point (certbot's live/ files are root-only, so the mihomo
+# service cannot read them in place).  The copy is idempotent and runs on
+# every apply; the optional renewal hook below covers renewals between runs.
+mihomo_server_tls_source_certificate_path: ""
+mihomo_server_tls_source_key_path: ""
+
+# Install a certbot deploy hook that re-copies the source pair and reloads
+# mihomo after a renewal.  The hook is independent of the certbot role's own
+# certbot-deploy-hooks.sh, so both can coexist.  Requires the source pair.
+mihomo_server_tls_renewal_hook_enabled: false
+mihomo_server_tls_renewal_hook_path: /etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh
+
+# ALPN for hysteria2/tuic listeners (and their generated client nodes).
 mihomo_server_alpn:
   - h3
 

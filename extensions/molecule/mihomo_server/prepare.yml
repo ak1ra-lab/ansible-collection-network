@@ -3,8 +3,8 @@
 #
 # The shared preparation brings up udev and refreshes apt; this scenario adds
 # the tooling the verify playbook needs and provisions a throwaway
-# self-signed certificate, because mihomo TLS is manual-paths only (no
-# built-in ACME).
+# self-signed certificate in a source directory.  mihomo_server copies it into
+# /etc/mihomo/tls, exercising the same path a certbot-managed pair takes.
 
 - name: run the shared container preparation
   import_playbook: ../shared/prepare.yml
@@ -21,9 +21,9 @@
           - curl
         state: present
 
-    - name: ensure the test certificate directory exists
+    - name: ensure the test certificate source directory exists
       ansible.builtin.file:
-        path: /etc/mihomo/tls
+        path: /tmp/molecule-mihomo-server-source
         state: directory
         mode: "0755"
 
@@ -41,17 +41,19 @@
           - -subj
           - /CN=molecule.local
           - -keyout
-          - /etc/mihomo/tls/privkey.pem
+          - /tmp/molecule-mihomo-server-source/privkey.pem
           - -out
-          - /etc/mihomo/tls/fullchain.pem
-        creates: /etc/mihomo/tls/fullchain.pem
+          - /tmp/molecule-mihomo-server-source/fullchain.pem
+        creates: /tmp/molecule-mihomo-server-source/fullchain.pem
 
-    - name: make the test certificate readable by the service user
+    - name: make the test certificate source readable
       ansible.builtin.file:
-        path: "{{ item }}"
-        mode: "0644"
+        path: "{{ item.path }}"
+        mode: "{{ item.mode }}"
       loop:
-        - /etc/mihomo/tls/fullchain.pem
-        - /etc/mihomo/tls/privkey.pem
+        - path: /tmp/molecule-mihomo-server-source/fullchain.pem
+          mode: "0644"
+        - path: /tmp/molecule-mihomo-server-source/privkey.pem
+          mode: "0600"
       loop_control:
-        label: "{{ item }}"
+        label: "{{ item.path }}"

@@ -21,6 +21,61 @@
         fail_msg: "mihomo.service must be active, got: {{ _mihomo_server_active.stdout }}"
         quiet: true
 
+    - name: collect the deployed TLS material
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/mihomo/tls/fullchain.pem
+        - /etc/mihomo/tls/privkey.pem
+        - /tmp/molecule-mihomo-server-hook/mihomo-server.sh
+      register: _mihomo_server_tls_files
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert the TLS material is copied with service-readable permissions
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_tls_files.results[0].stat.exists
+          - _mihomo_server_tls_files.results[0].stat.isreg
+          - _mihomo_server_tls_files.results[0].stat.mode == '0640'
+          - _mihomo_server_tls_files.results[0].stat.pw_name == 'root'
+          - _mihomo_server_tls_files.results[0].stat.gr_name == 'mihomo'
+          - _mihomo_server_tls_files.results[1].stat.exists
+          - _mihomo_server_tls_files.results[1].stat.isreg
+          - _mihomo_server_tls_files.results[1].stat.mode == '0640'
+          - _mihomo_server_tls_files.results[1].stat.pw_name == 'root'
+          - _mihomo_server_tls_files.results[1].stat.gr_name == 'mihomo'
+          - _mihomo_server_tls_files.results[2].stat.exists
+          - _mihomo_server_tls_files.results[2].stat.isreg
+          - _mihomo_server_tls_files.results[2].stat.mode == '0755'
+        fail_msg: >-
+          the role must copy the source certificate/key to /etc/mihomo/tls
+          (0640 root:mihomo) and install the renewal hook (0755), got:
+          {{ _mihomo_server_tls_files.results | map(attribute='stat') | list }}
+        quiet: true
+
+    - name: read the certbot renewal hook
+      ansible.builtin.slurp:
+        src: /tmp/molecule-mihomo-server-hook/mihomo-server.sh
+      register: _mihomo_server_hook
+
+    - name: assert the renewal hook copies the source pair and reloads mihomo
+      ansible.builtin.assert:
+        that:
+          - >-
+            '/etc/mihomo/tls/fullchain.pem'
+            in (_mihomo_server_hook.content | ansible.builtin.b64decode)
+          - >-
+            '/tmp/molecule-mihomo-server-source/privkey.pem'
+            in (_mihomo_server_hook.content | ansible.builtin.b64decode)
+          - >-
+            'systemctl try-reload-or-restart mihomo.service'
+            in (_mihomo_server_hook.content | ansible.builtin.b64decode)
+        fail_msg: >-
+          the renewal hook must re-copy the source pair and reload mihomo,
+          got: {{ _mihomo_server_hook.content | ansible.builtin.b64decode }}
+        quiet: true
+
     - name: collect the listening TCP ports
       ansible.builtin.command:
         argv: [/usr/bin/ss, -H, -ltn]
