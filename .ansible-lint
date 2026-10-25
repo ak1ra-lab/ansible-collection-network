@@ -13,6 +13,10 @@ exclude_paths:
   # mirrors): not Ansible source.  The directory is gitignored (config/*),
   # but ansible-lint does not read .gitignore.
   - config/
+  # Local, gitignored inventory data (generated credentials, host overrides);
+  # same reason as config/ - not collection source.
+  - playbooks/host_vars/
+  - playbooks/group_vars/
 
 # Rules to skip entirely.
 skip_list:
