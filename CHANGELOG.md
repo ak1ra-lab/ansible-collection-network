@@ -94,6 +94,12 @@ The format is based on Keep a Changelog, and this project does not currently gua
   (`false` / `600` / `150` / `2m`) and the auto-ban set
   (`false` / `1200` / `300` / `5m`) - which the collection split dropped
   together with the switch gating.
+- `ansible-galaxy collection build` ships controller-local
+  `playbooks/host_vars/` and `playbooks/group_vars/` content: `graft
+  playbooks` overrides `.gitignore`, so generated credentials and inventory
+  data could enter the artifact.  The manifest now excludes the local
+  vars, scripts and templates directories (the same convention as
+  `ak1ra_lab.general`).
 
 ## [v0.2.0] - 2026-09-09
 

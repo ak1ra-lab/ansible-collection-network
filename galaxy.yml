@@ -1,7 +1,7 @@
 ---
 namespace: ak1ra_lab
 name: network
-version: 0.1.0
+version: 0.3.0
 readme: README.md
 authors:
   - ak1ra <git@ak1ra.xyz>
@@ -26,5 +26,9 @@ manifest:
     - graft roles
     - graft playbooks
     - graft plugins
+    - recursive-exclude playbooks/host_vars *
+    - recursive-exclude playbooks/group_vars *
+    - recursive-exclude playbooks/scripts *
+    - recursive-exclude playbooks/templates *
     - global-exclude *~ *.py[cod] __pycache__ *.bak *.swp *.tmp *.retry
     - include LICENSE README.md
