@@ -1,0 +1,15 @@
+---
+# mihomo_server_certbot scenario - exercise the collection playbook's certbot
+# mode against a local Pebble ACME server.
+#
+# Pebble comes from the Debian archive, so the scenario runs on the Debian
+# images only even though the shared inventory also lists Ubuntu.  The
+# extra var selects the inventory group targeted by the imported collection
+# playbook.
+ansible:
+  executor:
+    args:
+      ansible_playbook:
+        - --inventory=${MOLECULE_PROJECT_DIRECTORY}/extensions/molecule/inventory/
+        - --limit=debian-12,debian-13,localhost
+        - --extra-vars=playbook_hosts=test_resources

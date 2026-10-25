@@ -88,9 +88,11 @@ Molecule scenarios live under `extensions/molecule/` (collection-testing
 layout).  The `default` scenario owns the shared container lifecycle
 (`shared_state: true`); the component scenarios (`flow_offload`,
 `proxy_guard`, `systemd_bridge`, `systemd_netns`, `tproxy`, `mihomo_client`,
-`mihomo_server`) reuse the same containers and each run prepare, converge,
-idempotence, verify, the role's teardown (cleanup) and a teardown
-verification.
+`mihomo_server`, `mihomo_server_certbot`) reuse the same containers and each
+run prepare, converge, idempotence, verify, the role's teardown (cleanup) and
+a teardown verification.  `mihomo_server_certbot` runs on the Debian images
+only (Pebble comes from the Debian archive); it issues from a local Pebble
+ACME server and verifies the certbot -> role copy -> renewal hook flow.
 
 Development tooling is uv-managed (`pyproject.toml`, `ruff.toml`): `just
 sync` creates the environment, `just lint` runs ruff (check + format) over

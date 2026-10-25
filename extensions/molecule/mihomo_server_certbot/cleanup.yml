@@ -1,0 +1,77 @@
+---
+# mihomo_server_certbot scenario - stop the Pebble fixtures, tear down the
+# mihomo server and remove the certbot state and test packages.  Tolerates a
+# fresh host and an unreachable container.
+
+- name: tear down the certbot-backed mihomo server fixtures
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true
+  vars:
+    _mihomo_server_certbot_pebble_dir: /tmp/molecule-mihomo-server-certbot-pebble
+    mihomo_server_state: absent
+  tasks:
+    - name: stop the Pebble processes
+      ansible.builtin.shell:
+        cmd: |
+          for pidfile in \
+            {{ _mihomo_server_certbot_pebble_dir }}/pebble.pid \
+            {{ _mihomo_server_certbot_pebble_dir }}/challtestsrv.pid; do
+            if [ -f "$pidfile" ]; then
+              kill "$(cat "$pidfile")" 2>/dev/null || true
+            fi
+          done
+      changed_when: false
+      failed_when: false
+
+    - name: disable the certbot timer
+      ansible.builtin.command:
+        argv: [systemctl, disable, --now, certbot.timer]
+      changed_when: false
+      failed_when: false
+
+    - name: tear down the mihomo server
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.mihomo_server
+
+    - name: remove the mihomo and certbot test state
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/letsencrypt
+        - /var/lib/letsencrypt
+        - /var/log/letsencrypt
+        - /etc/logrotate.d/certbot
+        - /etc/systemd/system/certbot.service
+        - /etc/systemd/system/certbot.timer
+        - /etc/systemd/system/timers.target.wants/certbot.timer
+        - /etc/mihomo
+        - /tmp/molecule-mihomo-server-certbot
+        - /tmp/molecule-mihomo-server-certbot-pebble
+      loop_control:
+        label: "{{ item }}"
+
+    - name: purge the certbot and Pebble packages
+      ansible.builtin.apt:
+        name:
+          - certbot
+          - python3-certbot
+          - pebble
+        state: absent
+        purge: true
+
+    - name: reload the systemd manager configuration
+      ansible.builtin.command:
+        argv: [systemctl, daemon-reload]
+      changed_when: false
+
+- name: remove the controller-local certbot artifacts
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: remove the temporary artifact directory
+      ansible.builtin.file:
+        path: /tmp/molecule-mihomo-server-certbot
+        state: absent

@@ -13,9 +13,9 @@
 #   community.general - modprobe used by the tproxy role
 #
 # ak1ra_lab.general (github_releases_info / cpu_info, used by the mihomo_*
-# roles) is not on Galaxy yet and is installed separately from git; the
-# justfile dev recipes use the local GENERAL_COLLECTION checkout instead
-# (see README.md).
+# roles, and the certbot role used by the mihomo_server_certbot scenario) is
+# not on Galaxy yet and is installed separately from git; the justfile dev
+# recipes use the local GENERAL_COLLECTION checkout instead (see README.md).
 collections:
   - name: containers.podman
   - name: community.docker

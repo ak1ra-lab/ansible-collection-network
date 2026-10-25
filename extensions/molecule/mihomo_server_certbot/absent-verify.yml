@@ -1,0 +1,115 @@
+---
+# mihomo_server_certbot scenario - assert the teardown removed the mihomo,
+# certbot and Pebble fixtures and left no test packages behind.
+
+- name: verify the certbot-backed mihomo server teardown
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the teardown paths
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: _mihomo_server_certbot_absent_paths
+      loop:
+        - /usr/bin/certbot
+        - /etc/letsencrypt
+        - /etc/mihomo
+        - /etc/systemd/system/mihomo.service
+        - /etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh
+        - /tmp/molecule-mihomo-server-certbot
+        - /tmp/molecule-mihomo-server-certbot-pebble
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert the mihomo and certbot fixtures are gone
+      ansible.builtin.assert:
+        that:
+          - not item.stat.exists
+        fail_msg: "{{ item.item }} must be gone after cleanup"
+        quiet: true
+      loop: "{{ _mihomo_server_certbot_absent_paths.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: query the certbot package state
+      ansible.builtin.command:
+        argv: [dpkg-query, -W, "-f=${Status}", certbot]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_server_certbot_absent_certbot
+
+    - name: query the Pebble package state
+      ansible.builtin.command:
+        argv: [dpkg-query, -W, "-f=${Status}", pebble]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_server_certbot_absent_pebble
+
+    - name: assert the test packages are gone
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_certbot_absent_certbot.rc != 0
+          - _mihomo_server_certbot_absent_pebble.rc != 0
+        fail_msg: "the certbot and Pebble packages must be purged"
+        quiet: true
+
+    - name: query the certbot timer state
+      ansible.builtin.command:
+        argv: [systemctl, is-enabled, certbot.timer]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_server_certbot_absent_timer
+
+    - name: assert the certbot timer is gone
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_certbot_absent_timer.rc != 0
+        fail_msg: "certbot.timer must not remain enabled"
+        quiet: true
+
+    - name: collect the mihomo service activity
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, mihomo.service]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_server_certbot_absent_service
+
+    - name: assert the mihomo service is not active
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_certbot_absent_service.stdout | default('') != 'active'
+        fail_msg: "mihomo.service must not stay active after teardown"
+        quiet: true
+
+    - name: check for leftover Pebble processes
+      ansible.builtin.command:
+        argv: [pgrep, -f, /usr/bin/pebble]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_server_certbot_absent_pebble_processes
+
+    - name: assert no Pebble processes remain
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_certbot_absent_pebble_processes.rc != 0
+        fail_msg: >-
+          Pebble processes remain after cleanup:
+          {{ _mihomo_server_certbot_absent_pebble_processes.stdout }}
+        quiet: true
+
+- name: verify the controller-local artifacts are gone
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: collect the controller-local artifact directory state
+      ansible.builtin.stat:
+        path: /tmp/molecule-mihomo-server-certbot
+      register: _mihomo_server_certbot_local_after
+
+    - name: assert the controller-local artifact directory is gone
+      ansible.builtin.assert:
+        that:
+          - not _mihomo_server_certbot_local_after.stat.exists
+        fail_msg: "the scenario's temporary artifact directory must be removed"
+        quiet: true

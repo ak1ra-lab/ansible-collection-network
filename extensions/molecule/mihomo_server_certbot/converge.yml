@@ -1,0 +1,47 @@
+---
+# mihomo_server_certbot scenario - set the certbot/Pebble inputs and apply the
+# collection playbook, so the playbook's certbot pre_tasks, the role's source
+# copy and the independent renewal hook are all exercised together.
+
+- name: define the mihomo_server certbot test inputs
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: set the certbot and mihomo_server test contract
+      no_log: true
+      ansible.builtin.set_fact:
+        mihomo_server_hostname: molecule-mihomo.example.test
+        mihomo_server_region: US
+        mihomo_server_tls_certbot_enabled: true
+        mihomo_server_local_artifacts_dir: /tmp/molecule-mihomo-server-certbot/artifacts
+        mihomo_server_host_vars_file: >-
+          /tmp/molecule-mihomo-server-certbot/host_vars/{{ inventory_hostname }}/mihomo_server.yaml
+        # Fixed test credentials keep the generated artifacts identical on
+        # the idempotence re-run; the dedicated mihomo_server scenario owns
+        # the credential-generation coverage.
+        mihomo_server_user_count: 1
+        mihomo_server_shadowsocks_password: MDEyMzQ1Njc4OWFiY2RlZg==
+        mihomo_server_trojan_users:
+          - name: alice
+            password: molecule-trojan-password
+        mihomo_server_hysteria2_users:
+          - name: alice
+            password: molecule-hy2-password
+        certbot_install_source: apt
+        certbot_email: molecule@example.invalid
+        certbot_acme_server: https://localhost:14000/dir
+        certbot_no_verify_ssl: true
+        certbot_challenge: http-01
+        certbot_http01_method: standalone
+        certbot_http01_port: 5002
+        certbot_eab:
+          key_id: molecule-eab-kid
+          hmac_key: bW9sZWN1bGUtZWFiLWhtYWMta2V5LTAxMjM0NTY3ODk
+        certbot_certificates:
+          - name: molecule-mihomo.example.test
+            domains:
+              - molecule-mihomo.example.test
+        certbot_deploy_hooks: []
+
+- name: apply the mihomo_server playbook with certbot
+  ansible.builtin.import_playbook: ../../../playbooks/mihomo_server.yaml

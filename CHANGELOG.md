@@ -80,6 +80,11 @@ The format is based on Keep a Changelog, and this project does not currently gua
   challenge/provider configuration to the normal `certbot_*` contract,
   derives the role's source paths from `live/<lineage>` and enables the
   independent renewal hook.  The default remains manual TLS paths.
+- Molecule scenario `mihomo_server_certbot`: a local Pebble ACME server
+  (HTTP-01 standalone, EAB) exercises the certbot-backed playbook end to
+  end - issuance, the role's initial copy and permissions, the independent
+  renewal hook, idempotence and teardown.  Debian-only because Pebble comes
+  from the Debian archive.
 - Playbook entry points `ak1ra_lab.network.mihomo_install`,
   `ak1ra_lab.network.mihomo_client` and `ak1ra_lab.network.mihomo_server`:
   the mihomo roles never call each other, the client/server playbooks apply

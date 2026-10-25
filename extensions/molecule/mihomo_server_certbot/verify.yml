@@ -1,0 +1,263 @@
+---
+# mihomo_server_certbot scenario - assert Pebble issued the lineage, the role
+# copied it into the service-readable location, the independent renewal hook
+# is installed (and no certbot deploy-hook dispatcher is needed), and the
+# service reload survives a hook run.
+
+- name: verify the certbot-backed mihomo server
+  hosts: all
+  gather_facts: false
+  vars:
+    _mihomo_server_certbot_name: molecule-mihomo.example.test
+    _mihomo_server_certbot_live: /etc/letsencrypt/live/molecule-mihomo.example.test
+    _mihomo_server_certbot_hook: /etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh
+  tasks:
+    - name: collect the certbot binary
+      ansible.builtin.stat:
+        path: /usr/bin/certbot
+      register: _mihomo_server_certbot_bin
+
+    - name: assert certbot is installed from apt
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_certbot_bin.stat.exists
+          - _mihomo_server_certbot_bin.stat.executable
+        fail_msg: "the apt certbot package did not install /usr/bin/certbot"
+        quiet: true
+
+    - name: collect the issued certificate files
+      ansible.builtin.stat:
+        path: "{{ _mihomo_server_certbot_live }}/{{ item }}"
+        follow: true
+      register: _mihomo_server_certbot_issued
+      loop:
+        - cert.pem
+        - chain.pem
+        - fullchain.pem
+        - privkey.pem
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert the Pebble lineage exists
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+        fail_msg: "{{ item.item }} is missing from {{ _mihomo_server_certbot_live }}"
+        quiet: true
+      loop: "{{ _mihomo_server_certbot_issued.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: read the certificate metadata
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - x509
+          - -in
+          - "{{ _mihomo_server_certbot_live }}/cert.pem"
+          - -noout
+          - -issuer
+          - -ext
+          - subjectAltName
+      changed_when: false
+      register: _mihomo_server_certbot_cert
+
+    - name: assert Pebble issued the requested certificate
+      ansible.builtin.assert:
+        that:
+          - "'DNS:molecule-mihomo.example.test' in _mihomo_server_certbot_cert.stdout"
+          - "'Pebble' in _mihomo_server_certbot_cert.stdout"
+        fail_msg: >-
+          unexpected certificate:
+          {{ _mihomo_server_certbot_cert.stdout }}
+        quiet: true
+
+    - name: collect the deployed TLS material
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/mihomo/tls/fullchain.pem
+        - /etc/mihomo/tls/privkey.pem
+        - "{{ _mihomo_server_certbot_hook }}"
+      register: _mihomo_server_certbot_files
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert the TLS material is copied with service-readable permissions
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_certbot_files.results[0].stat.exists
+          - _mihomo_server_certbot_files.results[0].stat.mode == '0640'
+          - _mihomo_server_certbot_files.results[0].stat.pw_name == 'root'
+          - _mihomo_server_certbot_files.results[0].stat.gr_name == 'mihomo'
+          - _mihomo_server_certbot_files.results[1].stat.exists
+          - _mihomo_server_certbot_files.results[1].stat.mode == '0640'
+          - _mihomo_server_certbot_files.results[1].stat.pw_name == 'root'
+          - _mihomo_server_certbot_files.results[1].stat.gr_name == 'mihomo'
+          - _mihomo_server_certbot_files.results[2].stat.exists
+          - _mihomo_server_certbot_files.results[2].stat.mode == '0755'
+        fail_msg: >-
+          the role must copy the source certificate/key to /etc/mihomo/tls
+          (0640 root:mihomo) and install the renewal hook (0755), got:
+          {{ _mihomo_server_certbot_files.results | map(attribute='stat') | list }}
+        quiet: true
+
+    - name: collect the source and deployed certificate checksums
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: true
+        checksum_algorithm: sha256
+      register: _mihomo_server_certbot_checksums
+      loop:
+        - "{{ _mihomo_server_certbot_live }}/fullchain.pem"
+        - /etc/mihomo/tls/fullchain.pem
+        - "{{ _mihomo_server_certbot_live }}/privkey.pem"
+        - /etc/mihomo/tls/privkey.pem
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert the deployed files match the certbot lineage
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_certbot_checksums.results[0].stat.checksum
+            == _mihomo_server_certbot_checksums.results[1].stat.checksum
+          - >-
+            _mihomo_server_certbot_checksums.results[2].stat.checksum
+            == _mihomo_server_certbot_checksums.results[3].stat.checksum
+        fail_msg: "the deployed TLS copies do not match the certbot lineage"
+        quiet: true
+
+    - name: read the mihomo renewal hook
+      ansible.builtin.slurp:
+        src: "{{ _mihomo_server_certbot_hook }}"
+      register: _mihomo_server_certbot_hook_content
+
+    - name: assert the hook re-copies the lineage and reloads mihomo
+      ansible.builtin.assert:
+        that:
+          - >-
+            (_mihomo_server_certbot_live ~ '/fullchain.pem')
+            in (_mihomo_server_certbot_hook_content.content | ansible.builtin.b64decode)
+          - >-
+            (_mihomo_server_certbot_live ~ '/privkey.pem')
+            in (_mihomo_server_certbot_hook_content.content | ansible.builtin.b64decode)
+          - >-
+            'systemctl try-reload-or-restart mihomo.service'
+            in (_mihomo_server_certbot_hook_content.content | ansible.builtin.b64decode)
+        fail_msg: "the renewal hook was not rendered with the certbot source paths"
+        quiet: true
+
+    - name: collect the certbot deploy-hook dispatcher
+      ansible.builtin.stat:
+        path: /etc/letsencrypt/renewal-hooks/deploy/certbot-deploy-hooks.sh
+      register: _mihomo_server_certbot_dispatcher
+
+    - name: assert mihomo does not need certbot_deploy_hooks
+      ansible.builtin.assert:
+        that:
+          - not _mihomo_server_certbot_dispatcher.stat.exists
+        fail_msg: >-
+          the certbot deploy-hook dispatcher exists although the scenario
+          configures no certbot_deploy_hooks
+        quiet: true
+
+    - name: read the deployed mihomo configuration
+      ansible.builtin.slurp:
+        src: /etc/mihomo/config.yaml
+      register: _mihomo_server_certbot_config_raw
+
+    - name: parse the deployed mihomo configuration
+      ansible.builtin.set_fact:
+        _mihomo_server_certbot_config: >-
+          {{ _mihomo_server_certbot_config_raw.content
+             | ansible.builtin.b64decode | ansible.builtin.from_yaml }}
+
+    - name: assert the TLS listeners use the deployed copies
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_certbot_config['listeners']
+            | selectattr('certificate', 'defined')
+            | map(attribute='certificate') | unique | list
+            == ['/etc/mihomo/tls/fullchain.pem']
+          - >-
+            _mihomo_server_certbot_config['listeners']
+            | selectattr('private-key', 'defined')
+            | map(attribute='private-key') | unique | list
+            == ['/etc/mihomo/tls/privkey.pem']
+        fail_msg: >-
+          the TLS listeners do not reference the role-managed copies:
+          {{ _mihomo_server_certbot_config['listeners'] | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: collect the mihomo service activity
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, mihomo.service]
+      changed_when: false
+      register: _mihomo_server_certbot_active
+
+    - name: assert the mihomo service is active
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_certbot_active.stdout == 'active'
+        fail_msg: "mihomo.service must be active, got: {{ _mihomo_server_certbot_active.stdout }}"
+        quiet: true
+
+    - name: run the mihomo renewal hook
+      ansible.builtin.command:
+        argv: ["{{ _mihomo_server_certbot_hook }}"]
+      changed_when: false
+
+    - name: collect the mihomo service activity after the hook run
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, mihomo.service]
+      changed_when: false
+      register: _mihomo_server_certbot_active_after_hook
+
+    - name: assert the service stays active after the hook run
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_certbot_active_after_hook.stdout == 'active'
+        fail_msg: >-
+          mihomo.service is {{ _mihomo_server_certbot_active_after_hook.stdout }}
+          after the renewal hook
+        quiet: true
+
+    - name: read the certbot timer state
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-enabled, certbot.timer]
+      changed_when: false
+      register: _mihomo_server_certbot_timer
+
+    - name: read the certbot timer activity
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, certbot.timer]
+      changed_when: false
+      register: _mihomo_server_certbot_timer_active
+
+    - name: assert the certbot renewal timer is enabled and active
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_certbot_timer.stdout == 'enabled'
+          - _mihomo_server_certbot_timer_active.stdout == 'active'
+        fail_msg: >-
+          certbot.timer is {{ _mihomo_server_certbot_timer.stdout }} /
+          {{ _mihomo_server_certbot_timer_active.stdout }}
+        quiet: true
+
+    - name: list the certificates known to certbot
+      ansible.builtin.command:
+        argv: [/usr/bin/certbot, certificates]
+      changed_when: false
+      register: _mihomo_server_certbot_list
+
+    - name: assert certbot lists the mihomo certificate
+      ansible.builtin.assert:
+        that:
+          - "'Certificate Name: molecule-mihomo.example.test' in _mihomo_server_certbot_list.stdout"
+        fail_msg: >-
+          certbot does not list the mihomo certificate:
+          {{ _mihomo_server_certbot_list.stdout }}
+        quiet: true

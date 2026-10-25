@@ -1,0 +1,109 @@
+---
+# mihomo_server_certbot scenario - shared container preparation plus a local
+# Pebble ACME server, so issuance is tested without Let's Encrypt or a DNS
+# provider.  The Pebble fixtures use neutral example.test names only.
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml
+
+- name: prepare the Pebble ACME server
+  hosts: all
+  gather_facts: false
+  vars:
+    _mihomo_server_certbot_pebble_dir: /tmp/molecule-mihomo-server-certbot-pebble
+  tasks:
+    - name: install the Pebble ACME test server and its tooling
+      ansible.builtin.apt:
+        name:
+          - openssl
+          - pebble
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: create the Pebble working directory
+      ansible.builtin.file:
+        path: "{{ _mihomo_server_certbot_pebble_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: generate the Pebble TLS certificate
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - req
+          - -x509
+          - -newkey
+          - rsa:2048
+          - -nodes
+          - -days
+          - "1"
+          - -subj
+          - /CN=localhost
+          - -addext
+          - subjectAltName=DNS:localhost,IP:127.0.0.1
+          - -keyout
+          - "{{ _mihomo_server_certbot_pebble_dir }}/key.pem"
+          - -out
+          - "{{ _mihomo_server_certbot_pebble_dir }}/cert.pem"
+        chdir: "{{ _mihomo_server_certbot_pebble_dir }}"
+        creates: "{{ _mihomo_server_certbot_pebble_dir }}/cert.pem"
+
+    - name: render the Pebble configuration
+      ansible.builtin.copy:
+        content: |
+          {
+            "pebble": {
+              "listenAddress": "0.0.0.0:14000",
+              "managementListenAddress": "127.0.0.1:15000",
+              "certificate": "{{ _mihomo_server_certbot_pebble_dir }}/cert.pem",
+              "privateKey": "{{ _mihomo_server_certbot_pebble_dir }}/key.pem",
+              "httpPort": 5002,
+              "tlsPort": 5001,
+              "ocspResponderURL": "",
+              "externalAccountBindingRequired": true,
+              "externalAccountMACKeys": {
+                "molecule-eab-kid": "bW9sZWN1bGUtZWFiLWhtYWMta2V5LTAxMjM0NTY3ODk"
+              },
+              "domainBlocklist": [],
+              "retryAfter": {
+                "authz": 3,
+                "order": 5
+              }
+            }
+          }
+        dest: "{{ _mihomo_server_certbot_pebble_dir }}/pebble-config.json"
+        mode: "0644"
+
+    - name: start the Pebble challenge test server
+      ansible.builtin.shell:
+        cmd: >-
+          nohup /usr/bin/pebble-challtestsrv
+          -dns01 :8053 -http01 '' -https01 '' -tlsalpn01 '' -management :8055
+          -defaultIPv6 ''
+          > {{ _mihomo_server_certbot_pebble_dir }}/challtestsrv.log 2>&1 &
+          echo $! > {{ _mihomo_server_certbot_pebble_dir }}/challtestsrv.pid
+        chdir: "{{ _mihomo_server_certbot_pebble_dir }}"
+      changed_when: true
+
+    - name: start Pebble
+      ansible.builtin.shell:
+        cmd: >-
+          nohup /usr/bin/pebble
+          -config {{ _mihomo_server_certbot_pebble_dir }}/pebble-config.json
+          -dnsserver 127.0.0.1:8053
+          > {{ _mihomo_server_certbot_pebble_dir }}/pebble.log 2>&1 &
+          echo $! > {{ _mihomo_server_certbot_pebble_dir }}/pebble.pid
+        chdir: "{{ _mihomo_server_certbot_pebble_dir }}"
+      changed_when: true
+
+    - name: wait for the Pebble DNS and ACME endpoints
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ item }}"
+        timeout: 30
+      loop:
+        - 8053
+        - 14000
