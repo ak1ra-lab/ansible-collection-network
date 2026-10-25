@@ -117,10 +117,16 @@ mihomo_server_tls_key_path: >-
 mihomo_server_tls_source_certificate_path: ""
 mihomo_server_tls_source_key_path: ""
 
+# Collection playbook switch: when true, playbooks/mihomo_server.yaml applies
+# ak1ra_lab.general.certbot first and derives the source paths/hook below.
+# The role itself never calls certbot; direct role users can leave this false
+# and set the source pair and hook explicitly instead.
+mihomo_server_tls_certbot_enabled: false
+
 # Install a certbot deploy hook that re-copies the source pair and reloads
 # mihomo after a renewal.  The hook is independent of the certbot role's own
 # certbot-deploy-hooks.sh, so both can coexist.  Requires the source pair.
-mihomo_server_tls_renewal_hook_enabled: false
+mihomo_server_tls_renewal_hook_enabled: "{{ mihomo_server_tls_certbot_enabled | ansible.builtin.bool }}"
 mihomo_server_tls_renewal_hook_path: /etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh
 
 # ALPN for hysteria2/tuic listeners (and their generated client nodes).

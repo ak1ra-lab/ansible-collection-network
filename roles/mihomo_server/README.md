@@ -127,7 +127,8 @@ groups; `<host-label>` is the first DNS label of `mihomo_server_hostname`
 | `mihomo_server_tls_dir` | `/etc/mihomo/tls` | Destination directory for role-managed copies |
 | `mihomo_server_tls_certificate_path` / `_key_path` | derived from `_tls_dir` when a source pair is set, otherwise `""` | Listener paths; manual mode points at an existing pair readable by the mihomo user |
 | `mihomo_server_tls_source_certificate_path` / `_key_path` | `""` | Optional source pair; set both to let the role copy it into the destination paths |
-| `mihomo_server_tls_renewal_hook_enabled` | `false` | Install a certbot deploy hook that re-copies the source pair and reloads mihomo |
+| `mihomo_server_tls_certbot_enabled` | `false` | Collection-playbook switch: apply certbot first and derive the source pair |
+| `mihomo_server_tls_renewal_hook_enabled` | `mihomo_server_tls_certbot_enabled` | Install a certbot deploy hook that re-copies the source pair and reloads mihomo |
 | `mihomo_server_tls_renewal_hook_path` | `/etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh` | Renewal hook path |
 | `mihomo_server_alpn` | `[h3]` | ALPN for hysteria2/tuic listeners (and their generated client nodes) |
 | `mihomo_server_client_node_prefix` | `selfhost` | Prefix of the generated client node names |

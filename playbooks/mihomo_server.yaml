@@ -48,54 +48,52 @@
   hosts: "{{ playbook_hosts | default('mihomo-server') }}"
   become: true
   gather_facts: true
-  vars:
-    # Internal derived inputs for the optional certbot orchestration.  The
-    # public knobs are mihomo_server_tls_certbot_enabled / _lineage /
-    # _config_dir plus the certbot_* contract; an explicit
-    # mihomo_server_tls_source_* pair always wins over the derived live/ path.
-    _mihomo_server_tls_certbot_enabled: >-
-      {{ mihomo_server_tls_certbot_enabled | default(false) | ansible.builtin.bool }}
-    _mihomo_server_tls_certbot_config_dir: >-
-      {{ mihomo_server_tls_certbot_config_dir
-         | default(certbot_config_dir | default('/etc/letsencrypt')) }}
-    _mihomo_server_tls_certbot_lineage: >-
-      {{ mihomo_server_tls_certbot_lineage
-         | default(mihomo_server_hostname | default(ansible_facts['fqdn'])) }}
-    _mihomo_server_tls_source_certificate_path: >-
-      {{ mihomo_server_tls_source_certificate_path
-         | default(((_mihomo_server_tls_certbot_config_dir ~ '/live/'
-                     ~ _mihomo_server_tls_certbot_lineage ~ '/fullchain.pem')
-                    if _mihomo_server_tls_certbot_enabled | ansible.builtin.bool
-                    else ''), true) }}
-    _mihomo_server_tls_source_key_path: >-
-      {{ mihomo_server_tls_source_key_path
-         | default(((_mihomo_server_tls_certbot_config_dir ~ '/live/'
-                     ~ _mihomo_server_tls_certbot_lineage ~ '/privkey.pem')
-                    if _mihomo_server_tls_certbot_enabled | ansible.builtin.bool
-                    else ''), true) }}
-    _mihomo_server_tls_renewal_hook_enabled: >-
-      {{ mihomo_server_tls_renewal_hook_enabled
-         | default(_mihomo_server_tls_certbot_enabled) | ansible.builtin.bool }}
-    _mihomo_server_tls_renewal_hook_path: >-
-      {{ mihomo_server_tls_renewal_hook_path
-         | default(_mihomo_server_tls_certbot_config_dir
-                   ~ '/renewal-hooks/deploy/mihomo-server.sh') }}
   pre_tasks:
+    # Resolve the optional certbot inputs before the role call.  Keeping the
+    # resolved values in facts also avoids a variable cycle when the certbot
+    # role receives certbot_config_dir as a role parameter.
+    - name: resolve the certbot TLS directory and lineage
+      ansible.builtin.set_fact:
+        _mihomo_server_tls_certbot_config_dir_resolved: >-
+          {{ mihomo_server_tls_certbot_config_dir
+             | default(certbot_config_dir | default('/etc/letsencrypt')) }}
+        _mihomo_server_tls_certbot_lineage_resolved: >-
+          {{ mihomo_server_tls_certbot_lineage
+             | default(mihomo_server_hostname | default(ansible_facts['fqdn'])) }}
+
+    - name: resolve the certbot TLS source paths and renewal hook
+      ansible.builtin.set_fact:
+        _mihomo_server_tls_source_certificate_path_resolved: >-
+          {{ mihomo_server_tls_source_certificate_path
+             | default(((_mihomo_server_tls_certbot_config_dir_resolved ~ '/live/'
+                         ~ _mihomo_server_tls_certbot_lineage_resolved ~ '/fullchain.pem')
+                        if mihomo_server_tls_certbot_enabled | default(false) | ansible.builtin.bool
+                        else ''), true) }}
+        _mihomo_server_tls_source_key_path_resolved: >-
+          {{ mihomo_server_tls_source_key_path
+             | default(((_mihomo_server_tls_certbot_config_dir_resolved ~ '/live/'
+                         ~ _mihomo_server_tls_certbot_lineage_resolved ~ '/privkey.pem')
+                        if mihomo_server_tls_certbot_enabled | default(false) | ansible.builtin.bool
+                        else ''), true) }}
+        _mihomo_server_tls_renewal_hook_path_resolved: >-
+          {{ mihomo_server_tls_renewal_hook_path
+             | default(_mihomo_server_tls_certbot_config_dir_resolved
+                       ~ '/renewal-hooks/deploy/mihomo-server.sh') }}
+
     - name: obtain the mihomo TLS certificate (certbot)
       when:
-        - _mihomo_server_tls_certbot_enabled | ansible.builtin.bool
+        - mihomo_server_tls_certbot_enabled | default(false) | ansible.builtin.bool
         - mihomo_server_state | default('present') == 'present'
       ansible.builtin.include_role:
         name: ak1ra_lab.general.certbot
       vars:
-        certbot_config_dir: "{{ _mihomo_server_tls_certbot_config_dir }}"
+        certbot_config_dir: "{{ _mihomo_server_tls_certbot_config_dir_resolved }}"
   roles:
     - role: ak1ra_lab.network.mihomo_install
       vars:
         mihomo_install_restart_handler: systemctl restart mihomo.service
     - role: ak1ra_lab.network.mihomo_server
       vars:
-        mihomo_server_tls_source_certificate_path: "{{ _mihomo_server_tls_source_certificate_path }}"
-        mihomo_server_tls_source_key_path: "{{ _mihomo_server_tls_source_key_path }}"
-        mihomo_server_tls_renewal_hook_enabled: "{{ _mihomo_server_tls_renewal_hook_enabled }}"
-        mihomo_server_tls_renewal_hook_path: "{{ _mihomo_server_tls_renewal_hook_path }}"
+        mihomo_server_tls_source_certificate_path: "{{ _mihomo_server_tls_source_certificate_path_resolved }}"
+        mihomo_server_tls_source_key_path: "{{ _mihomo_server_tls_source_key_path_resolved }}"
+        mihomo_server_tls_renewal_hook_path: "{{ _mihomo_server_tls_renewal_hook_path_resolved }}"
