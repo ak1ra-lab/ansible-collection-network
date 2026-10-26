@@ -83,6 +83,13 @@ def _validate_port(config: dict[str, Any], protocol: str) -> None:
         _fail(f"{protocol}_port must be an integer between 1 and 65535, got {port!r}")
 
 
+def _int_at_least(config: dict[str, Any], key: str, minimum: int) -> int:
+    value = config[key]
+    if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
+        _fail(f"{key} must be an integer >= {minimum}, got {value!r}")
+    return value
+
+
 def _reality_dest(config: dict[str, Any]) -> str:
     dest = str(config["vless_reality_dest"]).strip()
     if not re.fullmatch(r".+:[0-9]+", dest):
@@ -450,6 +457,10 @@ def mihomo_server_client_proxies(
     without bandwidth lets mihomo fall back to BBR; clients that want Brutal
     set their own ``up``/``down`` in the client profile.
 
+    AnyTLS nodes carry ``client-fingerprint`` and the idle-session knobs from
+    the ``anytls_*`` keys; an empty fingerprint keeps mihomo's fallback to
+    Go's standard-library TLS, which is rarely what a browser looks like.
+
     Args:
         config: the server mapping (as for ``mihomo_server_config``) plus
             ``hostname``, ``region`` and ``client_node_prefix``.  With
@@ -494,6 +505,10 @@ def mihomo_server_client_proxies(
         enable_anytls=True,
         anytls_port=9447,
         anytls_users=[],
+        anytls_client_fingerprint="chrome",
+        anytls_idle_session_check_interval=30,
+        anytls_idle_session_timeout=30,
+        anytls_min_idle_session=0,
         alpn=["h3"],
     )
 
@@ -624,6 +639,12 @@ def mihomo_server_client_proxies(
             )
 
     if _truthy(c["enable_anytls"]):
+        fingerprint = str(c["anytls_client_fingerprint"]).strip()
+        if not fingerprint:
+            _fail("anytls_client_fingerprint must not be empty")
+        check_interval = _int_at_least(c, "anytls_idle_session_check_interval", 1)
+        timeout = _int_at_least(c, "anytls_idle_session_timeout", 1)
+        min_idle = _int_at_least(c, "anytls_min_idle_session", 0)
         for user in _users(c, "anytls"):
             proxies.append(
                 {
@@ -635,6 +656,10 @@ def mihomo_server_client_proxies(
                     "udp": True,
                     "sni": hostname,
                     "skip-cert-verify": False,
+                    "client-fingerprint": fingerprint,
+                    "idle-session-check-interval": check_interval,
+                    "idle-session-timeout": timeout,
+                    "min-idle-session": min_idle,
                 }
             )
 

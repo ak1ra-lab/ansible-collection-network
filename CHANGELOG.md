@@ -151,6 +151,9 @@ The format is based on Keep a Changelog, and this project does not currently gua
   instead of a certificate, the generated client node uses `reality-opts` and
   the first server name as its SNI, and the keypair/short ID are generated on
   the target and persisted to host_vars when left empty.
+- `mihomo_server`: AnyTLS client nodes now set a configurable uTLS
+  `client-fingerprint` (default `chrome`) and expose the idle-session check,
+  timeout and minimum-idle knobs (defaults `30`/`30`/`0`).
 
 ### Changed
 

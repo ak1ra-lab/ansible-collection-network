@@ -405,6 +405,40 @@ def test_client_proxy_shapes() -> None:
     assert tuic["alpn"] == ["h3"]
     assert tuic["congestion-controller"] == "bbr"
 
+    anytls = proxies["selfhost-US-node01-alice-anytls"]
+    assert anytls["client-fingerprint"] == "chrome"
+    assert anytls["idle-session-check-interval"] == 30
+    assert anytls["idle-session-timeout"] == 30
+    assert anytls["min-idle-session"] == 0
+
+
+def test_anytls_client_tuning() -> None:
+    proxies = client_config(
+        anytls_client_fingerprint="firefox",
+        anytls_idle_session_check_interval=15,
+        anytls_idle_session_timeout=60,
+        anytls_min_idle_session=2,
+    )["proxies"]
+    anytls = next(proxy for proxy in proxies if proxy["name"].endswith("-anytls"))
+    assert anytls["client-fingerprint"] == "firefox"
+    assert anytls["idle-session-check-interval"] == 15
+    assert anytls["idle-session-timeout"] == 60
+    assert anytls["min-idle-session"] == 2
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("anytls_client_fingerprint", ""),
+        ("anytls_idle_session_check_interval", 0),
+        ("anytls_idle_session_timeout", -1),
+        ("anytls_min_idle_session", -1),
+    ],
+)
+def test_anytls_client_tuning_validation(key: str, value: object) -> None:
+    with pytest.raises(AnsibleFilterError, match="anytls_"):
+        client_config(**{key: value})
+
 
 def test_vless_reality_client_node() -> None:
     proxies = mihomo_server_client_proxies(reality_protocols(hostname="node01.example.com", region="US"))["proxies"]

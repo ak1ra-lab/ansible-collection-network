@@ -149,7 +149,11 @@ groups; `<host-label>` is the first DNS label of `mihomo_server_hostname`
 | `mihomo_server_enable_anytls` | `true` | anytls listener switch (TLS/TCP) |
 | `mihomo_server_anytls_port` | `9447` | Port |
 | `mihomo_server_anytls_users` | `[]` | `[{name, password}]`; generated when empty |
-| `mihomo_server_anytls_padding_scheme` | `""` | Optional padding scheme |
+| `mihomo_server_anytls_padding_scheme` | `""` | Optional padding scheme; empty uses mihomo's default scheme |
+| `mihomo_server_anytls_client_fingerprint` | `chrome` | Client uTLS fingerprint; empty falls back to Go's standard-library TLS fingerprint |
+| `mihomo_server_anytls_idle_session_check_interval` | `30` | Client idle-session check interval (seconds) |
+| `mihomo_server_anytls_idle_session_timeout` | `30` | Client idle-session timeout (seconds) |
+| `mihomo_server_anytls_min_idle_session` | `0` | Client idle sessions kept warm (`0` disables the reserved pool) |
 | `mihomo_server_extra_listeners` | `[]` | Raw additional listeners appended after the generated ones |
 | `mihomo_server_tls_dir` | `/etc/mihomo/tls` | Destination directory for role-managed copies |
 | `mihomo_server_tls_certificate_path` / `_key_path` | derived from `_tls_dir` when a source pair is set, otherwise `""` | Listener paths; manual mode points at an existing pair readable by the mihomo user |
@@ -237,6 +241,17 @@ VLESS listener needs no certificate of its own.  The role:
 `xtls-rprx-vision` is the recommended `mihomo_server_vless_flow` value with
 REALITY.  Certificate paths are still required when any other TLS-using
 protocol (trojan/hysteria2/tuic/anytls) is enabled.
+
+### AnyTLS
+
+The generated AnyTLS client node sets `client-fingerprint` (default
+`chrome`) and the idle-session knobs.  Leaving
+`mihomo_server_anytls_client_fingerprint` empty makes mihomo use Go's
+standard-library TLS fingerprint, which is a weaker match for browser
+traffic.  A positive `mihomo_server_anytls_min_idle_session` keeps warm
+sessions on high-RTT links at the cost of keeping connections open.  AnyTLS
+has no REALITY support and the mihomo listener has no fallback site; keep it
+as a TLS/TCP fallback rather than a REALITY replacement.
 
 ## Example playbook
 

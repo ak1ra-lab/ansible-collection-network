@@ -113,6 +113,15 @@ mihomo_server_anytls_port: 9447
 # Users: [{name, password}] (generated when empty)
 mihomo_server_anytls_users: []
 mihomo_server_anytls_padding_scheme: ""
+# Client uTLS fingerprint.  Empty falls back to Go's standard-library TLS
+# fingerprint; "chrome" keeps the generated node closer to browser traffic.
+mihomo_server_anytls_client_fingerprint: "chrome"
+# Client idle-session handling (mihomo defaults: 30/30/0).  A positive
+# min_idle_session keeps warm sessions on high-RTT links at the cost of
+# keeping connections open.
+mihomo_server_anytls_idle_session_check_interval: 30
+mihomo_server_anytls_idle_session_timeout: 30
+mihomo_server_anytls_min_idle_session: 0
 
 # Raw extra listeners appended to the generated ones (escape hatch for
 # protocols the generated contract does not cover yet).  Each entry needs
