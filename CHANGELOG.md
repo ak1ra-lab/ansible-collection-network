@@ -145,6 +145,12 @@ The format is based on Keep a Changelog, and this project does not currently gua
   the value shape picks the transport.  It takes precedence over the release
   download, the escape hatch when the GitHub asset download is unreachable;
   `mihomo_client_bundle_src` accepts the same two shapes.
+- `mihomo_server`: VLESS REALITY support
+  (`mihomo_server_vless_reality_enabled`).  The server listener uses
+  `reality-config` (borrowed `dest`, X25519 keypair, short ID, server names)
+  instead of a certificate, the generated client node uses `reality-opts` and
+  the first server name as its SNI, and the keypair/short ID are generated on
+  the target and persisted to host_vars when left empty.
 
 ### Changed
 

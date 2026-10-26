@@ -94,11 +94,12 @@
           - _mihomo_server_tcp.stdout is ansible.builtin.search(':9442')
           - _mihomo_server_tcp.stdout is ansible.builtin.search(':9443')
           - _mihomo_server_udp.stdout is ansible.builtin.search(':9444')
+          - _mihomo_server_tcp.stdout is ansible.builtin.search(':9445')
           - _mihomo_server_tcp.stdout is ansible.builtin.search(':9447')
         fail_msg: >-
           the enabled listeners must be bound (ss 9442/trojan 9443/hy2 9444/
-          anytls 9447), got TCP: {{ _mihomo_server_tcp.stdout }} UDP:
-          {{ _mihomo_server_udp.stdout }}
+          vless 9445/anytls 9447), got TCP: {{ _mihomo_server_tcp.stdout }}
+          UDP: {{ _mihomo_server_udp.stdout }}
         quiet: true
 
     - name: read the generated server configuration
@@ -116,7 +117,7 @@
         that:
           - >-
             _mihomo_server_config_data['listeners'] | map(attribute='name') | list
-            == ['ss-in', 'trojan-in', 'hysteria2-in', 'anytls-in']
+            == ['ss-in', 'trojan-in', 'hysteria2-in', 'vless-in', 'anytls-in']
           - _mihomo_server_config_data['rules'] == ['MATCH,DIRECT']
           - "'users' not in _mihomo_server_config_data['listeners'][0]"
           - _mihomo_server_config_data['listeners'][0]['cipher'] == '2022-blake3-aes-128-gcm'
@@ -127,10 +128,17 @@
           - _mihomo_server_config_data['listeners'][2]['certificate'] == '/etc/mihomo/tls/fullchain.pem'
           - _mihomo_server_config_data['listeners'][2]['private-key'] == '/etc/mihomo/tls/privkey.pem'
           - _mihomo_server_config_data['listeners'][3]['users'] | length == 2
-          - _mihomo_server_config_data['listeners'][3]['users'] is mapping
+          - _mihomo_server_config_data['listeners'][3]['users'][0]['flow'] == 'xtls-rprx-vision'
+          - "'certificate' not in _mihomo_server_config_data['listeners'][3]"
+          - _mihomo_server_config_data['listeners'][3]['reality-config']['dest'] == 'www.microsoft.com:443'
+          - _mihomo_server_config_data['listeners'][3]['reality-config']['short-id'] | length == 1
+          - _mihomo_server_config_data['listeners'][3]['reality-config']['server-names'] == ['www.microsoft.com']
+          - _mihomo_server_config_data['listeners'][4]['users'] | length == 2
+          - _mihomo_server_config_data['listeners'][4]['users'] is mapping
         fail_msg: >-
-          the generated listeners must follow the per-protocol mihomo shape,
-          got: {{ _mihomo_server_config_data['listeners'] | ansible.builtin.to_json }}
+          the generated listeners must follow the per-protocol mihomo shape
+          (including vless REALITY), got:
+          {{ _mihomo_server_config_data['listeners'] | ansible.builtin.to_json }}
         quiet: true
 
     - name: read the generated client nodes on the controller
@@ -156,6 +164,8 @@
                 'selfhost-US-molecule-node01-bob-trojan',
                 'selfhost-US-molecule-node01-alice-hy2',
                 'selfhost-US-molecule-node01-bob-hy2',
+                'selfhost-US-molecule-node01-alice-vless',
+                'selfhost-US-molecule-node01-bob-vless',
                 'selfhost-US-molecule-node01-alice-anytls',
                 'selfhost-US-molecule-node01-bob-anytls']
         fail_msg: >-
@@ -183,6 +193,10 @@
           - _mihomo_server_host_vars_data['mihomo_server_shadowsocks_password'] | length > 0
           - _mihomo_server_host_vars_data['mihomo_server_trojan_users'] | length == 2
           - _mihomo_server_host_vars_data['mihomo_server_hysteria2_users'] | length == 2
+          - _mihomo_server_host_vars_data['mihomo_server_vless_users'] | length == 2
+          - _mihomo_server_host_vars_data['mihomo_server_vless_reality_private_key'] | length > 0
+          - _mihomo_server_host_vars_data['mihomo_server_vless_reality_public_key'] | length > 0
+          - _mihomo_server_host_vars_data['mihomo_server_vless_reality_short_id'] | length == 16
           - _mihomo_server_host_vars_data['mihomo_server_anytls_users'] | length == 2
         fail_msg: >-
           the generated credentials must be persisted to host_vars, got:
@@ -204,6 +218,19 @@
           - >-
             _mihomo_server_proxies_data['proxies'][3]['password']
             == _mihomo_server_config_data['listeners'][2]['users']['alice']
+          - >-
+            _mihomo_server_proxies_data['proxies'][5]['reality-opts']['public-key']
+            == _mihomo_server_host_vars_data['mihomo_server_vless_reality_public_key']
+          - >-
+            _mihomo_server_proxies_data['proxies'][5]['reality-opts']['short-id']
+            == _mihomo_server_host_vars_data['mihomo_server_vless_reality_short_id']
+          - >-
+            _mihomo_server_config_data['listeners'][3]['reality-config']['private-key']
+            == _mihomo_server_host_vars_data['mihomo_server_vless_reality_private_key']
+          - >-
+            _mihomo_server_proxies_data['proxies'][5]['servername'] == 'www.microsoft.com'
+          - >-
+            _mihomo_server_proxies_data['proxies'][5]['flow'] == 'xtls-rprx-vision'
         fail_msg: >-
           the server listeners, the client nodes and the host_vars artifact
           must carry the same generated credentials (server config, client

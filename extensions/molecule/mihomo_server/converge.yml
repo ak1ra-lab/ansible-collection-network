@@ -1,10 +1,11 @@
 ---
 # mihomo_server scenario - converge the role on the shared containers.
 #
-# The scenario pins four listener shapes (shadowsocks, trojan, hysteria2 and
-# anytls) and their ports so it stays independent of the role's default
-# profile (ss + hysteria2 + anytls).  Two users exercise the credential
-# generation.  The certificate is taken from the scenario's source directory
+# The scenario pins five listener shapes (shadowsocks, trojan, hysteria2,
+# vless with REALITY and anytls) and their ports so it stays independent of
+# the role's default profile (ss + hysteria2 + anytls).  Two users exercise
+# the credential generation.  The certificate is taken from the scenario's
+# source directory
 # and copied by the role, exercising the certbot-compatible source path; the
 # config/client copies are redirected into /tmp so the run does not touch the
 # repository tree; the credentials go to the default playbook-adjacent
@@ -21,12 +22,18 @@
     mihomo_server_enable_shadowsocks: true
     mihomo_server_enable_trojan: true
     mihomo_server_enable_hysteria2: true
-    mihomo_server_enable_vless: false
+    mihomo_server_enable_vless: true
     mihomo_server_enable_tuic: false
     mihomo_server_enable_anytls: true
+    mihomo_server_vless_flow: xtls-rprx-vision
+    mihomo_server_vless_reality_enabled: true
+    mihomo_server_vless_reality_dest: www.microsoft.com:443
+    mihomo_server_vless_reality_server_names:
+      - www.microsoft.com
     mihomo_server_shadowsocks_port: 9442
     mihomo_server_trojan_port: 9443
     mihomo_server_hysteria2_port: 9444
+    mihomo_server_vless_port: 9445
     mihomo_server_anytls_port: 9447
     mihomo_server_tls_source_certificate_path: /tmp/molecule-mihomo-server-source/fullchain.pem
     mihomo_server_tls_source_key_path: /tmp/molecule-mihomo-server-source/privkey.pem

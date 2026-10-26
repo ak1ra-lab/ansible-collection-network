@@ -132,7 +132,13 @@ groups; `<host-label>` is the first DNS label of `mihomo_server_hostname`
 | `mihomo_server_enable_vless` | `false` | vless listener switch |
 | `mihomo_server_vless_port` | `9445` | Port |
 | `mihomo_server_vless_users` | `[]` | `[{name, uuid}]`; generated when empty |
-| `mihomo_server_vless_flow` | `""` | Optional per-user `flow` (e.g. `xtls-rprx-vision`) |
+| `mihomo_server_vless_flow` | `""` | Optional per-user `flow`; `xtls-rprx-vision` is recommended with REALITY |
+| `mihomo_server_vless_reality_enabled` | `false` | Use `reality-config` instead of certificate/key for the vless listener |
+| `mihomo_server_vless_reality_dest` | `www.microsoft.com:443` | Borrowed TLS 1.3 site (`host:port`) |
+| `mihomo_server_vless_reality_private_key` / `_public_key` | `""` | X25519 keypair; generated on the target when both are empty and persisted to host_vars |
+| `mihomo_server_vless_reality_short_id` | `""` | Even-length hex (2-16 chars); generated when empty |
+| `mihomo_server_vless_reality_server_names` | `[]` | Accepted SNI list; defaults to the dest host when empty |
+| `mihomo_server_vless_reality_client_fingerprint` | `chrome` | uTLS fingerprint on the generated client node |
 | `mihomo_server_enable_tuic` | `false` | tuic (v5) listener switch |
 | `mihomo_server_tuic_port` | `9446` | Port |
 | `mihomo_server_tuic_users` | `[]` | `[{name, uuid, password}]`; generated when empty |
@@ -204,6 +210,29 @@ on the same host keep their own hooks.  The lineage defaults to
 `mihomo_server_tls_certbot_lineage` for a custom cert name (for example a
 wildcard lineage).  An explicit `mihomo_server_tls_source_*` pair always wins
 over the derived `live/` paths.
+
+### VLESS REALITY
+
+Set `mihomo_server_vless_reality_enabled: true` (with
+`mihomo_server_enable_vless: true`) to switch the vless listener from
+certificate TLS to REALITY.  REALITY borrows the TLS handshake of
+`mihomo_server_vless_reality_dest` (default `www.microsoft.com:443`), so the
+VLESS listener needs no certificate of its own.  The role:
+
+- generates the X25519 keypair on the target with
+  `mihomo generate reality-keypair` when both key variables are empty;
+- generates a 16-character hex short ID when
+  `mihomo_server_vless_reality_short_id` is empty;
+- persists the private key, public key and short ID to the host_vars
+  credential file (mode `0600`), so repeated runs reuse them;
+- emits `reality-config` on the server listener and `reality-opts` on the
+  generated client node.  `servername` becomes the first entry of
+  `mihomo_server_vless_reality_server_names` (or the dest host when the list
+  is empty), and `client-fingerprint` defaults to `chrome`.
+
+`xtls-rprx-vision` is the recommended `mihomo_server_vless_flow` value with
+REALITY.  Certificate paths are still required when any other TLS-using
+protocol (trojan/hysteria2/tuic/anytls) is enabled.
 
 ## Example playbook
 

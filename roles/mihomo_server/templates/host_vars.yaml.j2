@@ -20,6 +20,11 @@ mihomo_server_hysteria2_obfs_password: {{ mihomo_server_hysteria2_obfs_password 
 {% if mihomo_server_enable_vless | ansible.builtin.bool %}
 mihomo_server_vless_users:
 {{ mihomo_server_vless_users | ak1ra_lab.network.to_pretty_yaml | trim | indent(2, true) }}
+{% if mihomo_server_vless_reality_enabled | ansible.builtin.bool %}
+mihomo_server_vless_reality_private_key: {{ mihomo_server_vless_reality_private_key | ansible.builtin.to_json }}
+mihomo_server_vless_reality_public_key: {{ mihomo_server_vless_reality_public_key | ansible.builtin.to_json }}
+mihomo_server_vless_reality_short_id: {{ mihomo_server_vless_reality_short_id | ansible.builtin.to_json }}
+{% endif %}
 {% endif %}
 {% if mihomo_server_enable_tuic | ansible.builtin.bool %}
 mihomo_server_tuic_users:

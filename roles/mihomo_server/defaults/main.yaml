@@ -83,7 +83,22 @@ mihomo_server_enable_vless: false
 mihomo_server_vless_port: 9445
 # Users: [{name, uuid}] (generated when empty)
 mihomo_server_vless_users: []
+# XTLS Vision is recommended with REALITY; set it to "xtls-rprx-vision".
 mihomo_server_vless_flow: ""
+
+# VLESS REALITY (server side).  When enabled, the vless listener uses
+# reality-config instead of certificate/private-key; clients use reality-opts.
+# The X25519 keypair is generated on the target with
+# `mihomo generate reality-keypair` when both keys are empty and persisted to
+# host_vars.  dest must be a reachable TLS 1.3 site; server_names defaults to
+# the dest host when the list is empty.  short_id is generated when empty.
+mihomo_server_vless_reality_enabled: false
+mihomo_server_vless_reality_dest: "www.microsoft.com:443"
+mihomo_server_vless_reality_private_key: ""
+mihomo_server_vless_reality_public_key: ""
+mihomo_server_vless_reality_short_id: ""
+mihomo_server_vless_reality_server_names: []
+mihomo_server_vless_reality_client_fingerprint: "chrome"
 
 mihomo_server_enable_tuic: false
 mihomo_server_tuic_port: 9446

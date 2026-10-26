@@ -64,6 +64,19 @@ def all_protocols(**overrides: Any) -> dict[str, Any]:
     return spec
 
 
+def reality_protocols(**overrides: Any) -> dict[str, Any]:
+    spec = all_protocols(
+        vless_reality_enabled=True,
+        vless_reality_dest="www.microsoft.com:443",
+        vless_reality_private_key="private-key",
+        vless_reality_public_key="public-key",
+        vless_reality_short_id="0123456789abcdef",
+        vless_reality_server_names=["www.microsoft.com"],
+    )
+    spec.update(overrides)
+    return spec
+
+
 # ── server config ────────────────────────────────────────────────────────────
 
 
@@ -131,6 +144,65 @@ def test_default_protocol_profile() -> None:
         "anytls-in",
     ]
     assert [listener["port"] for listener in listeners] == [9442, 9444, 9447]
+
+
+def test_vless_reality_listener_uses_reality_config() -> None:
+    config = mihomo_server_config(reality_protocols())
+    vless = next(listener for listener in config["listeners"] if listener["name"] == "vless-in")
+    assert vless["reality-config"] == {
+        "dest": "www.microsoft.com:443",
+        "private-key": "private-key",
+        "short-id": ["0123456789abcdef"],
+        "server-names": ["www.microsoft.com"],
+    }
+    assert "certificate" not in vless
+    assert "private-key" not in vless
+
+
+def test_vless_reality_does_not_require_tls_paths() -> None:
+    config = mihomo_server_config(
+        server_spec(
+            enable_vless=True,
+            vless_users=[{"name": "alice", "uuid": UUID_A}],
+            vless_reality_enabled=True,
+            vless_reality_dest="www.microsoft.com:443",
+            vless_reality_private_key="private-key",
+            vless_reality_short_id="0123456789abcdef",
+            tls_certificate_path="",
+            tls_key_path="",
+        )
+    )
+    assert [listener["name"] for listener in config["listeners"]] == ["vless-in"]
+
+
+def test_vless_reality_server_names_default_to_the_dest_host() -> None:
+    config = mihomo_server_config(reality_protocols(vless_reality_server_names=[]))
+    vless = next(listener for listener in config["listeners"] if listener["name"] == "vless-in")
+    assert vless["reality-config"]["server-names"] == ["www.microsoft.com"]
+
+
+def test_vless_reality_requires_enable_vless() -> None:
+    with pytest.raises(AnsibleFilterError, match="requires enable_vless"):
+        mihomo_server_config(
+            server_spec(
+                enable_shadowsocks=True,
+                shadowsocks_password="c2VydmVyLXBhc3M=",
+                vless_reality_enabled=True,
+                vless_reality_private_key="private-key",
+                vless_reality_short_id="0123456789abcdef",
+            )
+        )
+
+
+def test_vless_reality_requires_a_private_key() -> None:
+    with pytest.raises(AnsibleFilterError, match="private_key"):
+        mihomo_server_config(reality_protocols(vless_reality_private_key=""))
+
+
+@pytest.mark.parametrize("short_id", ["", "xyz", "012", "0123456789abcdef00"])
+def test_vless_reality_validates_the_short_id(short_id: str) -> None:
+    with pytest.raises(AnsibleFilterError, match="short_id"):
+        mihomo_server_config(reality_protocols(vless_reality_short_id=short_id))
 
 
 def test_hysteria2_obfs_and_masquerade() -> None:
@@ -321,6 +393,41 @@ def test_client_proxy_shapes() -> None:
     tuic = proxies["selfhost-US-node01-alice-tuic"]
     assert tuic["alpn"] == ["h3"]
     assert tuic["congestion-controller"] == "bbr"
+
+
+def test_vless_reality_client_node() -> None:
+    proxies = mihomo_server_client_proxies(reality_protocols(hostname="node01.example.com", region="US"))["proxies"]
+    vless = next(proxy for proxy in proxies if proxy["name"].endswith("-vless"))
+    assert vless["servername"] == "www.microsoft.com"
+    assert vless["client-fingerprint"] == "chrome"
+    assert vless["reality-opts"] == {
+        "public-key": "public-key",
+        "short-id": "0123456789abcdef",
+    }
+    assert "skip-cert-verify" not in vless
+
+
+def test_vless_reality_client_derives_the_server_name_from_dest() -> None:
+    proxies = mihomo_server_client_proxies(
+        reality_protocols(
+            hostname="node01.example.com",
+            region="US",
+            vless_reality_server_names=[],
+        )
+    )["proxies"]
+    vless = next(proxy for proxy in proxies if proxy["name"].endswith("-vless"))
+    assert vless["servername"] == "www.microsoft.com"
+
+
+def test_vless_reality_client_requires_a_public_key() -> None:
+    with pytest.raises(AnsibleFilterError, match="public_key"):
+        mihomo_server_client_proxies(
+            reality_protocols(
+                hostname="node01.example.com",
+                region="US",
+                vless_reality_public_key="",
+            )
+        )
 
 
 def test_client_proxy_prefix_can_be_overridden() -> None:

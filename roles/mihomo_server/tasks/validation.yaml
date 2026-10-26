@@ -22,6 +22,12 @@
       - mihomo_server_trojan_users | ansible.builtin.type_debug == 'list'
       - mihomo_server_hysteria2_users | ansible.builtin.type_debug == 'list'
       - mihomo_server_vless_users | ansible.builtin.type_debug == 'list'
+      - mihomo_server_vless_reality_dest is string
+      - mihomo_server_vless_reality_private_key is string
+      - mihomo_server_vless_reality_public_key is string
+      - mihomo_server_vless_reality_short_id is string
+      - mihomo_server_vless_reality_server_names | ansible.builtin.type_debug == 'list'
+      - mihomo_server_vless_reality_client_fingerprint is string
       - mihomo_server_tuic_users | ansible.builtin.type_debug == 'list'
       - mihomo_server_anytls_users | ansible.builtin.type_debug == 'list'
       - mihomo_server_extra_listeners | ansible.builtin.type_debug == 'list'
@@ -63,9 +69,33 @@
         or (mihomo_server_shadowsocks_method | length > 0)
       - >-
         (mihomo_server_state == 'absent')
+        or not (mihomo_server_vless_reality_enabled | ansible.builtin.bool)
+        or (mihomo_server_enable_vless | ansible.builtin.bool)
+      - >-
+        (mihomo_server_state == 'absent')
+        or not (mihomo_server_vless_reality_enabled | ansible.builtin.bool)
+        or (mihomo_server_vless_reality_dest is ansible.builtin.match('^.+:[0-9]+$'))
+      - >-
+        (mihomo_server_state == 'absent')
+        or not (mihomo_server_vless_reality_enabled | ansible.builtin.bool)
+        or ((mihomo_server_vless_reality_private_key | length > 0)
+            == (mihomo_server_vless_reality_public_key | length > 0))
+      - >-
+        (mihomo_server_state == 'absent')
+        or not (mihomo_server_vless_reality_enabled | ansible.builtin.bool)
+        or (mihomo_server_vless_reality_short_id | length == 0)
+        or ((mihomo_server_vless_reality_short_id is ansible.builtin.match('^[0-9a-fA-F]{2,16}$'))
+            and ((mihomo_server_vless_reality_short_id | length) % 2 == 0))
+      - >-
+        (mihomo_server_state == 'absent')
+        or not (mihomo_server_vless_reality_enabled | ansible.builtin.bool)
+        or (mihomo_server_vless_reality_client_fingerprint | length > 0)
+      - >-
+        (mihomo_server_state == 'absent')
         or (not (mihomo_server_enable_trojan | ansible.builtin.bool
                  or mihomo_server_enable_hysteria2 | ansible.builtin.bool
-                 or mihomo_server_enable_vless | ansible.builtin.bool
+                 or (mihomo_server_enable_vless | ansible.builtin.bool
+                     and not (mihomo_server_vless_reality_enabled | ansible.builtin.bool))
                  or mihomo_server_enable_tuic | ansible.builtin.bool
                  or mihomo_server_enable_anytls | ansible.builtin.bool))
         or ((mihomo_server_tls_certificate_path | length > 0)
@@ -79,7 +109,11 @@
         *_users must be lists of {name, password, uuid?} mappings
         shadowsocks_method must not be empty
         TLS-using protocols require mihomo_server_tls_certificate_path and
-        mihomo_server_tls_key_path (mihomo has no built-in ACME)
+        mihomo_server_tls_key_path (mihomo has no built-in ACME), except
+        VLESS with REALITY enabled
+        VLESS REALITY requires enable_vless, a dest host:port, and the
+        private/public keys supplied together (or both empty for generation);
+        short_id must be even-length hex (2-16 chars) when set
         mihomo_server_tls_source_certificate_path and
         mihomo_server_tls_source_key_path must be set together; when set, the
         role copies them to the destination paths under an absolute
