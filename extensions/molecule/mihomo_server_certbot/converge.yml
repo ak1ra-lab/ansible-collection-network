@@ -13,6 +13,19 @@
         mihomo_server_hostname: molecule-mihomo.example.test
         mihomo_server_region: US
         mihomo_server_tls_certbot_enabled: true
+        # Pin the certificate-backed protocol set so the scenario stays
+        # independent of the role's default profile (and of any generated
+        # credentials the certbot run does not persist in an auto-loaded
+        # host_vars location).
+        mihomo_server_enable_shadowsocks: true
+        mihomo_server_enable_trojan: true
+        mihomo_server_enable_hysteria2: true
+        mihomo_server_enable_vless: false
+        mihomo_server_enable_tuic: false
+        mihomo_server_enable_anytls: false
+        mihomo_server_shadowsocks_port: 9442
+        mihomo_server_trojan_port: 9443
+        mihomo_server_hysteria2_port: 9444
         mihomo_server_local_artifacts_dir: /tmp/molecule-mihomo-server-certbot/artifacts
         mihomo_server_host_vars_file: >-
           /tmp/molecule-mihomo-server-certbot/host_vars/{{ inventory_hostname }}/mihomo_server.yaml
