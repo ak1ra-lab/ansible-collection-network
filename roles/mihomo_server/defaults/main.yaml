@@ -41,27 +41,31 @@ mihomo_server_external_controller_secret: ""
 
 # ── Protocol switches and ports ──────────────────────────────────────────────
 #
-# Port numbers follow the collection's server-role convention (the
-# sing_box_server role uses the same set) so the two backends stay easy to
-# compare; they are plain defaults, not a compatibility contract, and every
-# value maps to mihomo's own listener schema.
+# Default profile: shadowsocks (certificate-free fallback), hysteria2 (UDP
+# fast path) and anytls (TLS/TCP) are enabled; trojan, vless and tuic are
+# opt-in.  Every protocol stays available through its switch.
+#
+# Ports are plain role defaults, not a protocol convention: 9442-9447 keep
+# the listeners in one predictable block and avoid the historical
+# shadowsocks 8388 / alt-HTTPS 8443 values.  They are not a compatibility
+# contract, and every value maps to mihomo's own listener schema.
 
 mihomo_server_user_count: 1
 
 mihomo_server_enable_shadowsocks: true
-mihomo_server_shadowsocks_port: 8388
+mihomo_server_shadowsocks_port: 9442
 mihomo_server_shadowsocks_method: "2022-blake3-aes-128-gcm"
 # Server password (base64, decoded length = cipher key length); generated
 # when empty.  Single-user: no per-user shadowsocks passwords.
 mihomo_server_shadowsocks_password: ""
 
-mihomo_server_enable_trojan: true
-mihomo_server_trojan_port: 8443
+mihomo_server_enable_trojan: false
+mihomo_server_trojan_port: 9443
 # Users: [{name, password}] (generated when empty)
 mihomo_server_trojan_users: []
 
 mihomo_server_enable_hysteria2: true
-mihomo_server_hysteria2_port: 8845
+mihomo_server_hysteria2_port: 9444
 # Users: [{name, password}] (generated when empty)
 mihomo_server_hysteria2_users: []
 # Server-side Brutal bandwidth caps in Mbps (0 = omit).  These are the
@@ -76,19 +80,19 @@ mihomo_server_hysteria2_masquerade_enabled: true
 mihomo_server_hysteria2_masquerade_url: "https://www.bing.com"
 
 mihomo_server_enable_vless: false
-mihomo_server_vless_port: 8444
+mihomo_server_vless_port: 9445
 # Users: [{name, uuid}] (generated when empty)
 mihomo_server_vless_users: []
 mihomo_server_vless_flow: ""
 
 mihomo_server_enable_tuic: false
-mihomo_server_tuic_port: 8846
+mihomo_server_tuic_port: 9446
 # Users: [{name, uuid, password}] (generated when empty)
 mihomo_server_tuic_users: []
 mihomo_server_tuic_congestion_control: bbr
 
-mihomo_server_enable_anytls: false
-mihomo_server_anytls_port: 8447
+mihomo_server_enable_anytls: true
+mihomo_server_anytls_port: 9447
 # Users: [{name, password}] (generated when empty)
 mihomo_server_anytls_users: []
 mihomo_server_anytls_padding_scheme: ""

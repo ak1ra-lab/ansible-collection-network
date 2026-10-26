@@ -91,13 +91,13 @@
     - name: assert every enabled listener is bound
       ansible.builtin.assert:
         that:
-          - _mihomo_server_tcp.stdout is ansible.builtin.search(':8388')
-          - _mihomo_server_tcp.stdout is ansible.builtin.search(':8443')
-          - _mihomo_server_udp.stdout is ansible.builtin.search(':8845')
-          - _mihomo_server_tcp.stdout is ansible.builtin.search(':8447')
+          - _mihomo_server_tcp.stdout is ansible.builtin.search(':9442')
+          - _mihomo_server_tcp.stdout is ansible.builtin.search(':9443')
+          - _mihomo_server_udp.stdout is ansible.builtin.search(':9444')
+          - _mihomo_server_tcp.stdout is ansible.builtin.search(':9447')
         fail_msg: >-
-          the enabled listeners must be bound (ss 8388/trojan 8443/hy2 8845/
-          anytls 8447), got TCP: {{ _mihomo_server_tcp.stdout }} UDP:
+          the enabled listeners must be bound (ss 9442/trojan 9443/hy2 9444/
+          anytls 9447), got TCP: {{ _mihomo_server_tcp.stdout }} UDP:
           {{ _mihomo_server_udp.stdout }}
         quiet: true
 

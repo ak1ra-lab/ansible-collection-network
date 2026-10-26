@@ -73,6 +73,24 @@ The two `config/client_outbounds/` files and the `host_vars` file are
 written on the controller; commit them only on a private branch (they carry
 credentials) or keep them uncommitted.
 
+## Default profile
+
+The defaults enable three complementary listeners:
+
+- `shadowsocks` - certificate-free fallback, TCP and UDP, supported by
+  nearly every client;
+- `hysteria2` - QUIC/UDP fast path for lossy or high-RTT links; the role
+  leaves the server bandwidth unset, so clients use BBR unless they opt
+  into Brutal;
+- `anytls` - TLS/TCP listener designed to reduce the TLS-in-TLS packet
+  length and timing fingerprint.
+
+`trojan`, `vless` and `tuic` are opt-in.  All six protocol switches remain
+available; the default profile is a recommendation, not a restriction.
+Ports are role defaults, not protocol conventions: the `9442-9447` block
+avoids the historical shadowsocks `8388` / alt-HTTPS `8443` values and keeps
+the listeners easy to enumerate.
+
 ## Naming contract for the generated nodes
 
 ```
@@ -99,28 +117,28 @@ groups; `<host-label>` is the first DNS label of `mihomo_server_hostname`
 | `mihomo_server_external_controller_secret` | `""` | API secret (`secret`) when the controller is exposed |
 | `mihomo_server_user_count` | `1` | Auto-generated users (1-10, first N of the pool) |
 | `mihomo_server_enable_shadowsocks` | `true` | shadowsocks listener switch |
-| `mihomo_server_shadowsocks_port` | `8388` | Single-user ss listener port |
+| `mihomo_server_shadowsocks_port` | `9442` | Single-user ss listener port |
 | `mihomo_server_shadowsocks_method` | `2022-blake3-aes-128-gcm` | Cipher; 2022-blake3 ciphers get an exact-length base64 key, classic ciphers a 32-char passphrase |
 | `mihomo_server_shadowsocks_password` | `""` | Server password (base64); generated when empty |
-| `mihomo_server_enable_trojan` | `true` | trojan listener switch |
-| `mihomo_server_trojan_port` | `8443` | Port |
+| `mihomo_server_enable_trojan` | `false` | trojan listener switch (opt-in legacy TLS/TCP) |
+| `mihomo_server_trojan_port` | `9443` | Port |
 | `mihomo_server_trojan_users` | `[]` | `[{name, password}]`; generated when empty |
 | `mihomo_server_enable_hysteria2` | `true` | hysteria2 listener switch |
-| `mihomo_server_hysteria2_port` | `8845` | Port |
+| `mihomo_server_hysteria2_port` | `9444` | Port |
 | `mihomo_server_hysteria2_users` | `[]` | `[{name, password}]`; generated when empty |
 | `mihomo_server_hysteria2_up_mbps` / `_down_mbps` | `0` / `0` | Server-side Brutal caps in Mbps (`0` omits them). Generated client nodes never carry bandwidth, so clients use BBR unless they set their own; these caps only apply when a client opts into Brutal |
 | `mihomo_server_hysteria2_obfs_enabled` / `_obfs_password` | `false` / `""` | salamander obfuscation (password generated when enabled and empty) |
 | `mihomo_server_hysteria2_masquerade_enabled` / `_url` | `true` / bing.com | HTTP/3 masquerade |
 | `mihomo_server_enable_vless` | `false` | vless listener switch |
-| `mihomo_server_vless_port` | `8444` | Port |
+| `mihomo_server_vless_port` | `9445` | Port |
 | `mihomo_server_vless_users` | `[]` | `[{name, uuid}]`; generated when empty |
 | `mihomo_server_vless_flow` | `""` | Optional per-user `flow` (e.g. `xtls-rprx-vision`) |
 | `mihomo_server_enable_tuic` | `false` | tuic (v5) listener switch |
-| `mihomo_server_tuic_port` | `8846` | Port |
+| `mihomo_server_tuic_port` | `9446` | Port |
 | `mihomo_server_tuic_users` | `[]` | `[{name, uuid, password}]`; generated when empty |
 | `mihomo_server_tuic_congestion_control` | `bbr` | Congestion controller |
-| `mihomo_server_enable_anytls` | `false` | anytls listener switch |
-| `mihomo_server_anytls_port` | `8447` | Port |
+| `mihomo_server_enable_anytls` | `true` | anytls listener switch (TLS/TCP) |
+| `mihomo_server_anytls_port` | `9447` | Port |
 | `mihomo_server_anytls_users` | `[]` | `[{name, password}]`; generated when empty |
 | `mihomo_server_anytls_padding_scheme` | `""` | Optional padding scheme |
 | `mihomo_server_extra_listeners` | `[]` | Raw additional listeners appended after the generated ones |

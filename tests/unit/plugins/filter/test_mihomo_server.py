@@ -114,6 +114,25 @@ def test_listener_order_and_schema() -> None:
     assert anytls["certificate"] == CERT
 
 
+def test_default_protocol_profile() -> None:
+    config = mihomo_server_config(
+        {
+            "shadowsocks_password": "c2VydmVyLXBhc3M=",
+            "tls_certificate_path": CERT,
+            "tls_key_path": KEY,
+            "hysteria2_users": [{"name": "alice", "password": "hy2-pw"}],
+            "anytls_users": [{"name": "alice", "password": "anytls-pw"}],
+        }
+    )
+    listeners = config["listeners"]
+    assert [listener["name"] for listener in listeners] == [
+        "ss-in",
+        "hysteria2-in",
+        "anytls-in",
+    ]
+    assert [listener["port"] for listener in listeners] == [9442, 9444, 9447]
+
+
 def test_hysteria2_obfs_and_masquerade() -> None:
     config = mihomo_server_config(
         all_protocols(
@@ -174,7 +193,7 @@ def test_tls_paths_required_for_tls_protocols() -> None:
 
 def test_duplicate_ports_fail() -> None:
     with pytest.raises(AnsibleFilterError, match="already used by shadowsocks"):
-        mihomo_server_config(all_protocols(trojan_port=8388))
+        mihomo_server_config(all_protocols(trojan_port=9442))
 
 
 def test_users_are_required_for_enabled_protocols() -> None:
@@ -232,7 +251,7 @@ def test_extra_listener_port_collision_fails() -> None:
             server_spec(
                 enable_shadowsocks=True,
                 shadowsocks_password="c2VydmVyLXBhc3M=",
-                extra_listeners=[{"name": "socks-in", "type": "socks", "port": 8388}],
+                extra_listeners=[{"name": "socks-in", "type": "socks", "port": 9442}],
             )
         )
 
@@ -260,6 +279,24 @@ def test_client_proxy_names_follow_the_contract() -> None:
         "selfhost-US-node01-alice-tuic",
         "selfhost-US-node01-alice-anytls",
     ]
+
+
+def test_default_client_protocol_profile() -> None:
+    proxies = mihomo_server_client_proxies(
+        {
+            "hostname": "node01.example.com",
+            "region": "US",
+            "shadowsocks_password": "c2VydmVyLXBhc3M=",
+            "hysteria2_users": [{"name": "alice", "password": "hy2-pw"}],
+            "anytls_users": [{"name": "alice", "password": "anytls-pw"}],
+        }
+    )["proxies"]
+    assert [proxy["name"] for proxy in proxies] == [
+        "selfhost-US-node01-ss",
+        "selfhost-US-node01-alice-hy2",
+        "selfhost-US-node01-alice-anytls",
+    ]
+    assert [proxy["port"] for proxy in proxies] == [9442, 9444, 9447]
 
 
 def test_client_proxy_shapes() -> None:
@@ -309,7 +346,7 @@ def test_hysteria2_client_bandwidth_is_never_emitted() -> None:
 
 def test_client_proxies_validate_ports() -> None:
     with pytest.raises(AnsibleFilterError, match="trojan_port must be an integer"):
-        client_config(trojan_port="8443")
+        client_config(trojan_port="9443")
 
 
 def test_client_proxies_require_hostname_and_region() -> None:
