@@ -13,8 +13,9 @@
 #   - trojan takes a users list, hysteria2/tuic/anytls a name/uuid -> password
 #     mapping - users are declared here in one uniform shape
 #     ({name, password, uuid?}) and mapped by the filter plugin;
-#   - TLS is flat certificate/private-key paths and mihomo has no built-in
-#     ACME, so certificates are provisioned out of band (manual mode).
+#   - TLS is flat certificate/private-key paths (vless REALITY uses
+#     reality-config instead) and mihomo has no built-in ACME, so
+#     certificates are provisioned out of band (manual mode).
 
 # ── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -41,9 +42,10 @@ mihomo_server_external_controller_secret: ""
 
 # ── Protocol switches and ports ──────────────────────────────────────────────
 #
-# Default profile: shadowsocks (certificate-free fallback), hysteria2 (UDP
-# fast path) and anytls (TLS/TCP) are enabled; trojan, vless and tuic are
-# opt-in.  Every protocol stays available through its switch.
+# Default profile: shadowsocks (certificate-free fallback), vless with
+# REALITY + XTLS Vision (TCP primary), hysteria2 (UDP fast path) and anytls
+# (TLS/TCP fallback) are enabled; trojan and tuic are opt-in.  Every protocol
+# stays available through its switch.
 #
 # Ports are plain role defaults, not a protocol convention: 9442-9447 keep
 # the listeners in one predictable block and avoid the historical
@@ -79,12 +81,12 @@ mihomo_server_hysteria2_obfs_password: ""
 mihomo_server_hysteria2_masquerade_enabled: true
 mihomo_server_hysteria2_masquerade_url: "https://www.bing.com"
 
-mihomo_server_enable_vless: false
+mihomo_server_enable_vless: true
 mihomo_server_vless_port: 9445
 # Users: [{name, uuid}] (generated when empty)
 mihomo_server_vless_users: []
-# XTLS Vision is recommended with REALITY; set it to "xtls-rprx-vision".
-mihomo_server_vless_flow: ""
+# XTLS Vision is the default with REALITY; set it to "" for plain vless.
+mihomo_server_vless_flow: "xtls-rprx-vision"
 
 # VLESS REALITY (server side).  When enabled, the vless listener uses
 # reality-config instead of certificate/private-key; clients use reality-opts.
@@ -92,7 +94,7 @@ mihomo_server_vless_flow: ""
 # `mihomo generate reality-keypair` when both keys are empty and persisted to
 # host_vars.  dest must be a reachable TLS 1.3 site; server_names defaults to
 # the dest host when the list is empty.  short_id is generated when empty.
-mihomo_server_vless_reality_enabled: false
+mihomo_server_vless_reality_enabled: true
 mihomo_server_vless_reality_dest: "www.microsoft.com:443"
 mihomo_server_vless_reality_private_key: ""
 mihomo_server_vless_reality_public_key: ""

@@ -70,25 +70,25 @@
       - >-
         (mihomo_server_state == 'absent')
         or not (mihomo_server_vless_reality_enabled | ansible.builtin.bool)
-        or (mihomo_server_enable_vless | ansible.builtin.bool)
-      - >-
-        (mihomo_server_state == 'absent')
-        or not (mihomo_server_vless_reality_enabled | ansible.builtin.bool)
+        or not (mihomo_server_enable_vless | ansible.builtin.bool)
         or (mihomo_server_vless_reality_dest is ansible.builtin.match('^.+:[0-9]+$'))
       - >-
         (mihomo_server_state == 'absent')
         or not (mihomo_server_vless_reality_enabled | ansible.builtin.bool)
+        or not (mihomo_server_enable_vless | ansible.builtin.bool)
         or ((mihomo_server_vless_reality_private_key | length > 0)
             == (mihomo_server_vless_reality_public_key | length > 0))
       - >-
         (mihomo_server_state == 'absent')
         or not (mihomo_server_vless_reality_enabled | ansible.builtin.bool)
+        or not (mihomo_server_enable_vless | ansible.builtin.bool)
         or (mihomo_server_vless_reality_short_id | length == 0)
         or ((mihomo_server_vless_reality_short_id is ansible.builtin.match('^[0-9a-fA-F]{2,16}$'))
             and ((mihomo_server_vless_reality_short_id | length) % 2 == 0))
       - >-
         (mihomo_server_state == 'absent')
         or not (mihomo_server_vless_reality_enabled | ansible.builtin.bool)
+        or not (mihomo_server_enable_vless | ansible.builtin.bool)
         or (mihomo_server_vless_reality_client_fingerprint | length > 0)
       - >-
         (mihomo_server_state == 'absent')

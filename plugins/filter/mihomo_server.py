@@ -118,10 +118,8 @@ def _reality_server_names(config: dict[str, Any]) -> list[str]:
 
 
 def _validate_vless_reality(config: dict[str, Any]) -> None:
-    if not _truthy(config["vless_reality_enabled"]):
+    if not _truthy(config["vless_reality_enabled"]) or not _truthy(config["enable_vless"]):
         return
-    if not _truthy(config["enable_vless"]):
-        _fail("vless_reality_enabled requires enable_vless")
     _reality_dest(config)
     _reality_short_id(config)
     _reality_server_names(config)
@@ -347,6 +345,9 @@ def mihomo_server_config(config: dict[str, Any] | None = None) -> dict[str, Any]
             ``<protocol>_users`` / protocol options, plus ``log_level``,
             ``listen``, ``tls_certificate_path``, ``tls_key_path``,
             ``alpn``, ``external_controller`` and ``extra_listeners``.
+            With ``vless_reality_enabled``, the vless listener uses
+            ``vless_reality_dest``/``_private_key``/``_short_id``/
+            ``_server_names`` instead of the certificate paths.
 
             Users use one uniform input shape for every protocol:
             ``[{name, password, uuid?}]`` - ``password`` is required for
@@ -378,11 +379,11 @@ def mihomo_server_config(config: dict[str, Any] | None = None) -> dict[str, Any]
         hysteria2_obfs_password="",
         hysteria2_masquerade_enabled=True,
         hysteria2_masquerade_url="https://www.bing.com",
-        enable_vless=False,
+        enable_vless=True,
         vless_port=9445,
         vless_users=[],
-        vless_flow="",
-        vless_reality_enabled=False,
+        vless_flow="xtls-rprx-vision",
+        vless_reality_enabled=True,
         vless_reality_dest="www.microsoft.com:443",
         vless_reality_private_key="",
         vless_reality_public_key="",
@@ -451,7 +452,10 @@ def mihomo_server_client_proxies(
 
     Args:
         config: the server mapping (as for ``mihomo_server_config``) plus
-            ``hostname``, ``region`` and ``client_node_prefix``.
+            ``hostname``, ``region`` and ``client_node_prefix``.  With
+            ``vless_reality_enabled``, the vless node carries
+            ``reality-opts`` and uses the first
+            ``vless_reality_server_names`` entry as its ``servername``.
 
     Returns:
         ``{"proxies": [...]}`` - the ``providers/selfhost.yaml`` artifact.
@@ -473,11 +477,11 @@ def mihomo_server_client_proxies(
         hysteria2_users=[],
         hysteria2_obfs_enabled=False,
         hysteria2_obfs_password="",
-        enable_vless=False,
+        enable_vless=True,
         vless_port=9445,
         vless_users=[],
-        vless_flow="",
-        vless_reality_enabled=False,
+        vless_flow="xtls-rprx-vision",
+        vless_reality_enabled=True,
         vless_reality_dest="www.microsoft.com:443",
         vless_reality_public_key="",
         vless_reality_short_id="",

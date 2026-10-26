@@ -30,12 +30,12 @@ mihomo schema facts the contract is built on:
 - trojan takes a `users` list, hysteria2/tuic/anytls a name/uuid -> password
   mapping - the role declares users in one uniform shape
   (`{name, password, uuid?}`) and the filter plugin maps them;
-- TLS is flat `certificate` / `private-key` paths on every TLS-using
-  listener, and mihomo has **no built-in ACME**: certificates are
-  provisioned out of band.  The role can either reference an
-  operator-managed pair in place (manual mode) or copy an external source
-  pair into a service-readable location and install an optional certbot
-  renewal hook (see [TLS material](#tls-material)).
+- TLS is flat `certificate` / `private-key` paths on the certificate-using
+  listeners; vless with REALITY uses `reality-config` instead.  mihomo has
+  **no built-in ACME**: certificates are provisioned out of band.  The role
+  can either reference an operator-managed pair in place (manual mode) or
+  copy an external source pair into a service-readable location and install
+  an optional certbot renewal hook (see [TLS material](#tls-material)).
 
 The role does not manage a firewall or cloud security groups: open the
 enabled ports (`mihomo_server_*_port`) yourself.
@@ -44,11 +44,12 @@ enabled ports (`mihomo_server_*_port`) yourself.
 
 - A systemd-based Linux VPS (the binary is deployed as a static `.gz` archive
   by `ak1ra_lab.network.mihomo_install`).
-- A TLS certificate/key pair for every TLS-using protocol
-  (trojan/hysteria2/vless/tuic/anytls) - see
+- A TLS certificate/key pair for every certificate-using protocol
+  (trojan/hysteria2/tuic/anytls, and vless when REALITY is disabled) - see
   `mihomo_server_tls_certificate_path` / `_key_path`.  The role can copy an
   external source pair into a service-readable location, which is required
-  for certbot's root-only `live/` paths.
+  for certbot's root-only `live/` paths.  The default vless REALITY listener
+  does not need its own certificate.
 - A DNS name pointing at the VPS and a region token the client's region
   regex can match (`mihomo_server_region`, e.g. `US`, `HK`, `JP`).
 - Control node: `ak1ra_lab.general` (>= 0.2.0) for `github_releases_info`
@@ -75,17 +76,19 @@ credentials) or keep them uncommitted.
 
 ## Default profile
 
-The defaults enable three complementary listeners:
+The defaults enable four complementary listeners:
 
 - `shadowsocks` - certificate-free fallback, TCP and UDP, supported by
   nearly every client;
+- `vless` with REALITY and XTLS Vision - TCP primary; the listener borrows
+  a real site's TLS handshake and needs no certificate of its own;
 - `hysteria2` - QUIC/UDP fast path for lossy or high-RTT links; the role
   leaves the server bandwidth unset, so clients use BBR unless they opt
   into Brutal;
-- `anytls` - TLS/TCP listener designed to reduce the TLS-in-TLS packet
+- `anytls` - TLS/TCP fallback designed to reduce the TLS-in-TLS packet
   length and timing fingerprint.
 
-`trojan`, `vless` and `tuic` are opt-in.  All six protocol switches remain
+`trojan` and `tuic` are opt-in.  All six protocol switches remain
 available; the default profile is a recommendation, not a restriction.
 Ports are role defaults, not protocol conventions: the `9442-9447` block
 avoids the historical shadowsocks `8388` / alt-HTTPS `8443` values and keeps
@@ -129,11 +132,11 @@ groups; `<host-label>` is the first DNS label of `mihomo_server_hostname`
 | `mihomo_server_hysteria2_up_mbps` / `_down_mbps` | `0` / `0` | Server-side Brutal caps in Mbps (`0` omits them). Generated client nodes never carry bandwidth, so clients use BBR unless they set their own; these caps only apply when a client opts into Brutal |
 | `mihomo_server_hysteria2_obfs_enabled` / `_obfs_password` | `false` / `""` | salamander obfuscation (password generated when enabled and empty) |
 | `mihomo_server_hysteria2_masquerade_enabled` / `_url` | `true` / bing.com | HTTP/3 masquerade |
-| `mihomo_server_enable_vless` | `false` | vless listener switch |
+| `mihomo_server_enable_vless` | `true` | vless listener switch |
 | `mihomo_server_vless_port` | `9445` | Port |
 | `mihomo_server_vless_users` | `[]` | `[{name, uuid}]`; generated when empty |
-| `mihomo_server_vless_flow` | `""` | Optional per-user `flow`; `xtls-rprx-vision` is recommended with REALITY |
-| `mihomo_server_vless_reality_enabled` | `false` | Use `reality-config` instead of certificate/key for the vless listener |
+| `mihomo_server_vless_flow` | `xtls-rprx-vision` | Per-user `flow`; set `""` for plain vless |
+| `mihomo_server_vless_reality_enabled` | `true` | Use `reality-config` instead of certificate/key for the vless listener |
 | `mihomo_server_vless_reality_dest` | `www.microsoft.com:443` | Borrowed TLS 1.3 site (`host:port`) |
 | `mihomo_server_vless_reality_private_key` / `_public_key` | `""` | X25519 keypair; generated on the target when both are empty and persisted to host_vars |
 | `mihomo_server_vless_reality_short_id` | `""` | Even-length hex (2-16 chars); generated when empty |
@@ -213,9 +216,10 @@ over the derived `live/` paths.
 
 ### VLESS REALITY
 
-Set `mihomo_server_vless_reality_enabled: true` (with
-`mihomo_server_enable_vless: true`) to switch the vless listener from
-certificate TLS to REALITY.  REALITY borrows the TLS handshake of
+Both `mihomo_server_enable_vless` and
+`mihomo_server_vless_reality_enabled` are true in the default profile.  Set
+them together to switch the vless listener from certificate TLS to REALITY.
+REALITY borrows the TLS handshake of
 `mihomo_server_vless_reality_dest` (default `www.microsoft.com:443`), so the
 VLESS listener needs no certificate of its own.  The role:
 

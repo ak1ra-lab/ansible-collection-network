@@ -3,9 +3,9 @@
 #
 # The scenario pins five listener shapes (shadowsocks, trojan, hysteria2,
 # vless with REALITY and anytls) and their ports so it stays independent of
-# the role's default profile (ss + hysteria2 + anytls).  Two users exercise
-# the credential generation.  The certificate is taken from the scenario's
-# source directory
+# the role's default profile (ss + vless REALITY + hysteria2 + anytls).  Two
+# users exercise the credential generation.  The certificate is taken from
+# the scenario's source directory
 # and copied by the role, exercising the certbot-compatible source path; the
 # config/client copies are redirected into /tmp so the run does not touch the
 # repository tree; the credentials go to the default playbook-adjacent

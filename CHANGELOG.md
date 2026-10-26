@@ -154,11 +154,12 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Changed
 
-- `mihomo_server` default profile now enables shadowsocks, hysteria2 and
-  anytls (trojan/vless/tuic are opt-in) and moves the listener ports to
-  `9442-9447`; the filter fallback defaults, README and Molecule scenario
-  follow the same values.  Hysteria2 server bandwidth stays unset, so the
-  generated clients use BBR unless they explicitly opt into Brutal.
+- `mihomo_server` default profile now enables shadowsocks, hysteria2,
+  anytls and vless with REALITY + XTLS Vision (trojan and tuic are opt-in)
+  and moves the listener ports to `9442-9447`; the filter fallback defaults,
+  README and Molecule scenario follow the same values.  Hysteria2 server
+  bandwidth stays unset, so the generated clients use BBR unless they
+  explicitly opt into Brutal.
 - `mihomo_client` profile reworked around a hand-maintained template
   (`mihomo_client_config_template`, shipped as
   `templates/etc/mihomo/config.yaml.j2`): the static mihomo YAML (group

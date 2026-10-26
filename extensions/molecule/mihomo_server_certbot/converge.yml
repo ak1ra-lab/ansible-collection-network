@@ -21,6 +21,7 @@
         mihomo_server_enable_trojan: true
         mihomo_server_enable_hysteria2: true
         mihomo_server_enable_vless: false
+        mihomo_server_vless_reality_enabled: false
         mihomo_server_enable_tuic: false
         mihomo_server_enable_anytls: false
         mihomo_server_shadowsocks_port: 9442

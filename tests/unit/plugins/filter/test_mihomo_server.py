@@ -33,6 +33,7 @@ def server_spec(**overrides: Any) -> dict[str, Any]:
         "enable_trojan": False,
         "enable_hysteria2": False,
         "enable_vless": False,
+        "vless_reality_enabled": False,
         "enable_tuic": False,
         "enable_anytls": False,
         "tls_certificate_path": CERT,
@@ -55,6 +56,7 @@ def all_protocols(**overrides: Any) -> dict[str, Any]:
         enable_vless=True,
         vless_users=[{"name": "alice", "uuid": UUID_A}],
         vless_flow="xtls-rprx-vision",
+        vless_reality_enabled=False,
         enable_tuic=True,
         tuic_users=[{"name": "alice", "uuid": UUID_A, "password": "tuic-pw"}],
         enable_anytls=True,
@@ -134,6 +136,10 @@ def test_default_protocol_profile() -> None:
             "tls_certificate_path": CERT,
             "tls_key_path": KEY,
             "hysteria2_users": [{"name": "alice", "password": "hy2-pw"}],
+            "vless_users": [{"name": "alice", "uuid": UUID_A}],
+            "vless_reality_private_key": "private-key",
+            "vless_reality_public_key": "public-key",
+            "vless_reality_short_id": "0123456789abcdef",
             "anytls_users": [{"name": "alice", "password": "anytls-pw"}],
         }
     )
@@ -141,9 +147,10 @@ def test_default_protocol_profile() -> None:
     assert [listener["name"] for listener in listeners] == [
         "ss-in",
         "hysteria2-in",
+        "vless-in",
         "anytls-in",
     ]
-    assert [listener["port"] for listener in listeners] == [9442, 9444, 9447]
+    assert [listener["port"] for listener in listeners] == [9442, 9444, 9445, 9447]
 
 
 def test_vless_reality_listener_uses_reality_config() -> None:
@@ -181,17 +188,17 @@ def test_vless_reality_server_names_default_to_the_dest_host() -> None:
     assert vless["reality-config"]["server-names"] == ["www.microsoft.com"]
 
 
-def test_vless_reality_requires_enable_vless() -> None:
-    with pytest.raises(AnsibleFilterError, match="requires enable_vless"):
-        mihomo_server_config(
-            server_spec(
-                enable_shadowsocks=True,
-                shadowsocks_password="c2VydmVyLXBhc3M=",
-                vless_reality_enabled=True,
-                vless_reality_private_key="private-key",
-                vless_reality_short_id="0123456789abcdef",
-            )
+def test_vless_reality_is_ignored_when_vless_is_disabled() -> None:
+    config = mihomo_server_config(
+        server_spec(
+            enable_shadowsocks=True,
+            shadowsocks_password="c2VydmVyLXBhc3M=",
+            vless_reality_enabled=True,
+            vless_reality_private_key="private-key",
+            vless_reality_short_id="0123456789abcdef",
         )
+    )
+    assert [listener["name"] for listener in config["listeners"]] == ["ss-in"]
 
 
 def test_vless_reality_requires_a_private_key() -> None:
@@ -360,15 +367,19 @@ def test_default_client_protocol_profile() -> None:
             "region": "US",
             "shadowsocks_password": "c2VydmVyLXBhc3M=",
             "hysteria2_users": [{"name": "alice", "password": "hy2-pw"}],
+            "vless_users": [{"name": "alice", "uuid": UUID_A}],
+            "vless_reality_public_key": "public-key",
+            "vless_reality_short_id": "0123456789abcdef",
             "anytls_users": [{"name": "alice", "password": "anytls-pw"}],
         }
     )["proxies"]
     assert [proxy["name"] for proxy in proxies] == [
         "selfhost-US-node01-ss",
         "selfhost-US-node01-alice-hy2",
+        "selfhost-US-node01-alice-vless",
         "selfhost-US-node01-alice-anytls",
     ]
-    assert [proxy["port"] for proxy in proxies] == [9442, 9444, 9447]
+    assert [proxy["port"] for proxy in proxies] == [9442, 9444, 9445, 9447]
 
 
 def test_client_proxy_shapes() -> None:
