@@ -1,0 +1,50 @@
+---
+# mihomo_server_jls scenario - stop the local fallback destination, tear down
+# the mihomo server and remove controller/target test state.  Tolerates a
+# fresh host and an unreachable container.
+
+- name: tear down the JLS mihomo server fixtures
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true
+  vars:
+    _mihomo_server_jls_dir: /tmp/molecule-mihomo-server-jls
+    _mihomo_server_jls_dest_dir: /tmp/molecule-mihomo-server-jls-dest
+    mihomo_server_state: absent
+  tasks:
+    - name: stop the fallback destination TLS server
+      ansible.builtin.shell:
+        cmd: >-
+          if [ -f {{ _mihomo_server_jls_dest_dir }}/s_server.pid ]; then
+            kill "$(cat {{ _mihomo_server_jls_dest_dir }}/s_server.pid)" 2>/dev/null || true
+          fi
+      changed_when: false
+      failed_when: false
+
+    - name: tear down the mihomo server
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.mihomo_server
+
+    - name: remove the JLS scenario state
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ _mihomo_server_jls_dir }}"
+        - "{{ _mihomo_server_jls_dest_dir }}"
+        - /etc/mihomo
+      loop_control:
+        label: "{{ item }}"
+
+- name: remove the controller-local JLS artifacts
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: remove the temporary artifact and credential directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/molecule-mihomo-server-jls
+        - "{{ playbook_dir }}/host_vars"

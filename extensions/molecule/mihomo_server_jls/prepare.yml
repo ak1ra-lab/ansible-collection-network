@@ -1,0 +1,79 @@
+---
+# mihomo_server_jls scenario - one-time container preparation.
+#
+# The scenario needs a local TLS site for the JLS fallback: openssl s_server
+# listens on 127.0.0.1:19443 with a throwaway self-signed certificate for
+# jls-dest.test.  The mihomo server dials it only for unauthenticated probes;
+# verify.yml uses an openssl client to prove that fallback works.
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml
+
+- name: prepare the JLS fallback destination
+  hosts: all
+  gather_facts: true
+  vars:
+    _mihomo_server_jls_dir: /tmp/molecule-mihomo-server-jls
+    _mihomo_server_jls_dest_dir: /tmp/molecule-mihomo-server-jls-dest
+  tasks:
+    - name: ensure the verify tooling is installed
+      ansible.builtin.package:
+        name:
+          - iproute2
+          - openssl
+          - curl
+        state: present
+
+    - name: ensure the JLS fixture directory exists
+      ansible.builtin.file:
+        path: "{{ _mihomo_server_jls_dest_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: generate the fallback destination certificate
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - req
+          - -x509
+          - -newkey
+          - rsa:2048
+          - -nodes
+          - -days
+          - "1"
+          - -subj
+          - /CN=jls-dest.test
+          - -addext
+          - subjectAltName=DNS:jls-dest.test
+          - -keyout
+          - "{{ _mihomo_server_jls_dest_dir }}/dest.key"
+          - -out
+          - "{{ _mihomo_server_jls_dest_dir }}/dest.crt"
+        creates: "{{ _mihomo_server_jls_dest_dir }}/dest.crt"
+
+    - name: make the fallback destination key readable by openssl
+      ansible.builtin.file:
+        path: "{{ _mihomo_server_jls_dest_dir }}/{{ item }}"
+        mode: "{{ '0600' if item == 'dest.key' else '0644' }}"
+      loop:
+        - dest.crt
+        - dest.key
+
+    - name: start the fallback destination TLS server
+      ansible.builtin.shell:
+        cmd: >-
+          nohup /usr/bin/openssl s_server
+          -accept 19443
+          -cert {{ _mihomo_server_jls_dest_dir }}/dest.crt
+          -key {{ _mihomo_server_jls_dest_dir }}/dest.key
+          -www -tls1_3
+          > {{ _mihomo_server_jls_dest_dir }}/s_server.log 2>&1 &
+          echo $! > {{ _mihomo_server_jls_dest_dir }}/s_server.pid
+        chdir: "{{ _mihomo_server_jls_dest_dir }}"
+      changed_when: true
+
+    - name: wait for the fallback destination TLS port
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 19443
+        timeout: 30

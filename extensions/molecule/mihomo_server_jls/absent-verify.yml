@@ -1,0 +1,46 @@
+---
+# mihomo_server_jls scenario - assert the teardown performed by cleanup.yml:
+# the role-managed configuration/service and the local fallback destination
+# are gone.
+
+- name: verify the mihomo JLS teardown
+  hosts: all
+  gather_facts: false
+  vars:
+    _mihomo_server_jls_dest_dir: /tmp/molecule-mihomo-server-jls-dest
+  tasks:
+    - name: collect the teardown state of the role's artifacts
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/mihomo/config.yaml
+        - /etc/systemd/system/mihomo.service
+        - "{{ _mihomo_server_jls_dest_dir }}/dest.crt"
+      register: _mihomo_server_jls_artifacts_after
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert no role or fixture artifact is left behind
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_jls_artifacts_after.results | selectattr('stat.exists') | list | length
+            == 0
+        fail_msg: >-
+          leftover JLS scenario artifacts:
+          {{ _mihomo_server_jls_artifacts_after.results | selectattr('stat.exists') | map(attribute='item') | list }}
+        quiet: true
+
+    - name: collect the service state after teardown
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, mihomo.service]
+      changed_when: false
+      failed_when: false
+      register: _mihomo_server_jls_active_after
+
+    - name: assert the mihomo service is no longer running
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_jls_active_after.stdout | default('') != 'active'
+        fail_msg: "mihomo.service must not stay active after teardown"
+        quiet: true

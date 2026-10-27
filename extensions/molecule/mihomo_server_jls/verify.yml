@@ -1,0 +1,168 @@
+---
+# mihomo_server_jls scenario - assert the converged JLS state:
+#   * the service is active and the AnyTLS listener is really bound;
+#   * the server listener has jls-config and no certificate fields;
+#   * the generated client nodes use the JLS SNI/ALPN and separate credentials;
+#   * an unauthenticated probe falls back to the local TLS destination.
+
+- name: verify the converged mihomo JLS state
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the mihomo service activity state
+      ansible.builtin.command:
+        argv: [/usr/bin/systemctl, is-active, mihomo.service]
+      changed_when: false
+      register: _mihomo_server_jls_active
+
+    - name: assert the mihomo service is active
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_jls_active.stdout == 'active'
+        fail_msg: "mihomo.service must be active, got: {{ _mihomo_server_jls_active.stdout }}"
+        quiet: true
+
+    - name: collect the listening TCP ports
+      ansible.builtin.command:
+        argv: [/usr/bin/ss, -H, -ltn]
+      changed_when: false
+      register: _mihomo_server_jls_tcp
+
+    - name: assert the anytls listener is bound
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_jls_tcp.stdout is ansible.builtin.search(':19447')
+        fail_msg: >-
+          the JLS anytls listener must bind 19447, got:
+          {{ _mihomo_server_jls_tcp.stdout }}
+        quiet: true
+
+    - name: read the generated server configuration
+      ansible.builtin.slurp:
+        src: /etc/mihomo/config.yaml
+      register: _mihomo_server_jls_config
+
+    - name: parse the generated server configuration
+      ansible.builtin.set_fact:
+        _mihomo_server_jls_config_data: >-
+          {{ _mihomo_server_jls_config.content | ansible.builtin.b64decode | ansible.builtin.from_yaml }}
+
+    - name: assert the server listener uses JLS instead of a certificate
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_jls_config_data['listeners'] | map(attribute='name') | list
+            == ['anytls-in']
+          - "'certificate' not in _mihomo_server_jls_config_data['listeners'][0]"
+          - "'private-key' not in _mihomo_server_jls_config_data['listeners'][0]"
+          - "'padding-scheme' not in _mihomo_server_jls_config_data['listeners'][0]"
+          - _mihomo_server_jls_config_data['listeners'][0]['users'] | length == 2
+          - _mihomo_server_jls_config_data['listeners'][0]['jls-config']['enable'] is sameas true
+          - _mihomo_server_jls_config_data['listeners'][0]['jls-config']['dest'] == '127.0.0.1:19443'
+          - _mihomo_server_jls_config_data['listeners'][0]['jls-config']['sni'] == 'jls-dest.test'
+          - >-
+            _mihomo_server_jls_config_data['listeners'][0]['jls-config']['alpn']
+            == ['h2', 'http/1.1']
+          - >-
+            _mihomo_server_jls_config_data['listeners'][0]['jls-config']['users']
+            | length == 2
+        fail_msg: >-
+          the JLS listener must carry jls-config and no certificate fields,
+          got: {{ _mihomo_server_jls_config_data['listeners'][0] | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: read the generated client nodes on the controller
+      delegate_to: localhost
+      become: false
+      ansible.builtin.slurp:
+        src: >-
+          /tmp/molecule-mihomo-server-jls/artifacts/{{ inventory_hostname }}.proxies.yaml
+      register: _mihomo_server_jls_proxies
+
+    - name: parse the generated client nodes
+      ansible.builtin.set_fact:
+        _mihomo_server_jls_proxies_data: >-
+          {{ _mihomo_server_jls_proxies.content | ansible.builtin.b64decode | ansible.builtin.from_yaml }}
+
+    - name: assert the client nodes carry the JLS SNI, ALPN and options
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_jls_proxies_data['proxies'] | map(attribute='name') | list
+            == ['selfhost-US-molecule-jls-node01-alice-anytls',
+                'selfhost-US-molecule-jls-node01-bob-anytls']
+          - >-
+            _mihomo_server_jls_proxies_data['proxies']
+            | map(attribute='sni') | unique | list == ['jls-dest.test']
+          - >-
+            _mihomo_server_jls_proxies_data['proxies']
+            | map(attribute='alpn') | unique | list == [['h2', 'http/1.1']]
+          - >-
+            _mihomo_server_jls_proxies_data['proxies']
+            | selectattr('jls-opts', 'defined') | list | length == 2
+          - >-
+            _mihomo_server_jls_proxies_data['proxies']
+            | selectattr('tls', 'defined') | list | length == 0
+          - >-
+            _mihomo_server_jls_proxies_data['proxies'][0]['jls-opts']['username'] == 'alice'
+          - >-
+            _mihomo_server_jls_proxies_data['proxies'][1]['jls-opts']['username'] == 'bob'
+        fail_msg: >-
+          the generated JLS nodes must use sni=jls-dest.test, the JLS ALPN,
+          jls-opts, and no tls field, got:
+          {{ _mihomo_server_jls_proxies_data['proxies'] | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: collect the generated credentials artifact on the controller
+      delegate_to: localhost
+      become: false
+      ansible.builtin.slurp:
+        src: >-
+          {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yaml
+      register: _mihomo_server_jls_host_vars
+
+    - name: parse the generated credentials artifact
+      ansible.builtin.set_fact:
+        _mihomo_server_jls_host_vars_data: >-
+          {{ _mihomo_server_jls_host_vars.content | ansible.builtin.b64decode | ansible.builtin.from_yaml }}
+
+    - name: assert the JLS credentials are persisted and used by the client nodes
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_jls_host_vars_data['mihomo_server_anytls_users'] | length == 2
+          - _mihomo_server_jls_host_vars_data['mihomo_server_anytls_jls_users'] | length == 2
+          - >-
+            _mihomo_server_jls_host_vars_data['mihomo_server_anytls_jls_users']
+            | selectattr('name', 'equalto', 'alice') | map(attribute='password') | first
+            == _mihomo_server_jls_proxies_data['proxies'][0]['jls-opts']['password']
+          - >-
+            _mihomo_server_jls_host_vars_data['mihomo_server_anytls_users']
+            | selectattr('name', 'equalto', 'alice') | map(attribute='password') | first
+            != _mihomo_server_jls_proxies_data['proxies'][0]['jls-opts']['password']
+        fail_msg: >-
+          host_vars must persist both AnyTLS and JLS credentials, and the two
+          password layers must be distinct, got:
+          {{ _mihomo_server_jls_host_vars_data | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: probe the anytls port without JLS credentials
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          echo | /usr/bin/openssl s_client \
+            -connect 127.0.0.1:19447 \
+            -servername jls-dest.test \
+            -tls1_3 2>/dev/null \
+            | /usr/bin/openssl x509 -noout -subject
+        executable: /bin/bash
+      changed_when: false
+      register: _mihomo_server_jls_probe
+
+    - name: assert the unauthenticated probe falls back to the destination certificate
+      ansible.builtin.assert:
+        that:
+          - _mihomo_server_jls_probe.stdout is ansible.builtin.search('jls-dest.test')
+        fail_msg: >-
+          an unauthenticated probe must receive the jls_dest certificate
+          (jls-dest.test), got: {{ _mihomo_server_jls_probe.stdout }}
+        quiet: true

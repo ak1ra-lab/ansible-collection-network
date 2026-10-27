@@ -1,0 +1,37 @@
+---
+# mihomo_server_jls scenario - converge the role with AnyTLS JLS as the only
+# listener.  No certificate paths are needed: JLS replaces the listener TLS
+# layer.  The fallback destination is the local openssl s_server started by
+# prepare.yml; authenticated traffic does not dial it.
+
+- name: "apply the mihomo server with AnyTLS JLS (mihomo_server_state: present)"
+  hosts: all
+  gather_facts: true
+  vars:
+    mihomo_server_hostname: molecule-jls-node01.example.com
+    mihomo_server_region: US
+    mihomo_server_user_count: 2
+    mihomo_server_enable_shadowsocks: false
+    mihomo_server_enable_trojan: false
+    mihomo_server_enable_hysteria2: false
+    mihomo_server_enable_vless: false
+    mihomo_server_enable_tuic: false
+    mihomo_server_enable_anytls: true
+    mihomo_server_anytls_port: 19447
+    mihomo_server_anytls_security_mode: jls
+    mihomo_server_anytls_jls_dest: 127.0.0.1:19443
+    mihomo_server_anytls_jls_sni: jls-dest.test
+    mihomo_server_anytls_jls_alpn:
+      - h2
+      - http/1.1
+    mihomo_server_local_artifacts_dir: /tmp/molecule-mihomo-server-jls/artifacts
+  tasks:
+    - name: install the mihomo binary
+      ansible.builtin.import_role:
+        name: ak1ra_lab.network.mihomo_install
+      vars:
+        mihomo_install_restart_handler: systemctl restart mihomo.service
+
+    - name: apply the mihomo server
+      ansible.builtin.import_role:
+        name: ak1ra_lab.network.mihomo_server

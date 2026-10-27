@@ -1,0 +1,3 @@
+---
+# mihomo_server_jls scenario - exercises the AnyTLS JLS outer TLS mode on the
+# shared containers; inherits the base config.
