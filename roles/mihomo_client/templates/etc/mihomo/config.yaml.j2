@@ -130,14 +130,15 @@ sniffer:
 proxy-providers:
 {{ _proxy_providers | ak1ra_lab.network.to_pretty_yaml | trim | indent(2, true) }}
 
-# Three tiers per region: <region> (selector, self-hosted excluded),
-# <region> - AUTO (url-test, self-hosted excluded) and <region> - 自建
-# (selector, self-hosted nodes matched via the combined lookahead regex).
-# The catch-all 🚀 所有节点 selector includes the self-hosted nodes so it
-# stays populated on self-hosted-only deployments.  PROXY lists the three
-# tiers plus DIRECT (self-hosted first for quick access) and pins its
-# default to 🚀 所有节点; FINAL and the application groups list all three
-# tiers with PROXY / DIRECT on top; SSH leads with PROXY / DIRECT.
+# Three tiers per region for the five configured regions (SG/HK/TW/JP/US):
+# <region> (selector, self-hosted excluded), <region> - AUTO (url-test,
+# self-hosted excluded) and <region> - 自建 (selector, self-hosted nodes
+# matched via the combined lookahead regex).  The catch-all 🚀 所有节点
+# selector includes the self-hosted nodes so it stays populated on
+# self-hosted-only deployments.  PROXY lists the three tiers plus DIRECT
+# (self-hosted first for quick access) and pins its default to
+# 🚀 所有节点; FINAL and the application groups list all three tiers with
+# PROXY / DIRECT on top; SSH leads with PROXY / DIRECT.
 proxy-groups:
   - name: PROXY
     type: select
@@ -146,25 +147,19 @@ proxy-groups:
       - 🇭🇰 香港节点 - 自建
       - 🇹🇼 台湾节点 - 自建
       - 🇯🇵 日本节点 - 自建
-      - 🇰🇷 韩国节点 - 自建
       - 🇺🇸 美国节点 - 自建
-      - 🇪🇺 欧洲节点 - 自建
       - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
       - 🇯🇵 日本节点 - AUTO
-      - 🇰🇷 韩国节点 - AUTO
       - 🇺🇸 美国节点 - AUTO
-      - 🇪🇺 欧洲节点 - AUTO
       - 🚀 所有节点 - AUTO
       - 🇸🇬 新加坡节点
       - 🇭🇰 香港节点
       - 🇹🇼 台湾节点
       - 🇯🇵 日本节点
-      - 🇰🇷 韩国节点
       - 🇺🇸 美国节点
-      - 🇪🇺 欧洲节点
       - 🚀 所有节点
       - DIRECT
     default-selected: 🚀 所有节点
@@ -178,25 +173,19 @@ proxy-groups:
       - 🇭🇰 香港节点 - 自建
       - 🇹🇼 台湾节点 - 自建
       - 🇯🇵 日本节点 - 自建
-      - 🇰🇷 韩国节点 - 自建
       - 🇺🇸 美国节点 - 自建
-      - 🇪🇺 欧洲节点 - 自建
       - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
       - 🇯🇵 日本节点 - AUTO
-      - 🇰🇷 韩国节点 - AUTO
       - 🇺🇸 美国节点 - AUTO
-      - 🇪🇺 欧洲节点 - AUTO
       - 🚀 所有节点 - AUTO
       - 🇸🇬 新加坡节点
       - 🇭🇰 香港节点
       - 🇹🇼 台湾节点
       - 🇯🇵 日本节点
-      - 🇰🇷 韩国节点
       - 🇺🇸 美国节点
-      - 🇪🇺 欧洲节点
       - 🚀 所有节点
 
   - name: AI
@@ -208,25 +197,19 @@ proxy-groups:
       - 🇭🇰 香港节点 - 自建
       - 🇹🇼 台湾节点 - 自建
       - 🇯🇵 日本节点 - 自建
-      - 🇰🇷 韩国节点 - 自建
       - 🇺🇸 美国节点 - 自建
-      - 🇪🇺 欧洲节点 - 自建
       - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
       - 🇯🇵 日本节点 - AUTO
-      - 🇰🇷 韩国节点 - AUTO
       - 🇺🇸 美国节点 - AUTO
-      - 🇪🇺 欧洲节点 - AUTO
       - 🚀 所有节点 - AUTO
       - 🇸🇬 新加坡节点
       - 🇭🇰 香港节点
       - 🇹🇼 台湾节点
       - 🇯🇵 日本节点
-      - 🇰🇷 韩国节点
       - 🇺🇸 美国节点
-      - 🇪🇺 欧洲节点
       - 🚀 所有节点
 
   - name: Steam
@@ -238,25 +221,19 @@ proxy-groups:
       - 🇭🇰 香港节点 - 自建
       - 🇹🇼 台湾节点 - 自建
       - 🇯🇵 日本节点 - 自建
-      - 🇰🇷 韩国节点 - 自建
       - 🇺🇸 美国节点 - 自建
-      - 🇪🇺 欧洲节点 - 自建
       - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
       - 🇯🇵 日本节点 - AUTO
-      - 🇰🇷 韩国节点 - AUTO
       - 🇺🇸 美国节点 - AUTO
-      - 🇪🇺 欧洲节点 - AUTO
       - 🚀 所有节点 - AUTO
       - 🇸🇬 新加坡节点
       - 🇭🇰 香港节点
       - 🇹🇼 台湾节点
       - 🇯🇵 日本节点
-      - 🇰🇷 韩国节点
       - 🇺🇸 美国节点
-      - 🇪🇺 欧洲节点
       - 🚀 所有节点
 
   - name: Telegram
@@ -268,25 +245,19 @@ proxy-groups:
       - 🇭🇰 香港节点 - 自建
       - 🇹🇼 台湾节点 - 自建
       - 🇯🇵 日本节点 - 自建
-      - 🇰🇷 韩国节点 - 自建
       - 🇺🇸 美国节点 - 自建
-      - 🇪🇺 欧洲节点 - 自建
       - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
       - 🇯🇵 日本节点 - AUTO
-      - 🇰🇷 韩国节点 - AUTO
       - 🇺🇸 美国节点 - AUTO
-      - 🇪🇺 欧洲节点 - AUTO
       - 🚀 所有节点 - AUTO
       - 🇸🇬 新加坡节点
       - 🇭🇰 香港节点
       - 🇹🇼 台湾节点
       - 🇯🇵 日本节点
-      - 🇰🇷 韩国节点
       - 🇺🇸 美国节点
-      - 🇪🇺 欧洲节点
       - 🚀 所有节点
 
   - name: Entertainment
@@ -298,25 +269,19 @@ proxy-groups:
       - 🇭🇰 香港节点 - 自建
       - 🇹🇼 台湾节点 - 自建
       - 🇯🇵 日本节点 - 自建
-      - 🇰🇷 韩国节点 - 自建
       - 🇺🇸 美国节点 - 自建
-      - 🇪🇺 欧洲节点 - 自建
       - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
       - 🇯🇵 日本节点 - AUTO
-      - 🇰🇷 韩国节点 - AUTO
       - 🇺🇸 美国节点 - AUTO
-      - 🇪🇺 欧洲节点 - AUTO
       - 🚀 所有节点 - AUTO
       - 🇸🇬 新加坡节点
       - 🇭🇰 香港节点
       - 🇹🇼 台湾节点
       - 🇯🇵 日本节点
-      - 🇰🇷 韩国节点
       - 🇺🇸 美国节点
-      - 🇪🇺 欧洲节点
       - 🚀 所有节点
 
   - name: SSH
@@ -328,25 +293,19 @@ proxy-groups:
       - 🇭🇰 香港节点 - 自建
       - 🇹🇼 台湾节点 - 自建
       - 🇯🇵 日本节点 - 自建
-      - 🇰🇷 韩国节点 - 自建
       - 🇺🇸 美国节点 - 自建
-      - 🇪🇺 欧洲节点 - 自建
       - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
       - 🇯🇵 日本节点 - AUTO
-      - 🇰🇷 韩国节点 - AUTO
       - 🇺🇸 美国节点 - AUTO
-      - 🇪🇺 欧洲节点 - AUTO
       - 🚀 所有节点 - AUTO
       - 🇸🇬 新加坡节点
       - 🇭🇰 香港节点
       - 🇹🇼 台湾节点
       - 🇯🇵 日本节点
-      - 🇰🇷 韩国节点
       - 🇺🇸 美国节点
-      - 🇪🇺 欧洲节点
       - 🚀 所有节点
 
   # selector tier (all nodes of the region, self-hosted excluded)
@@ -370,20 +329,10 @@ proxy-groups:
     include-all: true
     filter: (?i:\bJP[N]?\d*\b|Japan|Tokyo|Osaka|Saitama|日本|东京|大阪|埼玉)
     exclude-filter: selfhost|自建
-  - name: 🇰🇷 韩国节点
-    type: select
-    include-all: true
-    filter: (?i:(?<!North\s)(\bK[O]?R\d*\b|Korea|首尔|韩|韓))
-    exclude-filter: selfhost|自建
   - name: 🇺🇸 美国节点
     type: select
     include-all: true
     filter: (?i:\bUS[A]?\d*\b|America|United.*?States|美国|[^-]美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥)
-    exclude-filter: selfhost|自建
-  - name: 🇪🇺 欧洲节点
-    type: select
-    include-all: true
-    filter: (?i:\bUK\d*\b|\bGB[R]?\d*\b|England|United.*?Kingdom|London|英国|[^-]英|伦敦)|(?i:\bFR[A]?\d*\b|France|Paris|法国|巴黎)|(?i:\bDE[U]?\d*\b|Germany|法兰克福|德(国|意志)|中德|^德$)|(Italy|Italia|Milan|意大利|米兰)|(?i:\bES[P]?\d*\b|Spain|西班牙)|(Belgium|比利时)|(卢森堡|Luxemburg|Luxembourg)|(Switzerland|Zurich|瑞士|苏黎世)|(?i:\bNL[D]?\d*\b|Netherlands|荷兰|阿姆斯特丹)|(?i:\bD[N]?K\b|Denmark|丹麦)|(挪威|Norway)|(Sweden|瑞典)|(Finland|Helsinki|芬兰|赫尔辛基)
     exclude-filter: selfhost|自建
   - name: 🚀 所有节点
     type: select
@@ -422,26 +371,10 @@ proxy-groups:
     url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
-  - name: 🇰🇷 韩国节点 - AUTO
-    type: url-test
-    include-all: true
-    filter: (?i:(?<!North\s)(\bK[O]?R\d*\b|Korea|首尔|韩|韓))
-    exclude-filter: selfhost|自建
-    url: https://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
   - name: 🇺🇸 美国节点 - AUTO
     type: url-test
     include-all: true
     filter: (?i:\bUS[A]?\d*\b|America|United.*?States|美国|[^-]美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥)
-    exclude-filter: selfhost|自建
-    url: https://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
-  - name: 🇪🇺 欧洲节点 - AUTO
-    type: url-test
-    include-all: true
-    filter: (?i:\bUK\d*\b|\bGB[R]?\d*\b|England|United.*?Kingdom|London|英国|[^-]英|伦敦)|(?i:\bFR[A]?\d*\b|France|Paris|法国|巴黎)|(?i:\bDE[U]?\d*\b|Germany|法兰克福|德(国|意志)|中德|^德$)|(Italy|Italia|Milan|意大利|米兰)|(?i:\bES[P]?\d*\b|Spain|西班牙)|(Belgium|比利时)|(卢森堡|Luxemburg|Luxembourg)|(Switzerland|Zurich|瑞士|苏黎世)|(?i:\bNL[D]?\d*\b|Netherlands|荷兰|阿姆斯特丹)|(?i:\bD[N]?K\b|Denmark|丹麦)|(挪威|Norway)|(Sweden|瑞典)|(Finland|Helsinki|芬兰|赫尔辛基)
     exclude-filter: selfhost|自建
     url: https://www.gstatic.com/generate_204
     interval: 300
@@ -471,18 +404,10 @@ proxy-groups:
     type: select
     include-all: true
     filter: (?=.*(?:selfhost|自建))(?=.*(?:(?i:\bJP[N]?\d*\b|Japan|Tokyo|Osaka|Saitama|日本|东京|大阪|埼玉)))
-  - name: 🇰🇷 韩国节点 - 自建
-    type: select
-    include-all: true
-    filter: (?=.*(?:selfhost|自建))(?=.*(?:(?i:(?<!North\s)(\bK[O]?R\d*\b|Korea|首尔|韩|韓))))
   - name: 🇺🇸 美国节点 - 自建
     type: select
     include-all: true
     filter: (?=.*(?:selfhost|自建))(?=.*(?:(?i:\bUS[A]?\d*\b|America|United.*?States|美国|[^-]美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥)))
-  - name: 🇪🇺 欧洲节点 - 自建
-    type: select
-    include-all: true
-    filter: (?=.*(?:selfhost|自建))(?=.*(?:(?i:\bUK\d*\b|\bGB[R]?\d*\b|England|United.*?Kingdom|London|英国|[^-]英|伦敦)|(?i:\bFR[A]?\d*\b|France|Paris|法国|巴黎)|(?i:\bDE[U]?\d*\b|Germany|法兰克福|德(国|意志)|中德|^德$)|(Italy|Italia|Milan|意大利|米兰)|(?i:\bES[P]?\d*\b|Spain|西班牙)|(Belgium|比利时)|(卢森堡|Luxemburg|Luxembourg)|(Switzerland|Zurich|瑞士|苏黎世)|(?i:\bNL[D]?\d*\b|Netherlands|荷兰|阿姆斯特丹)|(?i:\bD[N]?K\b|Denmark|丹麦)|(挪威|Norway)|(Sweden|瑞典)|(Finland|Helsinki|芬兰|赫尔辛基)))
   - name: 🚀 所有节点 - 自建
     type: select
     include-all: true

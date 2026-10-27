@@ -107,7 +107,7 @@
     - name: assert the generated profile matches the contract
       ansible.builtin.assert:
         that:
-          - _mihomo_client_profile_data['proxy-groups'] | length == 31
+          - _mihomo_client_profile_data['proxy-groups'] | length == 25
           - _mihomo_client_profile_data['proxy-groups'][0]['name'] == 'PROXY'
           - _mihomo_client_profile_data['proxy-groups'][0]['default-selected'] == '🚀 所有节点'
           - _mihomo_client_profile_data['proxy-groups'][0]['proxies'][0] == '🇸🇬 新加坡节点 - 自建'

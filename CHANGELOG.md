@@ -106,7 +106,7 @@ The format is based on Keep a Changelog, and this project does not currently gua
   ciphers) and `random_uuid` (`uuid.uuid4()`).
 - Unit tests for the filter and lookup plugins and the profile template
   (`tests/unit/`, run by a new `unit` CI job with pytest) covering the
-  template rendering (the 31-group topology, the conditional inline custom
+  template rendering (the 25-group topology, the conditional inline custom
   rule sets, the rule order and the DNS policy), the provider
   normalization, the self-hosted naming contract, the six listener shapes,
   the client-node naming contract and the switch/null-input hardening, plus
@@ -172,7 +172,7 @@ The format is based on Keep a Changelog, and this project does not currently gua
   rule-set payloads; copying the template is the customization path.  The
   sing-box-tproxy topology stays (no fallback / include-all auto group on
   the default path, `PROXY` pinned to `🚀 所有节点` through
-  `default-selected`, 31 groups), with `PROXY` ordering the tiers
+  `default-selected`, 25 groups), with `PROXY` ordering the tiers
   self-hosted -> AUTO -> selector and every top-level group (incl. `FINAL`,
   the application groups and `SSH`) listing all three tiers; `TELEGRAM` was
   renamed `Telegram`.  The bundled rule providers gain the
@@ -276,6 +276,11 @@ The format is based on Keep a Changelog, and this project does not currently gua
   the `mihomo_client_selfhost_*` flow stay;
   `mihomo_selfhost_proxies`' region check is now optional (the region
   regexes live in the template).
+- The `🇪🇺 欧洲节点` and `🇰🇷 韩国节点` region tiers from the
+  `mihomo_client` profile: neither the current airport nor the self-hosted
+  node set has nodes in those regions.  Nodes that appear there later still
+  reach `🚀 所有节点` / `🚀 所有节点 - AUTO`; the region blocks can be
+  re-added when a dedicated group is actually needed.
 - `mihomo_server_client_proxies_dialer_proxy`: whether to chain a node is a
   client routing decision, and a fixed front-group name baked into every
   generated node cannot express it (nor keep the direct variant); clients

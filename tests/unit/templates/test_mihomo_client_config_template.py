@@ -79,7 +79,7 @@ def test_default_profile_structure(mihomo_client_defaults: dict[str, Any]) -> No
     profile = render_profile(profile_vars(mihomo_client_defaults))
 
     groups = profile["proxy-groups"]
-    assert len(groups) == 31
+    assert len(groups) == 25
     assert groups[0]["name"] == "PROXY"
     assert groups[0]["default-selected"] == "🚀 所有节点"
     assert groups[0]["proxies"][0] == "🇸🇬 新加坡节点 - 自建"

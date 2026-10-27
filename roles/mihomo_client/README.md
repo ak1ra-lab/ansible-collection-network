@@ -101,8 +101,8 @@ regions, different DNS servers, ...) is a template edit: copy the file,
 adjust it and point the variable at the copy (see "Customizing the profile"
 below).
 
-The topology: 31 proxy groups in three tiers per region (seven regions plus
-the `🚀 所有节点` catch-all):
+The topology: 25 proxy groups in three tiers per region (five regions
+(SG/HK/TW/JP/US) plus the `🚀 所有节点` catch-all):
 
 - `<region>` - selector over the all-provider pool matching the region
   regex, self-hosted nodes excluded;
