@@ -34,3 +34,7 @@ mihomo_server_tuic_users:
 mihomo_server_anytls_users:
 {{ mihomo_server_anytls_users | ak1ra_lab.network.to_pretty_yaml | trim | indent(2, true) }}
 {% endif %}
+{% if mihomo_server_anytls_jls_users | length > 0 %}
+mihomo_server_anytls_jls_users:
+{{ mihomo_server_anytls_jls_users | ak1ra_lab.network.to_pretty_yaml | trim | indent(2, true) }}
+{% endif %}

@@ -79,6 +79,22 @@ def reality_protocols(**overrides: Any) -> dict[str, Any]:
     return spec
 
 
+def jls_protocols(**overrides: Any) -> dict[str, Any]:
+    spec = server_spec(
+        enable_anytls=True,
+        anytls_users=[{"name": "alice", "password": "anytls-pw"}],
+        anytls_security_mode="jls",
+        anytls_jls_dest="www.microsoft.com:443",
+        anytls_jls_sni="",
+        anytls_jls_alpn=["h2", "http/1.1"],
+        anytls_jls_users=[{"name": "alice", "password": "jls-pw"}],
+        tls_certificate_path="",
+        tls_key_path="",
+    )
+    spec.update(overrides)
+    return spec
+
+
 # ── server config ────────────────────────────────────────────────────────────
 
 
@@ -237,6 +253,101 @@ def test_anytls_padding_scheme() -> None:
     config = mihomo_server_config(all_protocols(anytls_padding_scheme="stop=8"))
     anytls = next(listener for listener in config["listeners"] if listener["name"] == "anytls-in")
     assert anytls["padding-scheme"] == "stop=8"
+
+
+def test_anytls_padding_scheme_is_validated_and_normalized() -> None:
+    config = mihomo_server_config(
+        all_protocols(anytls_padding_scheme="stop = 4\n0 = 30-30\n1 = 100-400\n2 = 400-500, c, 500-1000\n")
+    )
+    anytls = next(listener for listener in config["listeners"] if listener["name"] == "anytls-in")
+    assert anytls["padding-scheme"] == "stop=4\n0=30-30\n1=100-400\n2=400-500,c,500-1000"
+
+
+@pytest.mark.parametrize(
+    "scheme",
+    [
+        "0=30-30",
+        "stop=x\n0=30-30",
+        "stop=2\n2=30-30",
+        "stop=2\n0=30",
+        "stop=2\n0=30-20",
+        "stop=2\n0=30-30,,1-1",
+    ],
+)
+def test_anytls_padding_scheme_rejects_invalid_values(scheme: str) -> None:
+    with pytest.raises(AnsibleFilterError, match="padding_scheme"):
+        mihomo_server_config(all_protocols(anytls_padding_scheme=scheme))
+
+
+def test_anytls_jls_listener_schema() -> None:
+    config = mihomo_server_config(jls_protocols())
+    assert [listener["name"] for listener in config["listeners"]] == ["anytls-in"]
+    anytls = config["listeners"][0]
+    assert anytls["users"] == {"alice": "anytls-pw"}
+    assert "certificate" not in anytls
+    assert "private-key" not in anytls
+    assert anytls["jls-config"] == {
+        "enable": True,
+        "users": [{"username": "alice", "password": "jls-pw"}],
+        "dest": "www.microsoft.com:443",
+        "sni": "www.microsoft.com",
+        "alpn": ["h2", "http/1.1"],
+    }
+
+
+def test_anytls_jls_sni_and_rate_limit_override() -> None:
+    config = mihomo_server_config(
+        jls_protocols(
+            anytls_jls_sni="cover.example.com",
+            anytls_jls_alpn=["h2"],
+            anytls_jls_rate_limit=1000,
+        )
+    )
+    jls = config["listeners"][0]["jls-config"]
+    assert jls["sni"] == "cover.example.com"
+    assert jls["alpn"] == ["h2"]
+    assert jls["rate-limit"] == 1000
+
+
+def test_anytls_jls_requires_a_credential_per_anytls_user() -> None:
+    with pytest.raises(AnsibleFilterError, match="no credential"):
+        mihomo_server_config(
+            jls_protocols(
+                anytls_users=[
+                    {"name": "alice", "password": "anytls-pw"},
+                    {"name": "bob", "password": "anytls-pw-2"},
+                ],
+                anytls_jls_users=[{"name": "alice", "password": "jls-pw"}],
+            )
+        )
+
+
+def test_anytls_jls_requires_a_dns_sni() -> None:
+    with pytest.raises(AnsibleFilterError, match="DNS name"):
+        mihomo_server_config(jls_protocols(anytls_jls_dest="127.0.0.1:443", anytls_jls_sni=""))
+
+
+@pytest.mark.parametrize("dest", ["www.microsoft.com", "www.microsoft.com:", "www.microsoft.com:0"])
+def test_anytls_jls_dest_validation(dest: str) -> None:
+    with pytest.raises(AnsibleFilterError, match="anytls_jls_dest"):
+        mihomo_server_config(jls_protocols(anytls_jls_dest=dest))
+
+
+def test_anytls_jls_requires_enable_anytls() -> None:
+    with pytest.raises(AnsibleFilterError, match="enable_anytls"):
+        mihomo_server_config(
+            server_spec(
+                enable_shadowsocks=True,
+                shadowsocks_password="c2VydmVyLXBhc3M=",
+                enable_anytls=False,
+                anytls_security_mode="jls",
+            )
+        )
+
+
+def test_anytls_security_mode_validation() -> None:
+    with pytest.raises(AnsibleFilterError, match="anytls_security_mode"):
+        mihomo_server_config(server_spec(enable_anytls=True, anytls_security_mode="shadow-tls"))
 
 
 def test_extra_listeners_are_appended() -> None:
@@ -438,6 +549,66 @@ def test_anytls_client_tuning() -> None:
 def test_anytls_client_tuning_validation(key: str, value: object) -> None:
     with pytest.raises(AnsibleFilterError, match="anytls_"):
         client_config(**{key: value})
+
+
+def test_anytls_jls_client_node() -> None:
+    proxies = client_config(
+        anytls_security_mode="jls",
+        anytls_jls_dest="www.microsoft.com:443",
+        anytls_jls_sni="",
+        anytls_jls_users=[{"name": "alice", "password": "jls-pw"}],
+        anytls_jls_alpn=["h2", "http/1.1"],
+    )["proxies"]
+    anytls = next(proxy for proxy in proxies if proxy["name"].endswith("-anytls"))
+    assert anytls["server"] == "node01.example.com"
+    assert anytls["password"] == "anytls-pw"
+    assert anytls["sni"] == "www.microsoft.com"
+    assert anytls["alpn"] == ["h2", "http/1.1"]
+    assert anytls["jls-opts"] == {"username": "alice", "password": "jls-pw"}
+    assert "tls" not in anytls
+    assert anytls["client-fingerprint"] == "chrome"
+    assert anytls["idle-session-check-interval"] == 30
+
+
+def test_anytls_jls_client_node_uses_an_explicit_sni() -> None:
+    proxies = client_config(
+        anytls_security_mode="jls",
+        anytls_jls_dest="127.0.0.1:443",
+        anytls_jls_sni="cover.example.com",
+        anytls_jls_users=[{"name": "alice", "password": "jls-pw"}],
+    )["proxies"]
+    anytls = next(proxy for proxy in proxies if proxy["name"].endswith("-anytls"))
+    assert anytls["sni"] == "cover.example.com"
+
+
+def test_anytls_jls_client_requires_matching_users() -> None:
+    with pytest.raises(AnsibleFilterError, match="no credential"):
+        client_config(
+            anytls_security_mode="jls",
+            anytls_jls_dest="www.microsoft.com:443",
+            anytls_jls_users=[{"name": "bob", "password": "jls-pw"}],
+        )
+
+
+def test_anytls_jls_client_requires_enable_anytls() -> None:
+    with pytest.raises(AnsibleFilterError, match="enable_anytls"):
+        mihomo_server_client_proxies(
+            all_protocols(
+                hostname="node01.example.com",
+                region="US",
+                enable_anytls=False,
+                anytls_security_mode="jls",
+            )
+        )
+
+
+def test_anytls_jls_nodes_pass_the_client_validation() -> None:
+    proxies = client_config(
+        anytls_security_mode="jls",
+        anytls_jls_users=[{"name": "alice", "password": "jls-pw"}],
+    )["proxies"]
+    validated = mihomo_selfhost_proxies({"proxies": proxies, "selfhost_pattern": "selfhost|自建"})
+    assert validated["proxies"] == proxies
 
 
 def test_vless_reality_client_node() -> None:

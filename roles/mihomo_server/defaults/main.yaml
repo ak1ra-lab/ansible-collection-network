@@ -14,8 +14,9 @@
 #     mapping - users are declared here in one uniform shape
 #     ({name, password, uuid?}) and mapped by the filter plugin;
 #   - TLS is flat certificate/private-key paths (vless REALITY uses
-#     reality-config instead) and mihomo has no built-in ACME, so
-#     certificates are provisioned out of band (manual mode).
+#     reality-config instead; anytls JLS uses jls-config instead) and mihomo
+#     has no built-in ACME, so certificates are provisioned out of band
+#     (manual mode).
 
 # ── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -112,6 +113,35 @@ mihomo_server_enable_anytls: true
 mihomo_server_anytls_port: 9447
 # Users: [{name, password}] (generated when empty)
 mihomo_server_anytls_users: []
+# AnyTLS outer TLS mode:
+#   certificate - certificate/private-key (the default; no listener fallback)
+#   jls         - JLS replaces the listener certificate and falls back to
+#                 anytls_jls_dest for unauthenticated probes.  JLS is
+#                 mihomo-only in this role: clients deployed by
+#                 roles/mihomo_client are mihomo, but other clients cannot use
+#                 the resulting node.  Requires mihomo >= 1.19.29.
+mihomo_server_anytls_security_mode: certificate
+# JLS fallback destination (a real TLS site with a certificate the clients
+# trust and a SAN matching anytls_jls_sni).  Authenticated traffic does not
+# use it; it only serves probes and failed-authentication fallbacks.
+mihomo_server_anytls_jls_dest: "www.microsoft.com:443"
+# JLS SNI.  Empty derives it from the jls_dest host.  Must be a DNS name
+# (not an IP) and must match the destination certificate; the generated client
+# node uses this value instead of mihomo_server_hostname.
+mihomo_server_anytls_jls_sni: ""
+mihomo_server_anytls_jls_alpn:
+  - h2
+  - http/1.1
+# JLS users: [{name, password}] (generated per AnyTLS user when empty).  This
+# is a second credential layer; do not reuse the AnyTLS passwords.
+mihomo_server_anytls_jls_users: []
+# Fallback forwarding limit in bit/s; 0 means unlimited.
+mihomo_server_anytls_jls_rate_limit: 0
+# Optional AnyTLS padding scheme.  Empty uses mihomo's default scheme; a
+# custom scheme is pushed to mihomo clients through cmdUpdatePaddingScheme.
+# The first session still uses the client's default scheme for its early
+# packets.  Invalid schemes fail listener startup (mihomo -t does not check
+# them), so the role validates the syntax before rendering.
 mihomo_server_anytls_padding_scheme: ""
 # Client uTLS fingerprint.  Empty falls back to Go's standard-library TLS
 # fingerprint; "chrome" keeps the generated node closer to browser traffic.

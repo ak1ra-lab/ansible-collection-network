@@ -31,11 +31,12 @@ mihomo schema facts the contract is built on:
   mapping - the role declares users in one uniform shape
   (`{name, password, uuid?}`) and the filter plugin maps them;
 - TLS is flat `certificate` / `private-key` paths on the certificate-using
-  listeners; vless with REALITY uses `reality-config` instead.  mihomo has
-  **no built-in ACME**: certificates are provisioned out of band.  The role
-  can either reference an operator-managed pair in place (manual mode) or
-  copy an external source pair into a service-readable location and install
-  an optional certbot renewal hook (see [TLS material](#tls-material)).
+  listeners; vless with REALITY uses `reality-config` instead, and anytls
+  with JLS uses `jls-config`.  mihomo has **no built-in ACME**: certificates
+  are provisioned out of band.  The role can either reference an
+  operator-managed pair in place (manual mode) or copy an external source
+  pair into a service-readable location and install an optional certbot
+  renewal hook (see [TLS material](#tls-material)).
 
 The role does not manage a firewall or cloud security groups: open the
 enabled ports (`mihomo_server_*_port`) yourself.
@@ -49,7 +50,13 @@ enabled ports (`mihomo_server_*_port`) yourself.
   `mihomo_server_tls_certificate_path` / `_key_path`.  The role can copy an
   external source pair into a service-readable location, which is required
   for certbot's root-only `live/` paths.  The default vless REALITY listener
-  does not need its own certificate.
+  does not need its own certificate, and AnyTLS with
+  `mihomo_server_anytls_security_mode: jls` replaces its certificate with the
+  JLS layer.
+- For JLS: mihomo **>= 1.19.29** on both ends, a stable TLS destination with
+  a certificate the generated mihomo clients trust, and a DNS `jls_sni`
+  matching that certificate.  The JLS node is mihomo-only (the role's
+  `mihomo_client` output); other clients cannot use it.
 - A DNS name pointing at the VPS and a region token the client's region
   regex can match (`mihomo_server_region`, e.g. `US`, `HK`, `JP`).
 - Control node: `ak1ra_lab.general` (>= 0.2.0) for `github_releases_info`
@@ -151,7 +158,13 @@ node names).
 | `mihomo_server_enable_anytls` | `true` | anytls listener switch (TLS/TCP) |
 | `mihomo_server_anytls_port` | `9447` | Port |
 | `mihomo_server_anytls_users` | `[]` | `[{name, password}]`; generated when empty |
-| `mihomo_server_anytls_padding_scheme` | `""` | Optional padding scheme; empty uses mihomo's default scheme |
+| `mihomo_server_anytls_security_mode` | `certificate` | `certificate` (certificate/private-key, no listener fallback) or `jls` (JLS outer TLS with a `dest` fallback) |
+| `mihomo_server_anytls_jls_dest` | `www.microsoft.com:443` | JLS fallback TLS destination; authenticated traffic does not dial it |
+| `mihomo_server_anytls_jls_sni` | `""` | JLS SNI; empty derives the dest host. Must be a DNS name matching the dest certificate |
+| `mihomo_server_anytls_jls_alpn` | `[h2, http/1.1]` | JLS outer ALPN; the generated client node mirrors it |
+| `mihomo_server_anytls_jls_users` | `[]` | `[{name, password}]`; independent second credential, generated per AnyTLS user when empty |
+| `mihomo_server_anytls_jls_rate_limit` | `0` | Fallback forwarding limit in bit/s; `0` is unlimited |
+| `mihomo_server_anytls_padding_scheme` | `""` | Optional padding scheme; empty uses mihomo's default scheme. Custom schemes are validated before rendering |
 | `mihomo_server_anytls_client_fingerprint` | `chrome` | Client uTLS fingerprint; empty falls back to Go's standard-library TLS fingerprint |
 | `mihomo_server_anytls_idle_session_check_interval` | `30` | Client idle-session check interval (seconds) |
 | `mihomo_server_anytls_idle_session_timeout` | `30` | Client idle-session timeout (seconds) |
@@ -241,8 +254,9 @@ VLESS listener needs no certificate of its own.  The role:
   is empty), and `client-fingerprint` defaults to `chrome`.
 
 `xtls-rprx-vision` is the recommended `mihomo_server_vless_flow` value with
-REALITY.  Certificate paths are still required when any other TLS-using
-protocol (trojan/hysteria2/tuic/anytls) is enabled.
+REALITY.  Certificate paths are still required when any other
+certificate-using protocol (trojan/hysteria2/tuic, or anytls in
+`certificate` mode) is enabled.
 
 ### AnyTLS
 
@@ -252,8 +266,53 @@ The generated AnyTLS client node sets `client-fingerprint` (default
 standard-library TLS fingerprint, which is a weaker match for browser
 traffic.  A positive `mihomo_server_anytls_min_idle_session` keeps warm
 sessions on high-RTT links at the cost of keeping connections open.  AnyTLS
-has no REALITY support and the mihomo listener has no fallback site; keep it
-as a TLS/TCP fallback rather than a REALITY replacement.
+has no REALITY support; keep it as a TLS/TCP fallback rather than a REALITY
+replacement.
+
+#### Certificate mode (default)
+
+`mihomo_server_anytls_security_mode: certificate` emits the flat
+`certificate`/`private-key` fields.  The listener has no fallback: a failed
+AnyTLS authentication closes the connection.  This is the only mode usable by
+non-mihomo AnyTLS clients.
+
+#### JLS mode
+
+`mihomo_server_anytls_security_mode: jls` replaces the anytls listener's
+certificate with a JLS outer TLS layer:
+
+- the server emits `jls-config` (`users`, `dest`, `sni`, `alpn`, optional
+  `rate-limit`) and keeps the AnyTLS `users` map; the two are separate
+  credential layers;
+- unauthenticated probes are relayed to `jls_dest`; authenticated clients
+  never dial it;
+- the generated client node uses `sni: <jls_sni>` (not
+  `mihomo_server_hostname`), `alpn: <jls_alpn>`, and
+  `jls-opts: {username, password}`;
+- `mihomo_server_anytls_jls_users` is generated one-per-AnyTLS-user and
+  persisted to host_vars; passwords are independent from the AnyTLS passwords;
+- do not add `tls: true` to the node (AnyTLS is always TLS and mihomo ignores
+  the field);
+- `skip-cert-verify` is **not** applied to the JLS fallback; `jls_dest` must
+  present a certificate the client trusts and a SAN matching `jls_sni`;
+- JLS and ECH are mutually exclusive; ECH is not implemented by this role yet;
+- it requires mihomo >= 1.19.29 on both ends and is mihomo-only.  Changing
+  `security_mode` replaces the listener and is not backward compatible with
+  old clients; plan a maintenance window or a parallel listener/host.
+
+`jls_dest` being temporarily unreachable does not break authenticated traffic,
+but it disables the probe fallback.  `jls_rate_limit` only limits fallback
+forwarding, in bit/s.
+
+#### Padding
+
+Leaving `mihomo_server_anytls_padding_scheme` empty uses mihomo's default
+scheme.  A custom scheme is pushed to mihomo/sing-anytls clients through
+`cmdUpdatePaddingScheme`; the first session still uses the client's default
+scheme for its early packets.  The role validates the scheme syntax before
+rendering because `mihomo -t` does not check listener runtime parameters.
+Custom padding changes packet shape only; it does not hide SNI or fix the
+TLS-in-TLS/timing weaknesses described by the AnyTLS FAQ.
 
 ## Example playbook
 

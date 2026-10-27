@@ -30,6 +30,13 @@
       - mihomo_server_vless_reality_client_fingerprint is string
       - mihomo_server_tuic_users | ansible.builtin.type_debug == 'list'
       - mihomo_server_anytls_users | ansible.builtin.type_debug == 'list'
+      - mihomo_server_anytls_security_mode in ['certificate', 'jls']
+      - mihomo_server_anytls_jls_dest is string
+      - mihomo_server_anytls_jls_sni is string
+      - mihomo_server_anytls_jls_alpn | ansible.builtin.type_debug == 'list'
+      - mihomo_server_anytls_jls_users | ansible.builtin.type_debug == 'list'
+      - mihomo_server_anytls_jls_rate_limit | int >= 0
+      - mihomo_server_anytls_padding_scheme is string
       - mihomo_server_extra_listeners | ansible.builtin.type_debug == 'list'
       - mihomo_server_alpn | ansible.builtin.type_debug == 'list'
       - mihomo_server_tls_dir is string
@@ -92,12 +99,26 @@
         or (mihomo_server_vless_reality_client_fingerprint | length > 0)
       - >-
         (mihomo_server_state == 'absent')
+        or (mihomo_server_anytls_security_mode == 'certificate')
+        or (mihomo_server_enable_anytls | ansible.builtin.bool)
+      - >-
+        (mihomo_server_state == 'absent')
+        or (mihomo_server_anytls_security_mode != 'jls')
+        or (mihomo_server_anytls_jls_dest is ansible.builtin.match('^.+:[0-9]+$'))
+      - >-
+        (mihomo_server_state == 'absent')
+        or (mihomo_server_anytls_security_mode != 'jls')
+        or (mihomo_server_anytls_jls_sni | length == 0)
+        or (mihomo_server_anytls_jls_sni is not ansible.builtin.search('\s'))
+      - >-
+        (mihomo_server_state == 'absent')
         or (not (mihomo_server_enable_trojan | ansible.builtin.bool
                  or mihomo_server_enable_hysteria2 | ansible.builtin.bool
                  or (mihomo_server_enable_vless | ansible.builtin.bool
                      and not (mihomo_server_vless_reality_enabled | ansible.builtin.bool))
                  or mihomo_server_enable_tuic | ansible.builtin.bool
-                 or mihomo_server_enable_anytls | ansible.builtin.bool))
+                 or (mihomo_server_enable_anytls | ansible.builtin.bool
+                     and mihomo_server_anytls_security_mode != 'jls')))
         or ((mihomo_server_tls_certificate_path | length > 0)
             and (mihomo_server_tls_key_path | length > 0))
     fail_msg: |
@@ -107,10 +128,12 @@
         the client region regex can match
         mihomo_server_user_count must be within 1..10
         *_users must be lists of {name, password, uuid?} mappings
+        anytls_security_mode must be certificate or jls; jls requires
+        enable_anytls, a host:port jls_dest and a DNS jls_sni when it is set
         shadowsocks_method must not be empty
         TLS-using protocols require mihomo_server_tls_certificate_path and
         mihomo_server_tls_key_path (mihomo has no built-in ACME), except
-        VLESS with REALITY enabled
+        VLESS with REALITY enabled and AnyTLS with JLS enabled
         VLESS REALITY requires enable_vless, a dest host:port, and the
         private/public keys supplied together (or both empty for generation);
         short_id must be even-length hex (2-16 chars) when set

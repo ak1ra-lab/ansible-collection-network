@@ -69,6 +69,15 @@ The format is based on Keep a Changelog, and this project does not currently gua
   `config/client_outbounds/<host>.proxies.yaml` for the client's
   `providers/selfhost.yaml`; an optional external-controller secret and a
   configurable client-node prefix are available.
+- `mihomo_server`: optional AnyTLS **JLS** outer TLS mode
+  (`mihomo_server_anytls_security_mode: jls`) with `jls-config` on the server,
+  `jls-opts` on the generated client nodes, independent per-user JLS
+  credentials persisted to host_vars, and unauthenticated-probe fallback to
+  `mihomo_server_anytls_jls_dest`.  The generated node uses the JLS SNI/ALPN
+  instead of the server hostname and is mihomo-only (mihomo >= 1.19.29).
+  Certificate mode remains the default and its output is unchanged.  AnyTLS
+  padding schemes are now syntax-validated before rendering because
+  `mihomo -t` does not validate listener runtime parameters.
 - `mihomo_server` can consume an externally managed TLS pair:
   `mihomo_server_tls_source_certificate_path` / `_key_path` are copied into
   `mihomo_server_tls_dir` (`0640 root:mihomo`) on every apply, and
