@@ -514,8 +514,8 @@ def test_client_proxies_require_hostname_and_region() -> None:
 
 
 def test_generated_nodes_carry_the_client_naming_tokens() -> None:
-    # The client profile matches nodes by the `selfhost|自建` tag and a region
-    # token; its region regexes live in the client profile template, so the
+    # The client profiles match nodes by the `selfhost|自建` tag and a region
+    # token; the region regexes live in the client profile templates, so the
     # mechanical region check runs there.  Here: both tokens must survive the
     # generation, and the names must pass the client-side tag validation.
     proxies = client_config()["proxies"]

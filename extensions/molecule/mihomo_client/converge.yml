@@ -8,7 +8,8 @@
 #
 # Two synthetic inline self-hosted nodes plus one node loaded from a
 # controller-local artifact exercise the providers/selfhost.yaml rendering,
-# the artifact merge path and the naming contract (they are never dialed).
+# the artifact merge path, the naming contract and the default plain
+# profile's selfhost-to-region merge (they are never dialed).
 #
 # The Clash API secret is left unset: the role generates it and writes the
 # playbook-adjacent host_vars file, which Ansible auto-loads on the

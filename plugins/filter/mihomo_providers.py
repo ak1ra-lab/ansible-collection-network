@@ -8,12 +8,14 @@
 * ``mihomo_selfhost_proxies`` - validates the self-hosted node list against
   the naming contract: every node must carry the self-hosted tag
   (``selfhost|自建`` by default) or it silently disappears from the
-  ``*-自建`` groups (verified the hard way in the mihomo-setup deployment).
-  Names must be unique and non-empty.  A ``regions`` list may additionally
-  require a region-regex match (catch-all entries with ``catch_all: true``
-  are skipped: their regex matches every node by construction and would turn
-  the check into a no-op); it is optional because the region regexes live in
-  the profile template, not in role variables.
+  ``*-自建`` groups of the selfhost-tier profile (verified the hard way in
+  the mihomo-setup deployment); the plain profile merges the nodes into the
+  normal region groups by region token.  Names must be unique and non-empty.
+  A ``regions`` list may additionally require a region-regex match
+  (catch-all entries with ``catch_all: true`` are skipped: their regex
+  matches every node by construction and would turn the check into a no-op);
+  it is optional because the region regexes live in the profile templates,
+  not in role variables.
 
 The spec for ``mihomo_selfhost_proxies`` is ``proxies`` plus the
 ``selfhost_pattern`` (and optionally ``regions``) of the profile.
@@ -122,11 +124,12 @@ def mihomo_selfhost_proxies(config: dict[str, Any] | None = None) -> dict[str, A
         if selfhost_pattern and not selfhost_pattern.search(name):
             _fail(
                 f"self-hosted node {name!r} does not match the self-hosted tag "
-                f"pattern {pattern!r}; it would be missing from the *-自建 groups"
+                f"pattern {pattern!r}; it would be missing from the selfhost-tier "
+                f"*-自建 groups"
             )
         if regions and not any(region.search(name) for region in regions):
             _fail(
-                f"self-hosted node {name!r} matches no region regex; it would be missing from the *-自建 region groups"
+                f"self-hosted node {name!r} matches no region regex; it would be missing from the selfhost-tier *-自建 region groups"
             )
     return {"proxies": list(proxies)}
 

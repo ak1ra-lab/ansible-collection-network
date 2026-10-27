@@ -103,9 +103,11 @@ the listeners easy to enumerate.
 e.g. `selfhost-US-node01-ss` (shadowsocks is single-user, so no
 user segment) and `selfhost-US-node01-alice-trojan`.  The prefix
 (`mihomo_server_client_node_prefix`, default `selfhost`) plus the region
-token are what make the node appear in the client's `*-自建` and region
-groups; `<host-label>` is the first DNS label of `mihomo_server_hostname`
-(hosts sharing a first label produce colliding node names).
+token are what make the node appear in the client's region groups; the
+client's optional selfhost-tier profile additionally uses the prefix for
+its `*-自建` groups.  `<host-label>` is the first DNS label of
+`mihomo_server_hostname` (hosts sharing a first label produce colliding
+node names).
 
 ## Variable contract
 

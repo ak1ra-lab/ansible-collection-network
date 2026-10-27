@@ -170,8 +170,9 @@ mihomo_server_alpn:
 # ── Client artifacts ─────────────────────────────────────────────────────────
 
 # Prefix of the generated client node names
-# (<prefix>-<REGION>-<host>[-<user>]-<proto>).  The client's self-hosted tag
-# (`selfhost|自建` by default) and region regexes are what pick the nodes up.
+# (<prefix>-<REGION>-<host>[-<user>]-<proto>).  The client's region regexes
+# pick the nodes up in both profiles; the prefix is also the self-hosted tag
+# (`selfhost|自建` by default) used by the optional selfhost-tier profile.
 mihomo_server_client_node_prefix: selfhost
 
 # Controller-local output locations.  The artifacts dir mirrors the

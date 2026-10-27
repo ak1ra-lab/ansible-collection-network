@@ -6,7 +6,7 @@ Coverage follows the mihomo-setup incident and provider contracts:
   `selfhost` name, always-injected file provider),
 * the self-hosted node naming contract (selfhost tag, unique names, and the
   optional region-regex check), so nodes that would silently vanish from
-  the `*-自建` groups fail the play.
+  the selfhost-tier profile's `*-自建` groups fail the play.
 """
 
 from __future__ import annotations

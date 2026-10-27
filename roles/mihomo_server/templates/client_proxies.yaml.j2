@@ -6,8 +6,9 @@
 # mihomo_client_selfhost_files).
 #
 # Naming contract: selfhost-<REGION>-<host>[-<user>]-<proto> - the selfhost
-# tag plus the region token make the nodes appear in the *-自建 and region
-# groups of the client profile.
+# tag plus the region token make the nodes appear in the client profile's
+# region groups; the optional selfhost-tier profile also uses the tag for its
+# *-自建 groups.
 ---
 {{ _mihomo_server_spec | ansible.builtin.combine({
     'hostname': mihomo_server_hostname,

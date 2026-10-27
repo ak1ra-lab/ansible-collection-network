@@ -31,10 +31,12 @@ _mihomo_client_modules_file: /etc/modules-load.d/ansible-mihomo-client.conf
 # the mihomo_server artifacts; mihomo hot-reloads it (fswatch), no restart.
 _mihomo_client_selfhost_provider: "{{ mihomo_client_etc_dir }}/providers/selfhost.yaml"
 
-# Naming contract of the self-hosted nodes: the tag is what the profile
-# template's `selfhost|自建` group filters match (keep the two in sync when
-# editing a copied template); the role only validates the nodes it renders,
-# not the region tokens (the region regexes live in the template).
+# Naming contract of the self-hosted nodes: the tag is what the selfhost-tier
+# template's `selfhost|自建` group filters match (the plain template merges
+# the nodes into the normal region groups; keep the tag in sync when editing
+# a copied template).  The role only validates the tag and uniqueness of the
+# nodes it renders, not the region tokens (the region regexes live in the
+# templates).
 _mihomo_client_selfhost_pattern: "selfhost|自建"
 
 # Loop input for tasks/data_files.yaml: the release data file(s) the profile

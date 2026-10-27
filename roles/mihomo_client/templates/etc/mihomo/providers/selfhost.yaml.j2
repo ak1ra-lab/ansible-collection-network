@@ -7,11 +7,13 @@
 # config/client_outbounds/<host>.proxies.yaml).
 #
 # Naming contract: every node name carries the self-hosted tag and a region
-# token (e.g. selfhost-US-LAX-node01-ss); otherwise it never reaches the
-# *-自建 and region proxy groups of the profile template.  The
-# mihomo_selfhost_proxies filter fails the play when the tag is missing or
-# the name repeats; the region token is validated by the template's region
-# filters at load time (they live in templates/etc/mihomo/config.yaml.j2).
+# token (e.g. selfhost-US-LAX-node01-ss).  The plain profile template merges
+# the nodes into the normal region groups; the selfhost-tier template also
+# uses the tag for the *-自建 groups.  The mihomo_selfhost_proxies filter
+# fails the play when the tag is missing or the name repeats; the region
+# token is validated by the templates' region filters at load time (they
+# live in templates/etc/mihomo/config.yaml.j2 and
+# templates/etc/mihomo/config.selfhost.yaml.j2).
 ---
 {% set _selfhost = {
     'proxies': _mihomo_client_selfhost_nodes,

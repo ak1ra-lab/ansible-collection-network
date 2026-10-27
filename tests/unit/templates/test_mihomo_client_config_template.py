@@ -1,11 +1,13 @@
-"""Unit tests for the mihomo_client profile template.
+"""Unit tests for the mihomo_client profile templates.
 
-The profile is a hand-maintained template
-(roles/mihomo_client/templates/etc/mihomo/config.yaml.j2): static mihomo
-YAML plus a handful of rendered values.  These tests render it with the
-shipped defaults (and payload fixtures) and assert the structure an operator
-observes - the tier topology, the conditional inline custom rule sets, the
-rule order, the DNS policy and the provider injection.
+The profiles are hand-maintained templates under
+roles/mihomo_client/templates/etc/mihomo: the default plain profile
+(config.yaml.j2, two tiers, self-hosted nodes merged) and the selfhost-tier
+profile (config.selfhost.yaml.j2, three tiers for chain-proxy deployments).
+These tests render both with the shipped defaults (and payload fixtures) and
+assert the structure an operator observes - the tier topology, the
+conditional inline custom rule sets, the rule order, the DNS policy and the
+provider injection.
 """
 
 from __future__ import annotations
@@ -19,7 +21,11 @@ import jinja2
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-TEMPLATE_PATH = REPO_ROOT / "roles" / "mihomo_client" / "templates" / "etc" / "mihomo" / "config.yaml.j2"
+TEMPLATE_DIR = REPO_ROOT / "roles" / "mihomo_client" / "templates" / "etc" / "mihomo"
+TEMPLATE_PATHS = {
+    "plain": TEMPLATE_DIR / "config.yaml.j2",
+    "selfhost": TEMPLATE_DIR / "config.selfhost.yaml.j2",
+}
 
 sys.path.insert(0, str(REPO_ROOT / "plugins" / "filter"))
 
@@ -37,9 +43,9 @@ def _to_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def render_profile(variables: dict[str, Any]) -> dict[str, Any]:
-    """Render the shipped profile template and parse it as YAML."""
-    text = TEMPLATE_PATH.read_text(encoding="utf-8")
+def render_profile(variables: dict[str, Any], template: str = "plain") -> dict[str, Any]:
+    """Render a shipped profile template and parse it as YAML."""
+    text = TEMPLATE_PATHS[template].read_text(encoding="utf-8")
     options: dict[str, bool] = {}
     if text.startswith("#jinja2:"):
         header, text = text.split("\n", 1)
@@ -75,15 +81,8 @@ def profile_vars(defaults: dict[str, Any], **overrides: Any) -> dict[str, Any]:
 # ── topology, providers, rules ───────────────────────────────────────────────
 
 
-def test_default_profile_structure(mihomo_client_defaults: dict[str, Any]) -> None:
-    profile = render_profile(profile_vars(mihomo_client_defaults))
-
-    groups = profile["proxy-groups"]
-    assert len(groups) == 25
-    assert groups[0]["name"] == "PROXY"
-    assert groups[0]["default-selected"] == "🚀 所有节点"
-    assert groups[0]["proxies"][0] == "🇸🇬 新加坡节点 - 自建"
-    assert groups[0]["proxies"][-1] == "DIRECT"
+def assert_top_level_groups(groups: list[dict[str, Any]]) -> None:
+    """Assert the shared top-level selector contract."""
     assert [group["name"] for group in groups[1:7]] == [
         "FINAL",
         "AI",
@@ -97,6 +96,9 @@ def test_default_profile_structure(mihomo_client_defaults: dict[str, Any]) -> No
     assert all(groups[index]["proxies"] == groups[1]["proxies"] for index in range(2, 6))
     assert "TELEGRAM" not in [group["name"] for group in groups]
 
+
+def assert_common_sections(profile: dict[str, Any]) -> None:
+    """Assert the provider, rule-provider, DNS and rule contract."""
     assert list(profile["proxy-providers"]) == ["airport-a", "selfhost"]
     assert profile["proxy-providers"]["airport-a"]["path"] == "./providers/airport-a.yaml"
     assert profile["proxy-providers"]["selfhost"] == {"type": "file", "path": "./providers/selfhost.yaml"}
@@ -116,6 +118,78 @@ def test_default_profile_structure(mihomo_client_defaults: dict[str, Any]) -> No
     assert "RULE-SET,geosite-steam@cn,DIRECT" in rules
     assert "RULE-SET,geosite-telegram,Telegram" in rules
     assert not [rule for rule in rules if rule.startswith("RULE-SET,custom-")]
+
+
+def test_plain_profile_structure(mihomo_client_defaults: dict[str, Any]) -> None:
+    profile = render_profile(profile_vars(mihomo_client_defaults), template="plain")
+
+    groups = profile["proxy-groups"]
+    assert len(groups) == 19
+    assert groups[0]["name"] == "PROXY"
+    assert groups[0]["default-selected"] == "🚀 所有节点"
+    assert groups[0]["proxies"][0] == "🇸🇬 新加坡节点 - AUTO"
+    assert groups[0]["proxies"][-1] == "DIRECT"
+    assert_top_level_groups(groups)
+    # The plain profile has no separate self-hosted tier and does not filter
+    # self-hosted nodes out of the normal region groups.
+    assert not [group for group in groups if group["name"].endswith(" - 自建")]
+    assert all("exclude-filter" not in group for group in groups)
+    assert_common_sections(profile)
+
+
+def test_selfhost_profile_structure(mihomo_client_defaults: dict[str, Any]) -> None:
+    profile = render_profile(profile_vars(mihomo_client_defaults), template="selfhost")
+
+    groups = profile["proxy-groups"]
+    assert len(groups) == 23
+    assert groups[0]["name"] == "PROXY"
+    assert groups[0]["default-selected"] == "🚀 所有节点"
+    assert groups[0]["proxies"][0] == "🇸🇬 新加坡节点 - 自建"
+    assert groups[0]["proxies"][-1] == "DIRECT"
+    assert_top_level_groups(groups)
+    # The selfhost tier is limited to US/SG/JP plus the catch-all; HK/TW
+    # self-hosted nodes are intentionally left to the catch-all.
+    assert {group["name"] for group in groups if group["name"].endswith(" - 自建")} == {
+        "🇸🇬 新加坡节点 - 自建",
+        "🇯🇵 日本节点 - 自建",
+        "🇺🇸 美国节点 - 自建",
+        "🚀 所有节点 - 自建",
+    }
+    assert sum("exclude-filter" in group for group in groups) == 11
+    assert_common_sections(profile)
+
+
+def test_profiles_share_static_sections(mihomo_client_defaults: dict[str, Any]) -> None:
+    variables = profile_vars(mihomo_client_defaults)
+    plain = render_profile(variables, template="plain")
+    selfhost = render_profile(variables, template="selfhost")
+    for key in (
+        "mode",
+        "log-level",
+        "mixed-port",
+        "allow-lan",
+        "bind-address",
+        "tun",
+        "ipv6",
+        "external-controller",
+        "profile",
+        "dns",
+        "sniffer",
+        "proxy-providers",
+        "rule-providers",
+        "rules",
+    ):
+        assert plain[key] == selfhost[key]
+
+
+def test_default_template_selection(mihomo_client_defaults: dict[str, Any]) -> None:
+    expression = mihomo_client_defaults["mihomo_client_config_template"]
+    environment = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    environment.filters["ansible.builtin.bool"] = _bool
+    template = environment.from_string(expression)
+
+    assert template.render(mihomo_client_selfhost_tier=False).strip() == "etc/mihomo/config.yaml.j2"
+    assert template.render(mihomo_client_selfhost_tier=True).strip() == "etc/mihomo/config.selfhost.yaml.j2"
 
 
 def test_rendered_profile_values(mihomo_client_defaults: dict[str, Any]) -> None:

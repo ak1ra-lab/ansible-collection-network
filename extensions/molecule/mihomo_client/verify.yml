@@ -107,10 +107,14 @@
     - name: assert the generated profile matches the contract
       ansible.builtin.assert:
         that:
-          - _mihomo_client_profile_data['proxy-groups'] | length == 25
+          - _mihomo_client_profile_data['proxy-groups'] | length == 19
           - _mihomo_client_profile_data['proxy-groups'][0]['name'] == 'PROXY'
           - _mihomo_client_profile_data['proxy-groups'][0]['default-selected'] == '🚀 所有节点'
-          - _mihomo_client_profile_data['proxy-groups'][0]['proxies'][0] == '🇸🇬 新加坡节点 - 自建'
+          - _mihomo_client_profile_data['proxy-groups'][0]['proxies'][0] == '🇸🇬 新加坡节点 - AUTO'
+          - >-
+            '🇺🇸 美国节点 - 自建'
+            not in (_mihomo_client_profile_data['proxy-groups']
+                    | map(attribute='name') | list)
           - _mihomo_client_profile_data['proxy-groups'][1]['name'] == 'FINAL'
           - _mihomo_client_profile_data['proxy-groups'][2]['name'] == 'AI'
           - _mihomo_client_profile_data['proxy-groups'][4]['name'] == 'Telegram'
@@ -229,16 +233,19 @@
         that:
           - >-
             'selfhost-US-molecule-node01-ss'
-            in _mihomo_client_groups['🇺🇸 美国节点 - 自建']['all']
+            in _mihomo_client_groups['🇺🇸 美国节点']['all']
           - >-
             '自建-HK-molecule-node02-trojan'
-            in _mihomo_client_groups['🇭🇰 香港节点 - 自建']['all']
+            in _mihomo_client_groups['🇭🇰 香港节点']['all']
           - >-
             'selfhost-JP-molecule-node03-vless'
-            in _mihomo_client_groups['🇯🇵 日本节点 - 自建']['all']
+            in _mihomo_client_groups['🇯🇵 日本节点']['all']
+          - >-
+            'selfhost-US-molecule-node01-ss'
+            in _mihomo_client_groups['🚀 所有节点 - AUTO']['all']
         fail_msg: >-
-          the self-hosted nodes must match the template's region filters and
-          reach the *-自建 groups, got:
+          the self-hosted nodes must match the plain template's region filters
+          and merge into the normal region groups, got:
           {{ _mihomo_client_groups | ansible.builtin.to_json }}
         quiet: true
 

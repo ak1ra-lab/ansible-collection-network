@@ -8,12 +8,12 @@ transparent-proxy client, based on the hand-written
   + `dns-hijack`) captures both local and LAN-forwarded traffic, so a LAN
   client only needs this host as its gateway/DNS - no nftables marking, no
   policy-routing service and no `ak1ra_lab.network.tproxy` dependency;
-- the profile is a hand-maintained template (static mihomo YAML plus a
+- the profiles are hand-maintained templates (static mihomo YAML plus a
   handful of rendered values): top-level selectors (`PROXY` / `FINAL` /
-  application / `SSH`) over per-region selector / url-test / self-hosted
-  tiers, an explicit `default-selected` on `PROXY` (no latency auto or
-  fallback group on the default path) and `DIRECT` escape hatches in the
-  top-level members;
+  application / `SSH`) over per-region selector / url-test tiers (plus the
+  optional self-hosted tier for chain-proxy deployments), an explicit
+  `default-selected` on `PROXY` (no latency auto or fallback group on the
+  default path) and `DIRECT` escape hatches in the top-level members;
 - DNS stays `redir-host` (real answers) with a static rule-set split:
   `nameserver-policy` sends the direct-routed domain sets (private, CN, the
   Steam-CN download set and the custom direct set) to domestic DoH, the
@@ -88,36 +88,55 @@ enabling and starting the service.  The service unit runs the same config
 test as `ExecStartPre`, and `Restart=on-failure` recovers from a crashed
 engine.
 
-### The profile template
+### The profile templates
 
-`mihomo_client_config_template` (default
-`templates/etc/mihomo/config.yaml.j2`) is rendered to
-`/etc/mihomo/config.yaml`.  It is a hand-maintained template: the group
-topology, rule providers, rules and DNS split are plain mihomo YAML in that
-file, and only the necessary values are rendered into it - the mixed port,
-the API secret, the optional dashboard URL, the provider mapping and the
-custom rule-set payloads.  Anything else (a different listen port, extra
-regions, different DNS servers, ...) is a template edit: copy the file,
-adjust it and point the variable at the copy (see "Customizing the profile"
-below).
+`mihomo_client_config_template` is rendered to `/etc/mihomo/config.yaml`.
+Two hand-maintained templates ship:
 
-The topology: 25 proxy groups in three tiers per region (five regions
-(SG/HK/TW/JP/US) plus the `🚀 所有节点` catch-all):
+- `templates/etc/mihomo/config.yaml.j2` - the default plain profile
+  (`mihomo_client_selfhost_tier: false`).  Two tiers per region; self-hosted
+  nodes are matched by the same region filters and merged into the normal
+  selector / url-test groups, so there is no separate `*-自建` tier.
+- `templates/etc/mihomo/config.selfhost.yaml.j2` - the selfhost-tier profile
+  (`mihomo_client_selfhost_tier: true`).  Three tiers per region; the
+  self-hosted nodes stay in their own tier, which is what chain-proxy
+  deployments need when a direct and a chained variant of the same node must
+  coexist.  The self-hosted tier only covers US/SG/JP; self-hosted nodes in
+  any other region remain in `🚀 所有节点 - 自建`.
 
-- `<region>` - selector over the all-provider pool matching the region
-  regex, self-hosted nodes excluded;
+Both files are hand-maintained: the group topology, rule providers, rules and
+DNS split are plain mihomo YAML in those files, and only the necessary values
+are rendered into them - the mixed port, the API secret, the optional dashboard
+URL, the provider mapping and the custom rule-set payloads.  Anything else (a
+different listen port, extra regions, different DNS servers, ...) is a
+template edit: copy the file, adjust it and point the variable at the copy
+(see "Customizing the profile" below).
+
+The plain topology (19 groups, five regions SG/HK/TW/JP/US plus the
+`🚀 所有节点` catch-all):
+
+- `<region>` - selector over the full pool matching the region regex
+  (airport + self-hosted);
 - `<region> - AUTO` - url-test over the same pool (`interval` 300,
   `tolerance` 50);
-- `<region> - 自建` - selector matching nodes that carry the
-  `selfhost|自建` tag *and* the region token.
+- `🚀 所有节点` / `🚀 所有节点 - AUTO` - catch-all selector / url-test over
+  the full pool.
 
-`🚀 所有节点` is the plain include-all selector (self-hosted nodes
-included, so it stays populated on self-hosted-only deployments).
-`PROXY` lists the three tiers (self-hosted first, then AUTO, then the
-selector tier) plus `DIRECT`, and pins `default-selected: 🚀 所有节点` -
-the default path is explicit and the latency AUTO tier is only a manual
-choice.  `FINAL` and the application groups (`AI`, `Steam`, `Telegram`,
-`Entertainment`) list all three tiers with `PROXY` / `DIRECT` on top;
+The selfhost topology (23 groups):
+
+- `<region>` and `<region> - AUTO` - same five region tiers, self-hosted
+  nodes excluded;
+- `<region> - 自建` - US/SG/JP selectors matching nodes that carry the
+  `selfhost|自建` tag *and* the region token;
+- `🚀 所有节点 - 自建` - catch-all for every tagged self-hosted node,
+  including regions without a dedicated tier.
+
+`PROXY` lists the available tiers plus `DIRECT`, and pins
+`default-selected: 🚀 所有节点` - the default path is explicit and the
+latency AUTO tier is only a manual choice.  In the plain profile the order is
+AUTO then selector; in the selfhost profile the `*-自建` tier comes first.
+`FINAL` and the application groups (`AI`, `Steam`, `Telegram`,
+`Entertainment`) follow the same tier list with `PROXY` / `DIRECT` on top;
 `SSH` leads with `PROXY` / `DIRECT`.
 
 In one of the region selectors or `PROXY`, no group-level fallback exists:
@@ -170,14 +189,24 @@ The artifact entries go through Ansible's file lookup, so a relative path
 resolves against the role/playbook directories, not the working directory:
 anchor it with `{{ playbook_dir }}`-based or absolute paths.  Every node
 name must carry the `selfhost|自建` tag (the role fails the play otherwise)
-and a region token (the region regexes live in the profile template, so
-they match at load time).  At least one node source must exist
-(`mihomo_client_proxy_providers`, `mihomo_client_selfhost_proxies` or
+and a region token (the region regexes live in the profile templates, so
+they match at load time).  In the plain profile the region token is what
+merges the node into the normal region groups; in the selfhost profile the
+tag additionally selects the `*-自建` tier.  At least one node source must
+exist (`mihomo_client_proxy_providers`, `mihomo_client_selfhost_proxies` or
 `mihomo_client_selfhost_files`), otherwise the role fails the play.
+
+For a chain-proxy deployment, set `mihomo_client_selfhost_tier: true` and
+declare `dialer-proxy` on the self-hosted node entries (inline or in the
+files named by `mihomo_client_selfhost_files`).  The target can be a region
+selector or its `- AUTO` group; the selector gives a predictable path while
+AUTO follows the airport latency.  SS nodes are the safe baseline for
+chaining: UDP-based protocols (hysteria2, tuic) and TLS-camouflage protocols
+(VLESS REALITY, AnyTLS) may not relay through an airport node.
 
 ### DNS
 
-The DNS split is static in the profile template and rule-set based.
+The DNS split is static in the profile templates and rule-set based.
 `nameserver-policy` (evaluated first) routes the direct-routed domain sets
 to the domestic DoH pair:
 
@@ -228,8 +257,10 @@ data file is involved.
 
 ## Customizing the profile
 
-1. Copy `templates/etc/mihomo/config.yaml.j2` (e.g. into
-   `templates/mihomo-custom.yaml.j2` next to the playbook).
+1. Copy the closest shipped template - `templates/etc/mihomo/config.yaml.j2`
+   for the plain profile or `templates/etc/mihomo/config.selfhost.yaml.j2`
+   for the selfhost-tier profile (e.g. into `templates/mihomo-custom.yaml.j2`
+   next to the playbook).
 2. Edit the static YAML: change a region regex, add a proxy group, change
    the DNS servers, add raw rules, ...
 3. Point `mihomo_client_config_template` at the copy.  The rendered result
@@ -269,7 +300,8 @@ black-holing.
 | --- | --- | --- |
 | `mihomo_client_state` | `present` | `present` applies, `absent` tears the role-managed artifacts down |
 | `mihomo_client_mode` | `gateway` | `gateway` deploys the LAN sysctl drop-in; `local` removes it again (host-only shape) |
-| `mihomo_client_config_template` | `etc/mihomo/config.yaml.j2` | Profile template to render (point at a copy to customize) |
+| `mihomo_client_selfhost_tier` | `false` | Keep self-hosted nodes in a separate `*-自建` tier (US/SG/JP + catch-all) for chain-proxy deployments; `false` merges them into the normal region groups |
+| `mihomo_client_config_template` | auto: `etc/mihomo/config.yaml.j2` (plain) or `etc/mihomo/config.selfhost.yaml.j2` (selfhost tier) | Profile template to render; point at a copy to customize |
 | `mihomo_client_mixed_port` | `7890` | HTTP/SOCKS mixed port |
 | `mihomo_client_api_secret` | `""` | Clash API secret; generated with `random_password` when empty and persisted to `mihomo_client_host_vars_file` (an explicit value wins; the controller listens on `0.0.0.0:9090`) |
 | `mihomo_client_external_ui_url` | `""` | Optional dashboard archive URL, fetched by mihomo into `external-ui` (`ui`) at startup |

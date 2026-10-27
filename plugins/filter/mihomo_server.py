@@ -444,7 +444,8 @@ def mihomo_server_client_proxies(
     Node names follow the naming contract consumed by the client profile:
     ``<client_node_prefix>-<REGION>-<host>[-<user>]-<proto>`` - the
     ``selfhost`` prefix (default) and the region token (e.g. ``US``) are what
-    make the node appear in the ``*-自建`` and region groups.
+    make the node appear in the client's region groups; the optional
+    selfhost-tier profile also uses the prefix for its ``*-自建`` groups.
 
     shadowsocks is single-user, so it emits exactly one ``-ss`` node using
     the server password; every other protocol emits one node per user.

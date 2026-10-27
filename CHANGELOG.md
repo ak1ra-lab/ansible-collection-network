@@ -45,14 +45,17 @@ The format is based on Keep a Changelog, and this project does not currently gua
   (`mihomo_client_proxy_providers`, `mihomo_client_selfhost_proxies`,
   `mihomo_client_selfhost_files`) is required when applying, and an optional
   `mihomo_client_local_artifacts_dir` mirrors the rendered profile on the
-  controller for backup/diff.  The profile itself is a hand-maintained
-  template (static proxy-group topology, rule providers, rules and DNS
-  split; only a handful of `mihomo_client_*` values are rendered into it),
-  reproducing the mihomo-setup deployment shape with the sing-box-tproxy
-  group topology (top-level selectors, per-region selector / url-test /
-  self-hosted tiers, explicit default selection, no group-level fallback on
-  the default path) and pre-filled inline custom rule sets driven by
-  payload lists.
+  controller for backup/diff.  The profile itself ships as two
+  hand-maintained templates (static proxy-group topology, rule providers,
+  rules and DNS split; only a handful of `mihomo_client_*` values are
+  rendered into them): the default plain profile has two tiers and merges
+  self-hosted nodes into the normal region groups, while the selfhost-tier
+  profile keeps a separate `*-自建` tier (US/SG/JP plus the catch-all) for
+  chain-proxy deployments (`mihomo_client_selfhost_tier`).  Both reproduce
+  the mihomo-setup deployment shape with the sing-box-tproxy group topology
+  (top-level selectors, per-region selector / url-test tiers, explicit
+  default selection, no group-level fallback on the default path) and
+  pre-filled inline custom rule sets driven by payload lists.
 - `ak1ra_lab.network.mihomo_server`: mihomo proxy server on the VPS side
   (`listeners:` schema, shadowsocks/trojan/hysteria2/vless/tuic/anytls,
   TLS paths that are either operator-managed or copied from an external
@@ -106,10 +109,11 @@ The format is based on Keep a Changelog, and this project does not currently gua
   ciphers) and `random_uuid` (`uuid.uuid4()`).
 - Unit tests for the filter and lookup plugins and the profile template
   (`tests/unit/`, run by a new `unit` CI job with pytest) covering the
-  template rendering (the 25-group topology, the conditional inline custom
-  rule sets, the rule order and the DNS policy), the provider
-  normalization, the self-hosted naming contract, the six listener shapes,
-  the client-node naming contract and the switch/null-input hardening, plus
+  template rendering (the plain and selfhost-tier topologies, the
+  conditional inline custom rule sets, the rule order and the DNS policy),
+  the provider normalization, the self-hosted naming contract, the six
+  listener shapes, the client-node naming contract and the switch/null-input
+  hardening, plus
   Molecule scenarios for both mihomo roles that converge the real binary
   and data files on the shared containers (the `mihomo_client` scenario
   proves the TUN device, the table-2022 policy routes, the live nftables
@@ -163,19 +167,22 @@ The format is based on Keep a Changelog, and this project does not currently gua
   README and Molecule scenario follow the same values.  Hysteria2 server
   bandwidth stays unset, so the generated clients use BBR unless they
   explicitly opt into Brutal.
-- `mihomo_client` profile reworked around a hand-maintained template
+- `mihomo_client` profile reworked around two hand-maintained templates
   (`mihomo_client_config_template`, shipped as
-  `templates/etc/mihomo/config.yaml.j2`): the static mihomo YAML (group
-  topology, rule providers, rules, DNS split) is no longer generated from
-  role variables, and only the necessary values are rendered - mixed port,
-  API secret, the TUN/DNS switches, the provider mapping and the custom
-  rule-set payloads; copying the template is the customization path.  The
-  sing-box-tproxy topology stays (no fallback / include-all auto group on
-  the default path, `PROXY` pinned to `🚀 所有节点` through
-  `default-selected`, 25 groups), with `PROXY` ordering the tiers
-  self-hosted -> AUTO -> selector and every top-level group (incl. `FINAL`,
-  the application groups and `SSH`) listing all three tiers; `TELEGRAM` was
-  renamed `Telegram`.  The bundled rule providers gain the
+  `templates/etc/mihomo/config.yaml.j2` and
+  `templates/etc/mihomo/config.selfhost.yaml.j2`): the static mihomo YAML
+  (group topology, rule providers, rules, DNS split) is no longer generated
+  from role variables, and only the necessary values are rendered - mixed
+  port, API secret, the TUN/DNS switches, the provider mapping and the
+  custom rule-set payloads; copying either template is the customization
+  path.  The default plain profile has 19 groups in two tiers and merges
+  self-hosted nodes into the normal region groups; setting
+  `mihomo_client_selfhost_tier: true` selects the 23-group selfhost-tier
+  profile (three tiers, `*-自建` limited to US/SG/JP plus the catch-all) for
+  chain-proxy deployments.  Both keep the sing-box-tproxy topology (no
+  fallback / include-all auto group on the default path, `PROXY` pinned to
+  `🚀 所有节点` through `default-selected`); `TELEGRAM` was renamed
+  `Telegram`.  The bundled rule providers gain the
   `geosite-steam@cn` split (the Steam CDN/download domains route `DIRECT`
   and resolve through the domestic DoH pair while the store/community
   domains keep the `Steam` group), and the pre-filled inline rule providers

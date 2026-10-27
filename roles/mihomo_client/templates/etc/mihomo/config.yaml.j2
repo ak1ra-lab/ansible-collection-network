@@ -8,6 +8,13 @@
 # dial-outs are bound to the physical interface by auto-detect-interface, so
 # no nftables / policy-routing state is involved.
 #
+# This is the default plain profile: two tiers per region and no separate
+# self-hosted tier - self-hosted nodes (the `selfhost` file provider) are
+# matched by the same region filters and merged into the normal selector /
+# url-test groups.  Use `config.selfhost.yaml.j2` (or
+# `mihomo_client_selfhost_tier: true`) when a separate self-hosted tier is
+# needed for chain-proxy deployments.
+#
 # The profile is a hand-maintained template: the proxy-group topology, rule
 # providers, rules and the DNS split below are static YAML, and only the
 # mihomo_client_* variables are rendered into it (plus the inline custom
@@ -130,25 +137,18 @@ sniffer:
 proxy-providers:
 {{ _proxy_providers | ak1ra_lab.network.to_pretty_yaml | trim | indent(2, true) }}
 
-# Three tiers per region for the five configured regions (SG/HK/TW/JP/US):
-# <region> (selector, self-hosted excluded), <region> - AUTO (url-test,
-# self-hosted excluded) and <region> - 自建 (selector, self-hosted nodes
-# matched via the combined lookahead regex).  The catch-all 🚀 所有节点
-# selector includes the self-hosted nodes so it stays populated on
-# self-hosted-only deployments.  PROXY lists the three tiers plus DIRECT
-# (self-hosted first for quick access) and pins its default to
-# 🚀 所有节点; FINAL and the application groups list all three tiers with
-# PROXY / DIRECT on top; SSH leads with PROXY / DIRECT.
+# Two tiers per region for the five configured regions (SG/HK/TW/JP/US):
+# <region> (selector) and <region> - AUTO (url-test), both over the full
+# node pool (airport + self-hosted; the self-hosted tag is not excluded).
+# The catch-all 🚀 所有节点 selector and 🚀 所有节点 - AUTO include the
+# self-hosted nodes as well, so a self-hosted-only deployment still works.
+# PROXY lists the two tiers plus DIRECT (AUTO first, then the selector) and
+# pins its default to 🚀 所有节点; FINAL and the application groups list
+# both tiers with PROXY / DIRECT on top; SSH leads with PROXY / DIRECT.
 proxy-groups:
   - name: PROXY
     type: select
     proxies:
-      - 🇸🇬 新加坡节点 - 自建
-      - 🇭🇰 香港节点 - 自建
-      - 🇹🇼 台湾节点 - 自建
-      - 🇯🇵 日本节点 - 自建
-      - 🇺🇸 美国节点 - 自建
-      - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
@@ -169,12 +169,6 @@ proxy-groups:
     proxies:
       - PROXY
       - DIRECT
-      - 🇸🇬 新加坡节点 - 自建
-      - 🇭🇰 香港节点 - 自建
-      - 🇹🇼 台湾节点 - 自建
-      - 🇯🇵 日本节点 - 自建
-      - 🇺🇸 美国节点 - 自建
-      - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
@@ -193,12 +187,6 @@ proxy-groups:
     proxies:
       - PROXY
       - DIRECT
-      - 🇸🇬 新加坡节点 - 自建
-      - 🇭🇰 香港节点 - 自建
-      - 🇹🇼 台湾节点 - 自建
-      - 🇯🇵 日本节点 - 自建
-      - 🇺🇸 美国节点 - 自建
-      - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
@@ -217,12 +205,6 @@ proxy-groups:
     proxies:
       - PROXY
       - DIRECT
-      - 🇸🇬 新加坡节点 - 自建
-      - 🇭🇰 香港节点 - 自建
-      - 🇹🇼 台湾节点 - 自建
-      - 🇯🇵 日本节点 - 自建
-      - 🇺🇸 美国节点 - 自建
-      - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
@@ -241,12 +223,6 @@ proxy-groups:
     proxies:
       - PROXY
       - DIRECT
-      - 🇸🇬 新加坡节点 - 自建
-      - 🇭🇰 香港节点 - 自建
-      - 🇹🇼 台湾节点 - 自建
-      - 🇯🇵 日本节点 - 自建
-      - 🇺🇸 美国节点 - 自建
-      - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
@@ -265,12 +241,6 @@ proxy-groups:
     proxies:
       - PROXY
       - DIRECT
-      - 🇸🇬 新加坡节点 - 自建
-      - 🇭🇰 香港节点 - 自建
-      - 🇹🇼 台湾节点 - 自建
-      - 🇯🇵 日本节点 - 自建
-      - 🇺🇸 美国节点 - 自建
-      - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
@@ -289,12 +259,6 @@ proxy-groups:
     proxies:
       - DIRECT
       - PROXY
-      - 🇸🇬 新加坡节点 - 自建
-      - 🇭🇰 香港节点 - 自建
-      - 🇹🇼 台湾节点 - 自建
-      - 🇯🇵 日本节点 - 自建
-      - 🇺🇸 美国节点 - 自建
-      - 🚀 所有节点 - 自建
       - 🇸🇬 新加坡节点 - AUTO
       - 🇭🇰 香港节点 - AUTO
       - 🇹🇼 台湾节点 - AUTO
@@ -308,32 +272,27 @@ proxy-groups:
       - 🇺🇸 美国节点
       - 🚀 所有节点
 
-  # selector tier (all nodes of the region, self-hosted excluded)
+  # selector tier (all nodes of the region, self-hosted included)
   - name: 🇸🇬 新加坡节点
     type: select
     include-all: true
     filter: (?i:\bSG[P]?\d*\b|Singapore|新加坡|狮城)
-    exclude-filter: selfhost|自建
   - name: 🇭🇰 香港节点
     type: select
     include-all: true
     filter: (?i:\bHK[G]?\d*\b|Hong.*?Kong|\bHKT\b|\bHKBN\b|\bHGC\b|\bWTT\b|\bCMI\b|香港)
-    exclude-filter: selfhost|自建
   - name: 🇹🇼 台湾节点
     type: select
     include-all: true
     filter: (?i:\bTW[N]?\d*\b|Taiwan|新北|彰化|\bCHT\b|台湾|[^-]台|\bHINET\b)
-    exclude-filter: selfhost|自建
   - name: 🇯🇵 日本节点
     type: select
     include-all: true
     filter: (?i:\bJP[N]?\d*\b|Japan|Tokyo|Osaka|Saitama|日本|东京|大阪|埼玉)
-    exclude-filter: selfhost|自建
   - name: 🇺🇸 美国节点
     type: select
     include-all: true
     filter: (?i:\bUS[A]?\d*\b|America|United.*?States|美国|[^-]美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥)
-    exclude-filter: selfhost|自建
   - name: 🚀 所有节点
     type: select
     include-all: true
@@ -343,7 +302,6 @@ proxy-groups:
     type: url-test
     include-all: true
     filter: (?i:\bSG[P]?\d*\b|Singapore|新加坡|狮城)
-    exclude-filter: selfhost|自建
     url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
@@ -351,7 +309,6 @@ proxy-groups:
     type: url-test
     include-all: true
     filter: (?i:\bHK[G]?\d*\b|Hong.*?Kong|\bHKT\b|\bHKBN\b|\bHGC\b|\bWTT\b|\bCMI\b|香港)
-    exclude-filter: selfhost|自建
     url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
@@ -359,7 +316,6 @@ proxy-groups:
     type: url-test
     include-all: true
     filter: (?i:\bTW[N]?\d*\b|Taiwan|新北|彰化|\bCHT\b|台湾|[^-]台|\bHINET\b)
-    exclude-filter: selfhost|自建
     url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
@@ -367,7 +323,6 @@ proxy-groups:
     type: url-test
     include-all: true
     filter: (?i:\bJP[N]?\d*\b|Japan|Tokyo|Osaka|Saitama|日本|东京|大阪|埼玉)
-    exclude-filter: selfhost|自建
     url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
@@ -375,43 +330,15 @@ proxy-groups:
     type: url-test
     include-all: true
     filter: (?i:\bUS[A]?\d*\b|America|United.*?States|美国|[^-]美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥)
-    exclude-filter: selfhost|自建
     url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
   - name: 🚀 所有节点 - AUTO
     type: url-test
     include-all: true
-    exclude-filter: selfhost|自建
     url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
-
-  # self-hosted tier (self-hosted nodes matched by tag AND region)
-  - name: 🇸🇬 新加坡节点 - 自建
-    type: select
-    include-all: true
-    filter: (?=.*(?:selfhost|自建))(?=.*(?:(?i:\bSG[P]?\d*\b|Singapore|新加坡|狮城)))
-  - name: 🇭🇰 香港节点 - 自建
-    type: select
-    include-all: true
-    filter: (?=.*(?:selfhost|自建))(?=.*(?:(?i:\bHK[G]?\d*\b|Hong.*?Kong|\bHKT\b|\bHKBN\b|\bHGC\b|\bWTT\b|\bCMI\b|香港)))
-  - name: 🇹🇼 台湾节点 - 自建
-    type: select
-    include-all: true
-    filter: (?=.*(?:selfhost|自建))(?=.*(?:(?i:\bTW[N]?\d*\b|Taiwan|新北|彰化|\bCHT\b|台湾|[^-]台|\bHINET\b)))
-  - name: 🇯🇵 日本节点 - 自建
-    type: select
-    include-all: true
-    filter: (?=.*(?:selfhost|自建))(?=.*(?:(?i:\bJP[N]?\d*\b|Japan|Tokyo|Osaka|Saitama|日本|东京|大阪|埼玉)))
-  - name: 🇺🇸 美国节点 - 自建
-    type: select
-    include-all: true
-    filter: (?=.*(?:selfhost|自建))(?=.*(?:(?i:\bUS[A]?\d*\b|America|United.*?States|美国|[^-]美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥)))
-  - name: 🚀 所有节点 - 自建
-    type: select
-    include-all: true
-    filter: selfhost|自建
 
 # Inline custom rule sets: a set (and its rule below) only exists when the
 # matching mihomo_client_custom_*_payload list is non-empty.  Domain sets

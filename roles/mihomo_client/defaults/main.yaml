@@ -9,11 +9,13 @@
 # gateway/DNS (`mihomo_client_mode: gateway` sets `net.ipv4.ip_forward=1` and
 # relaxes rp_filter).
 #
-# The profile is a hand-maintained template
-# (templates/etc/mihomo/config.yaml.j2, rendered with
-# `mihomo_client_config_template`): the proxy-group topology, rule
-# providers, rules and the DNS split live in that file as plain mihomo YAML,
-# and only the variables below are rendered into it.  To customize beyond
+# The profile is a pair of hand-maintained templates rendered with
+# `mihomo_client_config_template`: the proxy-group topology, rule providers,
+# rules and the DNS split live in those files as plain mihomo YAML, and only
+# the variables below are rendered into them.  The default plain template
+# (config.yaml.j2) has two tiers and merges self-hosted nodes into the normal
+# region groups; the selfhost-tier template (config.selfhost.yaml.j2) keeps
+# a separate *-自建 tier for chain-proxy deployments.  To customize beyond
 # these knobs, copy the template, edit the copy and point the variable at it.
 #
 # The role owns the service identity, the profile, the systemd unit and the
@@ -31,11 +33,25 @@ mihomo_client_mode: gateway
 
 # ── Profile template ─────────────────────────────────────────────────────────
 
+# Keep self-hosted nodes in a separate *-自建 tier instead of merging them
+# into the normal selector / url-test groups.  Required for chain-proxy
+# deployments: with a separate tier the original (direct) node and a chained
+# variant can coexist without leaking the chained nodes into the normal
+# region groups.  The self-hosted tier only covers US/SG/JP; self-hosted
+# nodes in other regions stay in the 🚀 所有节点 - 自建 catch-all.  false
+# renders the plain profile (config.yaml.j2), true the selfhost-tier profile
+# (config.selfhost.yaml.j2).
+mihomo_client_selfhost_tier: false
+
 # Template rendered to <mihomo_client_etc_dir>/config.yaml.  Relative paths
 # resolve like any other template source (the role's templates/ directory and
-# a templates/ directory next to the invoking playbook); point it at a copy
-# of the shipped template to customize the profile.
-mihomo_client_config_template: etc/mihomo/config.yaml.j2
+# a templates/ directory next to the invoking playbook).  Defaults to the
+# plain or selfhost-tier shipped template according to
+# mihomo_client_selfhost_tier; point it at a copy to customize the profile.
+mihomo_client_config_template: >-
+  {{ 'etc/mihomo/config.selfhost.yaml.j2'
+     if mihomo_client_selfhost_tier | ansible.builtin.bool
+     else 'etc/mihomo/config.yaml.j2' }}
 
 # ── Profile values ───────────────────────────────────────────────────────────
 
@@ -82,7 +98,11 @@ mihomo_client_proxy_providers: {}
 # Ansible's file lookup, so relative entries resolve against the
 # role/playbook directories (not the working directory) - anchor them with
 # `{{ playbook_dir }}`-based or absolute paths.  Node names must carry the
-# selfhost tag and a region token or they never reach the *-自建 groups.
+# selfhost tag and a region token.  The plain profile merges them into the
+# normal region groups; the selfhost-tier profile additionally uses the tag
+# for its *-自建 groups.  For chain-proxy, enable
+# mihomo_client_selfhost_tier and add `dialer-proxy` to the node mappings or
+# artifacts.
 mihomo_client_selfhost_proxies: []
 mihomo_client_selfhost_files: []
 
