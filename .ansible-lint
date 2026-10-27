@@ -9,6 +9,9 @@ profile: production
 exclude_paths:
   - .git/
   - .venv/
+  # Agent plans/sessions are documentation and reference snippets, not
+  # Ansible source.
+  - .agents/
   # Controller-local generated data (mihomo_server client nodes, profile
   # mirrors): not Ansible source.  The directory is gitignored (config/*),
   # but ansible-lint does not read .gitignore.
