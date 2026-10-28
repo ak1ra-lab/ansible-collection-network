@@ -19,12 +19,12 @@ network:
 {% for address in interface.addresses %}
         - {{ address | ansible.builtin.to_json }}
 {% endfor %}
-{% if interface.name == ansible_facts['default_ipv4']['interface'] and netplan_static_gateway | length > 0 %}
+{% if interface.name == _netplan_static_default_interface and _netplan_static_gateway | length > 0 %}
       routes:
         - to: default
-          via: {{ netplan_static_gateway | ansible.builtin.to_json }}
+          via: {{ _netplan_static_gateway | ansible.builtin.to_json }}
 {% endif %}
-{% if interface.name == ansible_facts['default_ipv4']['interface'] and netplan_static_nameservers | length > 0 %}
+{% if interface.name == _netplan_static_default_interface and netplan_static_nameservers | length > 0 %}
       nameservers:
         addresses:
 {% for nameserver in netplan_static_nameservers %}

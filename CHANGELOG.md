@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project does not currently guarantee stable backward compatibility.
 
+## [Unreleased]
+
+### Added
+
+- `netplan_static_default_interface` selects the physical interface that
+  carries the static default route. The new
+  `netplan_static_default_routes` filter reads the kernel main table
+  (`/proc/net/route`), and `netplan_static_gateway` defaults to `auto` so the
+  gateway is captured from that interface.
+
+### Fixed
+
+- `netplan_static` no longer fails when a TUN client such as `mihomo_client`
+  owns `ansible_facts.default_ipv4` through policy routing. The TUN
+  (`mihomo0`) is never rendered; the role selects the captured ethernet
+  interface and gateway from the kernel main table instead.
+- `netplan_static` treats an empty `ansible_facts.default_ipv6` mapping as
+  "no IPv6 default route" instead of failing the IPv6-loss gate on hosts with
+  IPv6 disabled.
+
 ## [v0.3.0] - 2026-10-28
 
 ### Added

@@ -21,9 +21,13 @@ other advanced netplan features belong in a copied template
 ## Requirements
 
 - A systemd-based Debian/Ubuntu host with `netplan.io` (the role installs it
-  when missing) and a live IPv4 default route.
+  when missing) and a live IPv4 default route in the kernel main table on a
+  captured ethernet interface (or explicit `netplan_static_default_interface`
+  and `netplan_static_gateway` values).
 - The selected interfaces must be physical ethernet interfaces (`type:
-  ether`) with a MAC address.
+  ether`) with a MAC address. TUN, bridge, bond and VLAN devices are never
+  captured; a TUN client such as `mihomo_client` does not need netplan
+  management.
 - The role is IPv4-only. It fails closed when a default IPv6 route or a global
   IPv6 address exists on a selected interface unless
   `netplan_static_allow_ipv6_loss: true` is set explicitly.
@@ -54,7 +58,8 @@ unless `netplan_static_apply: false`.
 | `netplan_static_allow_absent_without_backup` | `false` | Allow `state: absent` to remove the role file without a restoreable backup. |
 | `netplan_static_apply` | `true` | Run `netplan apply`; `false` only runs `netplan generate` (container tests). |
 | `netplan_static_conflict_check` | `overlap` | Merge-aware conflict policy: `strict`, `overlap` or `none` (see below). |
-| `netplan_static_gateway` | live default gateway | Default route on the current default interface; empty renders no default route. |
+| `netplan_static_default_interface` | `""` | Physical interface that carries the default route; empty auto-selects from the kernel main table. |
+| `netplan_static_gateway` | `auto` | Default route on the selected interface; `auto` captures the main-table gateway, an IPv4 address overrides it, empty renders no default route. |
 | `netplan_static_nameservers` | `[]` | Optional plain IPv4 resolvers rendered on the default interface. |
 | `netplan_static_addresses` | `{}` | Per-interface CIDR overrides; a listed interface uses exactly this list instead of the captured primary + secondaries. |
 | `netplan_static_allow_ipv6_loss` | `false` | Explicitly accept that the static IPv4 configuration drops existing IPv6 addresses/routes. |
@@ -76,6 +81,30 @@ netplan_static_addresses:
 An override replaces the captured list for that interface exactly. It also
 covers the "the original netmask is wrong" case without a separate scalar
 prefix variable.
+
+### Hosts with a TUN or policy-routed default
+
+`ansible_facts.default_ipv4` follows the kernel route lookup, not the main
+routing table. A TUN client such as `mihomo_client` (`auto-route`, table
+2022) therefore reports `mihomo0` as the default interface even though the
+physical uplink's default route is still in the main table. The role never
+renders that TUN device: only `type: ether` interfaces are captured, and the
+gateway is read from `/proc/net/route` instead of the live fact. The role
+selects the captured ethernet interface that carries the main-table default
+route and uses its gateway.
+
+When more than one captured interface has a default route, or when the
+physical default route does not exist, select both values explicitly:
+
+```yaml
+netplan_static_default_interface: eth0
+netplan_static_gateway: 10.16.0.1
+```
+
+Set `netplan_static_gateway: ""` to render no default route at all. The
+`netplan_static_default_interface` variable is also useful on a multi-homed
+host whose default route should move to a different captured interface than
+the live one.
 
 ## Netplan merge semantics and conflict policy
 
@@ -202,7 +231,8 @@ For features outside the capture model, copy
 `netplan_static_config_template` at it. The role still owns the file mode,
 conflict preflight, cloud-init backup/removal and the `netplan generate/apply`
 handlers. The normalized interface data is available as
-`_netplan_static_interfaces`:
+`_netplan_static_interfaces`, and the resolved default route as
+`_netplan_static_default_interface` / `_netplan_static_gateway`:
 
 ```yaml
 - name: enp0s17
@@ -214,7 +244,12 @@ handlers. The normalized interface data is available as
 ## Limitations
 
 - IPv4 only; IPv6 fails closed unless explicitly accepted.
-- One default route; advanced routing uses a custom template.
+- One default route; advanced routing uses a custom template. Only the
+  kernel main table is captured, so policy-routing and TUN defaults are
+  intentionally ignored.
+- TUN devices (for example `mihomo0`) are never managed; a host that reaches
+  the network only through a TUN needs explicit static underlay
+  configuration.
 - Netplan conflict detection scans `/lib/netplan`, `/usr/lib/netplan`,
   `/etc/netplan` and `/run/netplan`, but it does not inspect hand-written
   `/etc/systemd/network` files, bridge/bond membership, or device matches by

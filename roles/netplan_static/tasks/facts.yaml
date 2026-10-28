@@ -1,16 +1,11 @@
 ---
 # tasks/facts.yaml - normalize the live interface state into the small model
 # consumed by the template.
-
-- name: require a default IPv4 route
-  ansible.builtin.assert:
-    that:
-      - ansible_facts['default_ipv4'] is defined
-      - ansible_facts['default_ipv4']['interface'] is defined
-    fail_msg: >-
-      netplan_static needs ansible_facts['default_ipv4']; gather facts and
-      make sure the host has an IPv4 default route
-    quiet: true
+#
+# The default interface and gateway are resolved from the kernel main route
+# table (/proc/net/route), not from ansible_facts.default_ipv4: a TUN client's
+# policy routing (for example mihomo0 with auto-route) can point the live
+# fact at an interface netplan must never manage.
 
 - name: build the normalized interface list
   ansible.builtin.set_fact:
@@ -27,14 +22,144 @@
       netplan_static_addresses override) was found
     quiet: true
 
-- name: require the default interface in the captured list
+- name: record the captured interface names
+  ansible.builtin.set_fact:
+    _netplan_static_interface_names: >-
+      {{ _netplan_static_interfaces | map(attribute='name') | list }}
+
+- name: read the kernel IPv4 route table
+  ansible.builtin.slurp:
+    src: /proc/net/route
+  register: _netplan_static_route_table
+
+- name: select the physical default routes
+  ansible.builtin.set_fact:
+    _netplan_static_physical_default_routes: >-
+      {{ _netplan_static_route_table.content
+         | ansible.builtin.b64decode
+         | ak1ra_lab.network.netplan_static_default_routes(
+             _netplan_static_interface_names) }}
+
+- name: record the live default interface
+  ansible.builtin.set_fact:
+    _netplan_static_live_default_interface: >-
+      {{ (ansible_facts['default_ipv4'] | default({})).get('interface', '') }}
+
+- name: use the explicitly configured default interface
+  when: netplan_static_default_interface | length > 0
+  ansible.builtin.set_fact:
+    _netplan_static_default_interface: "{{ netplan_static_default_interface }}"
+
+- name: prefer the live default interface when netplan manages it
+  when:
+    - netplan_static_default_interface | length == 0
+    - _netplan_static_live_default_interface in _netplan_static_interface_names
+  ansible.builtin.set_fact:
+    _netplan_static_default_interface: "{{ _netplan_static_live_default_interface }}"
+
+- name: leave the default interface unset when a non-netplan interface owns it
+  when:
+    - netplan_static_default_interface | length == 0
+    - _netplan_static_live_default_interface not in _netplan_static_interface_names
+  ansible.builtin.set_fact:
+    _netplan_static_default_interface: ""
+
+- name: auto-select the only captured interface with a default route
+  when:
+    - _netplan_static_default_interface | length == 0
+    - _netplan_static_physical_default_routes | length == 1
+  ansible.builtin.set_fact:
+    _netplan_static_default_interface: >-
+      {{ _netplan_static_physical_default_routes[0].interface }}
+
+- name: require an explicit default interface
+  when: _netplan_static_default_interface | length == 0
   ansible.builtin.assert:
     that:
-      - ansible_facts['default_ipv4']['interface'] in (_netplan_static_interfaces | map(attribute='name') | list)
+      - _netplan_static_physical_default_routes | length == 1
     fail_msg: >-
-      the default IPv4 interface
-      {{ ansible_facts['default_ipv4']['interface'] }} was not captured; add
-      an explicit netplan_static_addresses entry for it
+      the live default IPv4 interface
+      {{ _netplan_static_live_default_interface or '(none)' }}
+      is not a captured physical ethernet interface, and
+      {{ _netplan_static_physical_default_routes | length }} default route(s)
+      were found on the captured interfaces
+      ({{ _netplan_static_interface_names | join(', ') }}).  Set
+      netplan_static_default_interface explicitly.
+    quiet: true
+
+- name: require the selected default interface in the captured list
+  ansible.builtin.assert:
+    that:
+      - _netplan_static_default_interface in _netplan_static_interface_names
+    fail_msg: >-
+      netplan_static_default_interface
+      {{ _netplan_static_default_interface }} is not one of the captured
+      physical ethernet interfaces
+      ({{ _netplan_static_interface_names | join(', ') }})
+    quiet: true
+
+- name: select the default routes on the chosen interface
+  ansible.builtin.set_fact:
+    _netplan_static_selected_default_routes: >-
+      {{ _netplan_static_physical_default_routes
+         | selectattr('interface', 'equalto', _netplan_static_default_interface)
+         | list }}
+
+- name: use the explicitly configured gateway
+  when: netplan_static_gateway != 'auto'
+  ansible.builtin.set_fact:
+    _netplan_static_gateway: "{{ netplan_static_gateway }}"
+
+- name: require a single captured default route
+  when: netplan_static_gateway == 'auto'
+  ansible.builtin.assert:
+    that:
+      - _netplan_static_selected_default_routes | length <= 1
+    fail_msg: >-
+      multiple IPv4 default routes exist on
+      {{ _netplan_static_default_interface }}; set netplan_static_gateway
+      explicitly
+    quiet: true
+
+- name: capture the gateway on the chosen interface
+  when:
+    - netplan_static_gateway == 'auto'
+    - _netplan_static_selected_default_routes | length == 1
+  ansible.builtin.set_fact:
+    _netplan_static_gateway: >-
+      {{ _netplan_static_selected_default_routes[0].gateway }}
+
+- name: fall back to the live gateway on the same interface
+  when:
+    - netplan_static_gateway == 'auto'
+    - _netplan_static_selected_default_routes | length == 0
+    - _netplan_static_live_default_interface == _netplan_static_default_interface
+    - (ansible_facts['default_ipv4'] | default({})).get('gateway', '') | length > 0
+  ansible.builtin.set_fact:
+    _netplan_static_gateway: >-
+      {{ (ansible_facts['default_ipv4'] | default({})).get('gateway', '') }}
+
+- name: require a captured or explicit default gateway
+  when:
+    - netplan_static_gateway == 'auto'
+    - _netplan_static_gateway | default('') | length == 0
+  ansible.builtin.assert:
+    that: false
+    fail_msg: >-
+      no IPv4 default gateway was found on
+      {{ _netplan_static_default_interface }}; set
+      netplan_static_gateway explicitly (or to an empty string to render no
+      default route)
+    quiet: true
+
+- name: validate the resolved default gateway
+  ansible.builtin.assert:
+    that:
+      - _netplan_static_gateway | ansible.builtin.type_debug == 'str'
+      - >-
+        _netplan_static_gateway | length == 0
+        or (_netplan_static_gateway | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy
+    fail_msg: "the resolved netplan_static_gateway is not empty or a valid IPv4 address"
     quiet: true
 
 - name: require unique MAC addresses
@@ -62,20 +187,20 @@
   when: not netplan_static_allow_ipv6_loss
   ansible.builtin.assert:
     that:
-      - ansible_facts['default_ipv6'] is not defined
+      - ansible_facts['default_ipv6'] | default({}) | length == 0
       - _netplan_static_global_ipv6 | length == 0
     fail_msg: >-
       netplan_static is IPv4-only and would drop the existing IPv6
       configuration (default route:
-      {{ ansible_facts['default_ipv6'] | default('none') }}, global addresses:
-      {{ _netplan_static_global_ipv6 | map(attribute='address') | list }}).
+      {{ ansible_facts['default_ipv6'] | default({}) or 'none' }}, global
+      addresses: {{ _netplan_static_global_ipv6 | map(attribute='address') | list }}).
       Set netplan_static_allow_ipv6_loss: true to accept this explicitly.
     quiet: true
 
 - name: warn about the explicitly accepted IPv6 loss
   when:
     - netplan_static_allow_ipv6_loss
-    - (ansible_facts['default_ipv6'] is defined) or (_netplan_static_global_ipv6 | length > 0)
+    - (ansible_facts['default_ipv6'] | default({}) | length > 0) or (_netplan_static_global_ipv6 | length > 0)
   ansible.builtin.debug:
     msg: >-
       netplan_static_allow_ipv6_loss is true: the rendered static IPv4

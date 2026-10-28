@@ -65,8 +65,10 @@ Role-specific requirements:
   enslaved member interface; `iproute2`.
 - `cloud_init`: root privileges; a Debian/Ubuntu cloud image with cloud-init
   installed. The role only writes drop-ins under `/etc/cloud/cloud.cfg.d`.
-- `netplan_static`: root privileges; `netplan.io`, a live IPv4 default route,
-  and physical ethernet interfaces. It is IPv4-only and needs console or
+- `netplan_static`: root privileges; `netplan.io`, a live IPv4 default route
+  in the kernel main table, and physical ethernet interfaces. TUN defaults
+  such as `mihomo0` are ignored; select the underlay interface explicitly when
+  the main table is ambiguous. It is IPv4-only and needs console or
   out-of-band access because it can change the host's network path.
 - `systemd_resolved`: root privileges; the `systemd-resolved` package. The
   role must be the only owner of `/etc/resolv.conf` on the host.

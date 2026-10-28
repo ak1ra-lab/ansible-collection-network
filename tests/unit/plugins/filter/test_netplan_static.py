@@ -6,7 +6,7 @@ import base64
 
 import pytest
 from ansible.errors import AnsibleFilterError
-from netplan_static import netplan_conflicts, netplan_static_interfaces
+from netplan_static import netplan_conflicts, netplan_static_default_routes, netplan_static_interfaces
 
 
 def _facts(*interfaces: dict) -> dict:
@@ -117,6 +117,72 @@ def test_missing_mac_fails() -> None:
     )
     with pytest.raises(AnsibleFilterError, match="no MAC address"):
         netplan_static_interfaces(facts)
+
+
+ROUTE_HEADER = "Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT\n"
+
+
+def _route_table(*lines: str) -> str:
+    return ROUTE_HEADER + "".join(line + "\n" for line in lines)
+
+
+def test_default_route_from_the_kernel_main_table() -> None:
+    table = _route_table(
+        "eth0\t00000000\t0100100A\t0003\t0\t0\t0\t00000000\t0\t0\t0",
+        "eth0\t0000100A\t00000000\t0001\t0\t0\t0\t00FCFFFF\t0\t0\t0",
+        "mihomo0\t000012C6\t00000000\t0001\t0\t0\t0\tFCFFFFFF\t0\t0\t0",
+    )
+    assert netplan_static_default_routes(table, ["eth0"]) == [
+        {"interface": "eth0", "gateway": "10.16.0.1", "metric": 0}
+    ]
+
+
+def test_default_routes_ignore_devices_outside_the_captured_list() -> None:
+    table = _route_table(
+        "mihomo0\t00000000\t020012C6\t0003\t0\t0\t0\t00000000\t0\t0\t0",
+        "eth0\t00000000\t0100100A\t0003\t0\t0\t0\t00000000\t0\t0\t0",
+    )
+    result = netplan_static_default_routes(table, ["eth0"])
+    assert [route["interface"] for route in result] == ["eth0"]
+
+
+def test_default_routes_include_a_captured_tun_device() -> None:
+    table = _route_table("mihomo0\t00000000\t020012C6\t0003\t0\t0\t0\t00000000\t0\t0\t0")
+    assert netplan_static_default_routes(table, ["mihomo0"]) == [
+        {"interface": "mihomo0", "gateway": "198.18.0.2", "metric": 0}
+    ]
+
+
+def test_default_routes_sort_by_metric() -> None:
+    table = _route_table(
+        "eth1\t00000000\t0100100A\t0003\t0\t0\t100\t00000000\t0\t0\t0",
+        "eth0\t00000000\t0100100A\t0003\t0\t0\t0\t00000000\t0\t0\t0",
+    )
+    assert [route["interface"] for route in netplan_static_default_routes(table, ["eth0", "eth1"])] == [
+        "eth0",
+        "eth1",
+    ]
+
+
+def test_default_route_without_gateway_flag_is_skipped() -> None:
+    table = _route_table("eth0\t00000000\t00000000\t0001\t0\t0\t0\t00000000\t0\t0\t0")
+    assert netplan_static_default_routes(table, ["eth0"]) == []
+
+
+def test_default_routes_tolerate_malformed_lines() -> None:
+    table = _route_table(
+        "eth0\t00000000",
+        "eth0\t00000000\tnot-hex\t0003\t0\t0\t0\t00000000\t0\t0\t0",
+        "eth1\t00000000\t0100100A\t0003\t0\t0\t0\t00000000\t0\t0\t0",
+    )
+    assert netplan_static_default_routes(table, ["eth0", "eth1"]) == [
+        {"interface": "eth1", "gateway": "10.16.0.1", "metric": 0}
+    ]
+
+
+def test_default_routes_accept_bytes() -> None:
+    table = _route_table("eth0\t00000000\t0100100A\t0003\t0\t0\t0\t00000000\t0\t0\t0")
+    assert netplan_static_default_routes(table.encode(), ["eth0"])[0]["gateway"] == "10.16.0.1"
 
 
 ROLE = "/etc/netplan/90-ansible-static.yaml"

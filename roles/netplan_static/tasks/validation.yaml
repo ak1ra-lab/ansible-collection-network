@@ -24,14 +24,22 @@
       be absolute
     quiet: true
 
+- name: validate netplan_static_default_interface
+  ansible.builtin.assert:
+    that:
+      - netplan_static_default_interface | ansible.builtin.type_debug == 'str'
+    fail_msg: "netplan_static_default_interface must be a string"
+    quiet: true
+
 - name: validate netplan_static_gateway
   ansible.builtin.assert:
     that:
       - netplan_static_gateway | ansible.builtin.type_debug == 'str'
       - >-
-        netplan_static_gateway | length == 0
+        netplan_static_gateway in ['auto', '']
         or (netplan_static_gateway | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy
-    fail_msg: "netplan_static_gateway must be empty or a valid IPv4 address"
+    fail_msg: >-
+      netplan_static_gateway must be "auto", empty, or a valid IPv4 address
     quiet: true
 
 - name: validate netplan_static_nameservers

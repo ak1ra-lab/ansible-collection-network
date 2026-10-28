@@ -6,6 +6,11 @@
   validated and replace the captured list.  IPv6 is rejected: the role is
   deliberately IPv4-only and fails closed instead of silently dropping an
   existing IPv6 configuration.
+* ``netplan_static_default_routes`` - parse the kernel IPv4 route table
+  (``/proc/net/route``) for default routes on captured interfaces.  The
+  kernel main table is used instead of ``ansible_facts.default_ipv4`` because
+  a TUN client (mihomo's ``auto-route``) can hijack the route lookup without
+  owning a netplan-managed interface.
 * ``netplan_conflicts`` - classify foreign netplan YAML files against the
   role-managed interfaces.  Netplan merges files by filename order: later
   files amend new mapping keys and override the same keys; list values are
@@ -32,11 +37,14 @@ DOCUMENTATION = r"""
 name: netplan_static
 short_description: Normalize netplan_static interface facts and conflicts
 description:
-  - This file provides two filter plugins used by the netplan_static role.
+  - This file provides three filter plugins used by the netplan_static role.
   - C(netplan_static_interfaces) normalizes the Ansible network facts into
     the role's minimal interface model (name, MAC address, IPv4 addresses).
     It keeps physical ethernet interfaces with an IPv4 address, validates the
     optional per-interface address overrides, and fails closed on IPv6.
+  - C(netplan_static_default_routes) parses the kernel IPv4 route table for
+    default routes on the captured interfaces. It reads the main table, so a
+    TUN client's policy routing does not leak into the captured gateway.
   - C(netplan_conflicts) classifies foreign netplan YAML files against the
     role-managed interfaces. Netplan merges files by filename order, so a
     complementary split file such as a separate MTU file is allowed in
@@ -58,6 +66,13 @@ options:
         C(netplan_static_interfaces). A listed interface uses exactly this
         list instead of the captured primary and secondary addresses.
     type: dict
+  route_table:
+    description:
+      - Contents of C(/proc/net/route) for
+        C(netplan_static_default_routes), usually the decoded
+        C(ansible.builtin.slurp) result.
+    type: str
+    required: true
   pairs:
     description:
       - List of C([path, base64_encoded_content]) pairs for
@@ -116,6 +131,12 @@ EXAMPLES = r"""
          | ak1ra_lab.network.netplan_static_interfaces(
              netplan_static_addresses) }}
 
+- name: Capture the physical default routes from the kernel main table
+  ansible.builtin.set_fact:
+    _netplan_static_physical_default_routes: >-
+      {{ route_table.content | ansible.builtin.b64decode
+         | ak1ra_lab.network.netplan_static_default_routes(managed_devices) }}
+
 - name: Check foreign netplan files for conflicts
   ansible.builtin.set_fact:
     _netplan_static_conflicts: >-
@@ -133,6 +154,8 @@ _raw:
   description:
     - A list of C({name, macaddress, addresses}) mappings for
       C(netplan_static_interfaces).
+    - A list of C({interface, gateway, metric}) mappings for
+      C(netplan_static_default_routes), sorted by metric and interface.
     - A C({hard, shadowed}) mapping for C(netplan_conflicts); each entry
       carries a C(path) and a C(reason), and C(shadowed) entries are
       warnings rather than failures.
@@ -197,6 +220,60 @@ def _captured_ipv4(data: dict[str, Any], name: str) -> list[str]:
             _fail(f"{name}.ipv4_secondaries[{index}] must be a mapping")
         addresses.append(_primary_cidr(entry, f"{name}.ipv4_secondaries[{index}]"))
     return addresses
+
+
+def netplan_static_default_routes(route_table: Any, devices: Any) -> list[dict[str, Any]]:
+    """Return the IPv4 default routes from ``/proc/net/route``.
+
+    Only routes to ``0.0.0.0/0`` that carry the ``RTF_GATEWAY`` flag and use
+    one of ``devices`` are returned.  ``/proc/net/route`` contains the kernel
+    main table only: policy-routing tables created by a TUN client (mihomo's
+    table 2022) and ``ansible_facts.default_ipv4`` do not influence it.
+
+    Args:
+        route_table: the decoded ``/proc/net/route`` content.
+        devices: captured interface names.
+
+    Returns:
+        A list of ``{interface, gateway, metric}`` mappings sorted by metric,
+        interface and gateway.
+    """
+    if isinstance(route_table, bytes):
+        route_table = route_table.decode("utf-8", errors="replace")
+    if not isinstance(route_table, str):
+        _fail(f"route_table must be text, got {type(route_table).__name__}")
+    if not isinstance(devices, list):
+        _fail("devices must be a list of interface names")
+    names = {str(device) for device in devices}
+
+    routes: list[dict[str, Any]] = []
+    for line in route_table.splitlines()[1:]:
+        fields = line.split()
+        if len(fields) < 8:
+            continue
+        interface, destination, gateway, flags, _refcnt, _use, metric, mask = fields[:8]
+        if interface not in names:
+            continue
+        if destination.upper() != "00000000" or mask.upper() != "00000000":
+            continue
+        try:
+            flag_bits = int(flags, 16)
+            metric_value = int(metric)
+            gateway_address = str(ipaddress.IPv4Address(int(gateway, 16).to_bytes(4, "little")))
+        except (ValueError, OverflowError):
+            continue
+        # RTF_GATEWAY (0x2): a default route without a next hop cannot be
+        # rendered as `via`, and the role's contract is one gateway route.
+        if not flag_bits & 0x2:
+            continue
+        routes.append(
+            {
+                "interface": interface,
+                "gateway": gateway_address,
+                "metric": metric_value,
+            }
+        )
+    return sorted(routes, key=lambda route: (route["metric"], route["interface"], route["gateway"]))
 
 
 def netplan_static_interfaces(facts: Any, address_overrides: Any = None) -> list[dict[str, Any]]:
@@ -454,5 +531,6 @@ class FilterModule:
     def filters(self) -> dict[str, Any]:
         return {
             "netplan_static_interfaces": netplan_static_interfaces,
+            "netplan_static_default_routes": netplan_static_default_routes,
             "netplan_conflicts": netplan_conflicts,
         }

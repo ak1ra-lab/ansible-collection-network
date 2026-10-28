@@ -61,10 +61,20 @@ netplan_static_apply: true
 #   none    - do not inspect other netplan files
 netplan_static_conflict_check: overlap
 
-# Default route installed on the interface that currently carries the
-# default IPv4 route.  Defaults to the live gateway; set empty to render no
-# default route.
-netplan_static_gateway: "{{ ansible_facts['default_ipv4']['gateway'] | default('') }}"
+# Physical interface that carries the static default route.  Empty
+# auto-selects: the live default IPv4 interface when it is a captured
+# ethernet interface, otherwise the only captured interface with a default
+# route in the kernel main table.  Set this explicitly when a TUN (mihomo0)
+# owns ansible_facts.default_ipv4 or when multiple physical default routes
+# exist.
+netplan_static_default_interface: ""
+
+# Default route installed on netplan_static_default_interface.  "auto"
+# captures the live gateway from the kernel main-table default route; set an
+# IPv4 address to override it, or an empty string to render no default route.
+# ansible_facts.default_ipv4 is not used for the capture because a TUN
+# client's policy routing can point it at mihomo0.
+netplan_static_gateway: "auto"
 
 # Optional per-interface nameservers, rendered on the default interface only.
 # The list accepts IPv4 addresses; use systemd_resolved for global DNS and

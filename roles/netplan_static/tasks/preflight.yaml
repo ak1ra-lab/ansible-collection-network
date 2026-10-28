@@ -118,7 +118,7 @@
     _netplan_static_managed_keys: >-
       {{ ['match', 'set-name', 'dhcp4', 'dhcp6', 'accept-ra', 'addresses']
          + (['routes', 'gateway4', 'gateway6']
-            if netplan_static_gateway | length > 0 else [])
+            if _netplan_static_gateway | length > 0 else [])
          + (['nameservers.addresses']
             if netplan_static_nameservers | length > 0 else []) }}
 

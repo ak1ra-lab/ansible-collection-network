@@ -79,10 +79,12 @@ stay under cloud-init and then put stable host configuration in their place:
 
 - `cloud_init` writes drop-ins under `/etc/cloud/cloud.cfg.d` and is otherwise
   a no-op; disabling network ownership is an explicit opt-in.
-- `netplan_static` captures the live IPv4 addresses, default route, and MAC
-  matches into `/etc/netplan/90-ansible-static.yaml`; it backs up and removes
-  cloud-init's `50-cloud-init.yaml` only after cloud-init's network ownership
-  is disabled. The conflict preflight understands netplan's multi-file merge
+- `netplan_static` captures the live IPv4 addresses and the physical
+  main-table default route into `/etc/netplan/90-ansible-static.yaml`
+  (MAC-matched ethernet only; a TUN such as `mihomo0` is ignored); it backs up
+  and removes cloud-init's `50-cloud-init.yaml` only after cloud-init's
+  network ownership is disabled. The conflict preflight understands netplan's
+  multi-file merge
   order, so complementary files (for example a separate `mtu` file) remain
   valid.
 - `systemd_resolved` owns the global resolver drop-in and the
