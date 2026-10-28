@@ -1,0 +1,107 @@
+---
+# systemd_resolved scenario - assert the drop-in, the service, the backup
+# path and the temporary resolv.conf symlink.
+
+- name: verify the systemd-resolved configuration
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: read the resolved drop-in
+      ansible.builtin.slurp:
+        src: /etc/systemd/resolved.conf.d/90-ansible-resolved.conf
+      register: _systemd_resolved_dropin
+
+    - name: decode the resolved drop-in
+      ansible.builtin.set_fact:
+        _systemd_resolved_dropin_text: >-
+          {{ _systemd_resolved_dropin.content | ansible.builtin.b64decode }}
+
+    - name: assert the resolved drop-in content
+      ansible.builtin.assert:
+        that:
+          - _systemd_resolved_dropin_text is ansible.builtin.search('DNS=1\.1\.1\.1#cloudflare-dns\.com 8\.8\.4\.4#dns\.google')
+          - _systemd_resolved_dropin_text is ansible.builtin.search('FallbackDNS=9\.9\.9\.9#dns\.quad9\.net')
+          - _systemd_resolved_dropin_text is ansible.builtin.search('Domains=~\.')
+          - _systemd_resolved_dropin_text is ansible.builtin.search('DNSOverTLS=no')
+          - _systemd_resolved_dropin_text is ansible.builtin.search('DNSStubListener=yes')
+        fail_msg: >-
+          the resolved drop-in does not match the contract:
+          {{ _systemd_resolved_dropin_text }}
+        quiet: true
+
+    - name: collect the temporary resolver path state
+      ansible.builtin.stat:
+        path: /etc/molecule-resolv.conf
+      register: _systemd_resolved_resolv_conf
+
+    - name: assert the temporary resolver path is the stub symlink
+      ansible.builtin.assert:
+        that:
+          - _systemd_resolved_resolv_conf.stat.exists
+          - _systemd_resolved_resolv_conf.stat.islnk
+          - _systemd_resolved_resolv_conf.stat.lnk_source == '/run/systemd/resolve/stub-resolv.conf'
+        fail_msg: >-
+          the temporary resolver path must link to the systemd-resolved stub
+          view, got: {{ _systemd_resolved_resolv_conf.stat }}
+        quiet: true
+
+    - name: read the pre-role resolver backup
+      ansible.builtin.slurp:
+        src: /var/lib/ansible/ak1ra_lab/network/systemd_resolved/etc/molecule-resolv.conf
+      register: _systemd_resolved_backup
+
+    - name: assert the pre-role resolver file was backed up
+      ansible.builtin.assert:
+        that:
+          - _systemd_resolved_backup.content | ansible.builtin.b64decode is ansible.builtin.search('192\.0\.2\.53')
+          - _systemd_resolved_backup.content | ansible.builtin.b64decode is ansible.builtin.search('molecule\.test')
+        fail_msg: >-
+          the pre-role regular resolver file must be backed up under
+          /var/lib/ansible/ak1ra_lab/network/systemd_resolved
+        quiet: true
+
+    - name: collect the resolved service state
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - is-active
+          - systemd-resolved.service
+      changed_when: false
+      register: _systemd_resolved_active
+
+    - name: collect the resolved enablement
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - is-enabled
+          - systemd-resolved.service
+      changed_when: false
+      register: _systemd_resolved_enabled
+
+    - name: assert systemd-resolved is running and enabled
+      ansible.builtin.assert:
+        that:
+          - _systemd_resolved_active.stdout == 'active'
+          - _systemd_resolved_enabled.stdout == 'enabled'
+        fail_msg: >-
+          systemd-resolved must be active/enabled, got:
+          active={{ _systemd_resolved_active.stdout }}
+          enabled={{ _systemd_resolved_enabled.stdout }}
+        quiet: true
+
+    - name: read the effective resolved status
+      ansible.builtin.command:
+        argv:
+          - resolvectl
+          - status
+      changed_when: false
+      register: _systemd_resolved_status
+
+    - name: assert resolved sees the configured global DNS server
+      ansible.builtin.assert:
+        that:
+          - _systemd_resolved_status.stdout is ansible.builtin.search('1\.1\.1\.1')
+        fail_msg: >-
+          resolved does not report the configured global DNS server:
+          {{ _systemd_resolved_status.stdout }}
+        quiet: true

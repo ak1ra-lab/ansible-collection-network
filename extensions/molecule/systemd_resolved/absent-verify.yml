@@ -1,0 +1,42 @@
+---
+# systemd_resolved scenario - assert the role drop-in is gone and the
+# pre-role regular resolver file was restored from the fixed backup path.
+
+- name: verify the systemd-resolved teardown
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the resolved drop-in state
+      ansible.builtin.stat:
+        path: /etc/systemd/resolved.conf.d/90-ansible-resolved.conf
+      register: _systemd_resolved_dropin_after
+
+    - name: collect the restored temporary resolver path
+      ansible.builtin.stat:
+        path: /etc/molecule-resolv.conf
+      register: _systemd_resolved_resolv_conf_after
+
+    - name: read the restored temporary resolver file
+      ansible.builtin.slurp:
+        src: /etc/molecule-resolv.conf
+      register: _systemd_resolved_resolv_conf_content
+
+    - name: collect the backup path
+      ansible.builtin.stat:
+        path: /var/lib/ansible/ak1ra_lab/network/systemd_resolved/etc/molecule-resolv.conf
+      register: _systemd_resolved_backup_after
+
+    - name: assert the drop-in is gone and the pre-role file is restored
+      ansible.builtin.assert:
+        that:
+          - not _systemd_resolved_dropin_after.stat.exists
+          - _systemd_resolved_resolv_conf_after.stat.exists
+          - not _systemd_resolved_resolv_conf_after.stat.islnk
+          - >-
+            _systemd_resolved_resolv_conf_content.content
+            | ansible.builtin.b64decode is ansible.builtin.search('192\.0\.2\.53')
+          - _systemd_resolved_backup_after.stat.exists
+        fail_msg: >-
+          expected the role drop-in removed, the pre-role regular resolver
+          file restored, and the fixed backup retained
+        quiet: true

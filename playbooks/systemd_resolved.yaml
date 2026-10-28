@@ -1,0 +1,19 @@
+---
+# ak1ra_lab.network.systemd_resolved - collection playbook entry point.
+#
+# Configures systemd-resolved as the host resolver (global DNS, FallbackDNS,
+# Domains, DoT, stub listener) and manages the /etc/resolv.conf symlink mode.
+# This role keeps systemd-resolved running; hosts that need to stop it and
+# take over /etc/resolv.conf with a proxy client use
+# ak1ra_lab.network.mihomo_client instead.
+#
+# The contract is the systemd_resolved_* variable namespace documented in
+# roles/systemd_resolved/README.md; override it via group_vars/host_vars or
+# extra-vars - role defaults apply otherwise.
+
+- name: systemd-resolved host resolver
+  hosts: "{{ playbook_hosts | default('cloud-image-vms') }}"
+  become: true
+  gather_facts: true
+  roles:
+    - ak1ra_lab.network.systemd_resolved

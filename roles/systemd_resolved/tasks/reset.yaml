@@ -1,0 +1,66 @@
+---
+# tasks/reset.yaml - remove the role drop-in and restore the resolver file.
+#
+# A pre-role regular resolv.conf backup wins; otherwise the distro stub
+# symlink is restored.  The service itself is left enabled; the drop-in
+# removal handler restarts it when it was running.
+
+- name: remove the role-managed resolved drop-in
+  ansible.builtin.file:
+    path: "{{ _systemd_resolved_dropin_file }}"
+    state: absent
+  notify:
+    - systemd_resolved restart
+    - systemd_resolved flush-caches
+
+- name: restore the resolver file
+  when: systemd_resolved_resolv_conf_mode != 'unmanaged'
+  block:
+    - name: inspect the resolver-file backup
+      ansible.builtin.stat:
+        path: "{{ _systemd_resolved_backup_file }}"
+      register: _systemd_resolved_backup
+
+    - name: remove the current resolver path before restoring the backup
+      when: _systemd_resolved_backup.stat.exists
+      ansible.builtin.file:
+        path: "{{ systemd_resolved_resolv_conf_path }}"
+        state: absent
+
+    - name: restore the pre-role resolver file
+      when: _systemd_resolved_backup.stat.exists
+      ansible.builtin.copy:
+        src: "{{ _systemd_resolved_backup_file }}"
+        dest: "{{ systemd_resolved_resolv_conf_path }}"
+        remote_src: true
+        force: true
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - systemd_resolved flush-caches
+
+    - name: inspect the current resolver path without a backup
+      when: not _systemd_resolved_backup.stat.exists
+      ansible.builtin.stat:
+        path: "{{ systemd_resolved_resolv_conf_path }}"
+      register: _systemd_resolved_current
+
+    - name: remove a regular resolver file before restoring the stub link
+      when:
+        - not _systemd_resolved_backup.stat.exists
+        - _systemd_resolved_current.stat.exists
+        - not _systemd_resolved_current.stat.islnk
+      ansible.builtin.file:
+        path: "{{ systemd_resolved_resolv_conf_path }}"
+        state: absent
+
+    - name: restore the distro stub symlink
+      when: not _systemd_resolved_backup.stat.exists
+      ansible.builtin.file:
+        src: "{{ _systemd_resolved_stub_resolv_conf }}"
+        dest: "{{ systemd_resolved_resolv_conf_path }}"
+        force: true
+        state: link
+      notify:
+        - systemd_resolved flush-caches

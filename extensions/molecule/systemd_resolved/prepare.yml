@@ -1,0 +1,60 @@
+---
+# systemd_resolved scenario - install/start resolved and create a regular
+# resolver file for the backup/restore path.  The container's real
+# /etc/resolv.conf is a bind mount, so the role manages a separate file under
+# /etc instead.
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml
+
+- name: prepare the systemd-resolved fixture
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: install systemd-resolved
+      ansible.builtin.package:
+        name:
+          - systemd-resolved
+        state: present
+
+    - name: enable and start systemd-resolved
+      ansible.builtin.systemd_service:
+        name: systemd-resolved.service
+        state: started
+        enabled: true
+
+    - name: remove leftover resolver artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/molecule-resolv.conf
+        - /var/lib/ansible/ak1ra_lab/network/systemd_resolved
+        - /tmp/molecule-systemd-resolved
+
+    - name: create a pre-role regular resolver file
+      ansible.builtin.copy:
+        content: |
+          nameserver 192.0.2.53
+          search molecule.test
+        dest: /etc/molecule-resolv.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: assert the resolver path is not a bind mount
+      ansible.builtin.command:
+        argv:
+          - findmnt
+          - -n
+          - /etc/molecule-resolv.conf
+      register: _systemd_resolved_findmnt
+      changed_when: false
+      failed_when: false
+
+    - name: fail when the resolver path is a mount point
+      ansible.builtin.assert:
+        that:
+          - _systemd_resolved_findmnt.rc != 0
+        fail_msg: "/etc/molecule-resolv.conf must not be a mount point"
+        quiet: true

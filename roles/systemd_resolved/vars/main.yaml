@@ -1,0 +1,20 @@
+---
+# ak1ra_lab.network.systemd_resolved - internal constants.
+
+systemd_resolved_state_available:
+  - present
+  - absent
+systemd_resolved_resolv_conf_mode_available:
+  - stub
+  - uplink
+  - static
+  - unmanaged
+
+_systemd_resolved_dropin_dir: /etc/systemd/resolved.conf.d
+_systemd_resolved_dropin_file: /etc/systemd/resolved.conf.d/90-ansible-resolved.conf
+_systemd_resolved_backup_file: >-
+  {{ systemd_resolved_backup_dir ~ '/' ~ systemd_resolved_resolv_conf_path[1:] }}
+_systemd_resolved_stub_resolv_conf: /run/systemd/resolve/stub-resolv.conf
+_systemd_resolved_uplink_resolv_conf: /run/systemd/resolve/resolv.conf
+_systemd_resolved_static_resolv_conf: /usr/lib/systemd/resolv.conf
+_systemd_resolved_service: systemd-resolved.service

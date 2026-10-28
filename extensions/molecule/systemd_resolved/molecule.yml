@@ -1,0 +1,5 @@
+---
+# systemd_resolved scenario - exercises the global DNS drop-in and the
+# resolv.conf symlink handling against a real systemd-resolved service.  The
+# container's /etc/resolv.conf is a bind mount, so the scenario points the
+# role at a temporary resolver path instead.

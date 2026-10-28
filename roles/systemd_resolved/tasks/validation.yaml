@@ -1,0 +1,91 @@
+---
+# tasks/validation.yaml - fail fast on contract violations before touching
+# the host.
+
+- name: validate systemd_resolved_state
+  ansible.builtin.assert:
+    that:
+      - systemd_resolved_state in systemd_resolved_state_available
+    fail_msg: >-
+      systemd_resolved_state must be one of
+      {{ systemd_resolved_state_available }}
+      (got: {{ systemd_resolved_state }})
+    quiet: true
+
+- name: validate systemd_resolved_resolv_conf_mode
+  ansible.builtin.assert:
+    that:
+      - systemd_resolved_resolv_conf_mode in systemd_resolved_resolv_conf_mode_available
+    fail_msg: >-
+      systemd_resolved_resolv_conf_mode must be one of
+      {{ systemd_resolved_resolv_conf_mode_available }}
+      (got: {{ systemd_resolved_resolv_conf_mode }})
+    quiet: true
+
+- name: validate systemd_resolved paths
+  ansible.builtin.assert:
+    that:
+      - systemd_resolved_resolv_conf_path is ansible.builtin.match('^/')
+      - systemd_resolved_backup_dir is ansible.builtin.match('^/')
+    fail_msg: >-
+      systemd_resolved_resolv_conf_path and systemd_resolved_backup_dir
+      must be absolute paths
+    quiet: true
+
+- name: validate systemd_resolved_nameservers
+  ansible.builtin.assert:
+    that:
+      - systemd_resolved_nameservers | ansible.builtin.type_debug == 'list'
+      - item is string
+      - (item.split('#')[0] | ansible.utils.ipaddr) is ansible.builtin.truthy
+      - >-
+        not systemd_resolved_dns_over_tls
+        or (item is ansible.builtin.search('#.+$'))
+    fail_msg: >-
+      systemd_resolved_nameservers entries must be IP addresses, optionally
+      with #server-name; strict DNS over TLS requires the #server-name
+    quiet: true
+  loop: "{{ systemd_resolved_nameservers }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: validate systemd_resolved_fallback_nameservers
+  ansible.builtin.assert:
+    that:
+      - systemd_resolved_fallback_nameservers | ansible.builtin.type_debug == 'list'
+      - item is string
+      - (item.split('#')[0] | ansible.utils.ipaddr) is ansible.builtin.truthy
+      - >-
+        not systemd_resolved_dns_over_tls
+        or (item is ansible.builtin.search('#.+$'))
+    fail_msg: >-
+      systemd_resolved_fallback_nameservers entries must be IP addresses,
+      optionally with #server-name; strict DNS over TLS requires the
+      #server-name
+    quiet: true
+  loop: "{{ systemd_resolved_fallback_nameservers }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: validate systemd_resolved_domains
+  ansible.builtin.assert:
+    that:
+      - systemd_resolved_domains | ansible.builtin.type_debug == 'list'
+      - item is string
+      - item | length > 0
+    fail_msg: "systemd_resolved_domains must be a list of non-empty strings"
+    quiet: true
+  loop: "{{ systemd_resolved_domains }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: validate systemd_resolved boolean switches
+  ansible.builtin.assert:
+    that:
+      - systemd_resolved_dns_over_tls | ansible.builtin.type_debug == 'bool'
+      - systemd_resolved_stub_listener | ansible.builtin.type_debug == 'bool'
+      - systemd_resolved_backup_resolv_conf | ansible.builtin.type_debug == 'bool'
+    fail_msg: >-
+      systemd_resolved_dns_over_tls, systemd_resolved_stub_listener and
+      systemd_resolved_backup_resolv_conf must be YAML booleans
+    quiet: true

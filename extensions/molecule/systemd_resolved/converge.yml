@@ -1,0 +1,23 @@
+---
+# systemd_resolved scenario - configure global DNS and the stub symlink at a
+# separate file under /etc (the container's real /etc/resolv.conf is a bind
+# mount, but /etc/molecule-resolv.conf is a normal file).
+
+- name: apply the systemd-resolved configuration
+  hosts: all
+  gather_facts: true
+  vars:
+    systemd_resolved_nameservers:
+      - 1.1.1.1#cloudflare-dns.com
+      - 8.8.4.4#dns.google
+    systemd_resolved_fallback_nameservers:
+      - 9.9.9.9#dns.quad9.net
+    systemd_resolved_domains:
+      - "~."
+    systemd_resolved_dns_over_tls: false
+    systemd_resolved_resolv_conf_mode: stub
+    systemd_resolved_resolv_conf_path: /etc/molecule-resolv.conf
+  tasks:
+    - name: apply the systemd_resolved role
+      ansible.builtin.import_role:
+        name: ak1ra_lab.network.systemd_resolved

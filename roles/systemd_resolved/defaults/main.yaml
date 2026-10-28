@@ -1,0 +1,58 @@
+---
+# ak1ra_lab.network.systemd_resolved - public variable contract
+#
+# Manages systemd-resolved as the host resolver: the global DNS drop-in, the
+# optional fallback servers, DoT, the search/routing domains and the
+# /etc/resolv.conf symlink mode.  It deliberately has no static-file mode:
+# hosts that need a plain /etc/resolv.conf without systemd-resolved are
+# served by ak1ra_lab.network.tproxy or ak1ra_lab.network.mihomo_client.
+
+# Declarative state:
+#   present - install/configure systemd-resolved and its resolv.conf link
+#   absent  - remove the role drop-in and restore the distro stub symlink (or
+#             the pre-role backup when one exists)
+systemd_resolved_state: present
+
+# Global DNS servers.  Each entry is an IP address, optionally followed by
+# #server-name for DNS over TLS certificate validation, e.g.
+#   1.1.1.1#cloudflare-dns.com
+# Empty removes the role's global DNS drop-in and leaves the distro DNS
+# configuration untouched.
+systemd_resolved_nameservers: []
+
+# FallbackDNS entries (same IP#server-name syntax).  Empty omits the key.
+systemd_resolved_fallback_nameservers: []
+
+# Domains= entries.  The default ~. makes the global servers the default
+# route for all queries unless a more specific per-link domain matches.
+systemd_resolved_domains:
+  - "~."
+
+# DNSOverTLS=yes when true.  Strict DoT requires a #server-name on every
+# nameserver; the role validates that before rendering.
+systemd_resolved_dns_over_tls: false
+
+# /etc/resolv.conf mode:
+#   stub      -> /run/systemd/resolve/stub-resolv.conf
+#   uplink    -> /run/systemd/resolve/resolv.conf
+#   static    -> /usr/lib/systemd/resolv.conf
+#   unmanaged -> leave the file alone (another role or the operator owns it)
+systemd_resolved_resolv_conf_mode: stub
+
+# DNSStubListener= value in the drop-in.  true keeps 127.0.0.53:53 available.
+systemd_resolved_stub_listener: true
+
+# Path managed by the role.  Normally /etc/resolv.conf; the variable exists so
+# tests (and unusual chroots) can point the file handling at another path.
+systemd_resolved_resolv_conf_path: /etc/resolv.conf
+
+# Role-owned backup root.  The backup mirrors the absolute resolver path
+# below this directory, for example:
+#   /var/lib/ansible/ak1ra_lab/network/systemd_resolved/etc/resolv.conf
+# The path is fixed (first backup wins); it is a rollback snapshot, not a
+# timestamped backup history.
+systemd_resolved_backup_dir: /var/lib/ansible/ak1ra_lab/network/systemd_resolved
+
+# Keep a backup before replacing a regular resolver file.  A symlink is
+# replaced in place and does not need a backup.
+systemd_resolved_backup_resolv_conf: true

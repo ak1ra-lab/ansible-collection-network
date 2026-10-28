@@ -1,0 +1,17 @@
+---
+# systemd_resolved scenario - remove the drop-in and restore the temporary
+# resolver path.  Runs before prepare on every lifecycle, so it must tolerate
+# a fresh host.
+
+- name: "tear down the systemd-resolved configuration (systemd_resolved_state: absent)"
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true
+  vars:
+    systemd_resolved_state: absent
+    systemd_resolved_resolv_conf_mode: stub
+    systemd_resolved_resolv_conf_path: /etc/molecule-resolv.conf
+  tasks:
+    - name: apply the systemd_resolved teardown
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.systemd_resolved

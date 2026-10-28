@@ -1,0 +1,104 @@
+---
+# tasks/present.yaml - configure systemd-resolved and its resolv.conf link.
+
+- name: ensure systemd-resolved is installed
+  ansible.builtin.package:
+    name:
+      - systemd-resolved
+    state: present
+
+- name: ensure the resolved drop-in directory exists
+  when: systemd_resolved_nameservers | length > 0
+  ansible.builtin.file:
+    path: "{{ _systemd_resolved_dropin_dir }}"
+    owner: root
+    group: root
+    mode: "0755"
+    state: directory
+
+- name: manage the global DNS drop-in
+  block:
+    - name: render the global DNS drop-in
+      when: systemd_resolved_nameservers | length > 0
+      ansible.builtin.template:
+        src: etc/systemd/resolved.conf.d/90-ansible-resolved.conf.j2
+        dest: "{{ _systemd_resolved_dropin_file }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - systemd_resolved restart
+        - systemd_resolved flush-caches
+
+    - name: remove the global DNS drop-in
+      when: systemd_resolved_nameservers | length == 0
+      ansible.builtin.file:
+        path: "{{ _systemd_resolved_dropin_file }}"
+        state: absent
+      notify:
+        - systemd_resolved restart
+        - systemd_resolved flush-caches
+
+- name: manage the resolver file
+  when: systemd_resolved_resolv_conf_mode != 'unmanaged'
+  block:
+    - name: inspect the resolver file
+      ansible.builtin.stat:
+        path: "{{ systemd_resolved_resolv_conf_path }}"
+      register: _systemd_resolved_resolv_conf
+
+    - name: ensure the resolver backup directory exists
+      when:
+        - systemd_resolved_backup_resolv_conf
+        - _systemd_resolved_resolv_conf.stat.exists
+        - not _systemd_resolved_resolv_conf.stat.islnk
+      ansible.builtin.file:
+        path: "{{ _systemd_resolved_backup_file | dirname }}"
+        owner: root
+        group: root
+        mode: "0700"
+        state: directory
+
+    - name: back up a regular resolver file before replacing it
+      when:
+        - systemd_resolved_backup_resolv_conf
+        - _systemd_resolved_resolv_conf.stat.exists
+        - not _systemd_resolved_resolv_conf.stat.islnk
+      ansible.builtin.copy:
+        src: "{{ systemd_resolved_resolv_conf_path }}"
+        dest: "{{ _systemd_resolved_backup_file }}"
+        remote_src: true
+        force: false
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: remove a regular resolver file before linking
+      when:
+        - _systemd_resolved_resolv_conf.stat.exists
+        - not _systemd_resolved_resolv_conf.stat.islnk
+      ansible.builtin.file:
+        path: "{{ systemd_resolved_resolv_conf_path }}"
+        state: absent
+
+    - name: link the resolver file to the selected systemd-resolved view
+      vars:
+        _systemd_resolved_resolv_conf_target: >-
+          {{ _systemd_resolved_stub_resolv_conf
+             if systemd_resolved_resolv_conf_mode == 'stub'
+             else (_systemd_resolved_uplink_resolv_conf
+                   if systemd_resolved_resolv_conf_mode == 'uplink'
+                   else _systemd_resolved_static_resolv_conf) }}
+      ansible.builtin.file:
+        src: "{{ _systemd_resolved_resolv_conf_target }}"
+        dest: "{{ systemd_resolved_resolv_conf_path }}"
+        force: true
+        state: link
+      notify:
+        - systemd_resolved flush-caches
+
+- name: ensure systemd-resolved is enabled and started
+  ansible.builtin.systemd_service:
+    name: "{{ _systemd_resolved_service }}"
+    enabled: true
+    state: started

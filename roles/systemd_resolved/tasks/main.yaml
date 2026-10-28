@@ -1,0 +1,14 @@
+---
+# tasks file for ak1ra_lab.network.systemd_resolved
+# Dispatcher: validation first, then branch on systemd_resolved_state.
+
+- name: validate contract variables
+  ansible.builtin.import_tasks: validation.yaml
+
+- name: "remove the role configuration (systemd_resolved_state: absent)"
+  when: systemd_resolved_state == 'absent'
+  ansible.builtin.import_tasks: reset.yaml
+
+- name: "configure systemd-resolved (systemd_resolved_state: present)"
+  when: systemd_resolved_state == 'present'
+  ansible.builtin.import_tasks: present.yaml

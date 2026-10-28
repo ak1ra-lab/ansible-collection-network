@@ -29,6 +29,27 @@ The format is based on Keep a Changelog, and this project does not currently gua
   without one).  IPv4-only and fail-closed on an existing IPv6 default
   route/global address unless `netplan_static_allow_ipv6_loss: true`.
   Advanced netplan features use `netplan_static_config_template`.
+- `ak1ra_lab.network.systemd_resolved`: manage systemd-resolved as the host
+  resolver - global `DNS=`, `FallbackDNS=`, `Domains=`, `DNSOverTLS=`,
+  `DNSStubListener=` and the `/etc/resolv.conf` `stub`/`uplink`/`static`/
+  `unmanaged` mode, with a backup/restore path for a pre-role regular
+  resolver file.  No static-file mode: `tproxy` and `mihomo_client` keep
+  their own static resolver files, and a host must have exactly one
+  `/etc/resolv.conf` owner.
+- Unified rollback backup convention for the cloud-image roles:
+  `/var/lib/ansible/<namespace>/<collection>/<role>/<absolute-path-without-leading-slash>`,
+  with `netplan_static` writing
+  `/var/lib/ansible/ak1ra_lab/network/netplan_static/etc/netplan/50-cloud-init.yaml`
+  and `systemd_resolved` writing
+  `/var/lib/ansible/ak1ra_lab/network/systemd_resolved/etc/resolv.conf`.  The
+  path is fixed (first backup wins), not timestamped; `ansible.builtin.copy`
+  `backup: true` is not used because it writes next to the destination and
+  offers no backup directory.
+- Playbook entry points `ak1ra_lab.network.cloud_init`,
+  `ak1ra_lab.network.netplan_static` and
+  `ak1ra_lab.network.systemd_resolved`; the roles are independent and
+  compose in a site playbook (cloud_init -> netplan_static ->
+  systemd_resolved) for a cloud-image network takeover.
 - Filter plugins for `netplan_static`: `netplan_static_interfaces`
   normalizes Ansible interface facts into the minimal address/MAC model and
   validates IPv4 CIDR overrides; `netplan_conflicts` classifies foreign
@@ -38,6 +59,11 @@ The format is based on Keep a Changelog, and this project does not currently gua
   later key overrides, different IDs matching the same device, or a
   same-named `/run/netplan` file shadowing the role file.  Unit tests cover
   the normalization, merge-order and conflict paths.
+- Molecule scenarios `cloud_init`, `netplan_static` and `systemd_resolved`,
+  sharing the existing containers.  `netplan_static` runs with `apply:
+  false` and validates the rendered file with `netplan generate`; the real
+  network change and the cloud-init handback/reboot flow remain VM-level
+  checks.
 - `ak1ra_lab.network.mihomo_install`: shared mihomo binary installer - the
   official **statically linked** `.gz` archive from the MetaCubeX/mihomo
   GitHub releases, resolved with `ak1ra_lab.general.github_releases_info`
