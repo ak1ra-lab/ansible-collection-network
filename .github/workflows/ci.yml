@@ -67,6 +67,11 @@ jobs:
           uv run ruff check plugins/ tests/
           uv run ruff format --check plugins/ tests/
           uv run ty check plugins/ tests/
+      - name: Build the documentation site
+        env:
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
+          NO_MKDOCS_2_WARNING: "1"
+        run: uv run --group docs mkdocs build --strict
 
   unit:
     name: Unit tests

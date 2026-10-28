@@ -1,0 +1,76 @@
+---
+# Build the MkDocs site and publish it to GitHub Pages.
+#
+# The docs plugin reads the collection through ansible-doc, so the workflow
+# installs the collection under test into the project-local collections path
+# before building. Role READMEs are included through Markdown snippets, which
+# is why changes under roles/**/README.md trigger a rebuild.
+name: Docs
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "docs/**"
+      - "plugins/**"
+      - "roles/**/README.md"
+      - "CONTRIBUTING.md"
+      - "CHANGELOG.md"
+      - "README.md"
+      - "mkdocs.yaml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "galaxy.yml"
+      - ".github/workflows/docs.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: docs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@eb1897b8dc4b5d5bfe39a428a8f2304605e0983c # v7.0.0
+      - name: Install docs dependencies
+        run: uv sync --locked --group docs
+      - name: Install the collection under test
+        run: |
+          mkdir -p .ansible/collections
+          uv run ansible-galaxy collection install \
+            --force --collections-path .ansible/collections .
+      - name: Build the documentation site
+        env:
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
+          NO_MKDOCS_2_WARNING: "1"
+        run: uv run mkdocs build --strict
+      - name: Upload the Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: site
+
+  deploy:
+    name: Deploy
+    needs: [build]
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
