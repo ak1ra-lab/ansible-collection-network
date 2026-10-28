@@ -19,6 +19,43 @@ from typing import Any
 import yaml
 from yaml.representer import SafeRepresenter
 
+DOCUMENTATION = r"""
+---
+name: to_pretty_yaml
+short_description: Render YAML in the hand-written file style
+description:
+  - Dumps a YAML-serializable structure with the pure-Python PyYAML emitter.
+  - Unlike C(ansible.builtin.to_nice_yaml), astral-plane characters such as
+    emoji are emitted literally instead of being escaped.
+  - Block sequences are indented under their mapping key, mapping order is
+    preserved, and line wrapping is disabled.
+options:
+  data:
+    description: The YAML-serializable structure to render.
+    type: raw
+    required: true
+  indent:
+    description: Block indentation width.
+    type: int
+    default: 2
+author:
+  - ak1ra
+"""
+
+EXAMPLES = r"""
+- name: Render a provider mapping like the hand-written profile files
+  ansible.builtin.set_fact:
+    rendered_provider: >-
+      {{ provider_mapping | ak1ra_lab.network.to_pretty_yaml }}
+"""
+
+RETURN = r"""
+_raw:
+  description: The rendered YAML document, with a trailing newline.
+  type: str
+  returned: always
+"""
+
 
 class _IndentedDumper(yaml.SafeDumper):
     """PyYAML dumper that indents block sequences under their mapping key.

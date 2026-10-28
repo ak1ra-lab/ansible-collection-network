@@ -28,6 +28,60 @@ from typing import Any, NoReturn
 
 from ansible.errors import AnsibleFilterError
 
+DOCUMENTATION = r"""
+---
+name: mihomo_providers
+short_description: Normalize mihomo providers and self-hosted nodes
+description:
+  - This file provides two filter plugins used by the mihomo client profile.
+  - C(mihomo_proxy_providers) normalizes the C(proxy-providers) mapping. It
+    adds the conventional cache path to HTTP providers that do not set one,
+    and appends the reserved self-hosted file provider last.
+  - C(mihomo_selfhost_proxies) validates the self-hosted node list against
+    the naming contract used by the profile's region groups. It rejects
+    missing or duplicate names, nodes that do not carry the self-hosted tag,
+    and nodes that match no configured region regex.
+options:
+  config:
+    description:
+      - Filter input mapping.
+      - For C(mihomo_proxy_providers), the mapping contains C(providers),
+        optional C(provider_root), and optional C(selfhost_provider).
+      - For C(mihomo_selfhost_proxies), the mapping contains C(proxies),
+        C(selfhost_pattern), and optional C(regions).
+    type: dict
+    required: true
+author:
+  - ak1ra
+"""
+
+EXAMPLES = r"""
+- name: Normalize the subscription providers and append the self-hosted file
+  ansible.builtin.set_fact:
+    proxy_providers: >-
+      {{ {'providers': mihomo_client_proxy_providers,
+          'provider_root': '/etc/mihomo/providers',
+          'selfhost_provider': 'selfhost'}
+         | ak1ra_lab.network.mihomo_proxy_providers }}
+
+- name: Validate the self-hosted nodes before rendering the provider file
+  ansible.builtin.set_fact:
+    selfhost_provider: >-
+      {{ {'proxies': mihomo_client_selfhost_proxies,
+          'selfhost_pattern': 'selfhost|自建',
+          'regions': profile_regions}
+         | ak1ra_lab.network.mihomo_selfhost_proxies }}
+"""
+
+RETURN = r"""
+_raw:
+  description:
+    - The normalized provider mapping for C(mihomo_proxy_providers), or a
+      mapping with a C(proxies) list for C(mihomo_selfhost_proxies).
+  type: dict
+  returned: always
+"""
+
 
 def _fail(message: str) -> NoReturn:
     raise AnsibleFilterError(f"mihomo_providers: {message}")

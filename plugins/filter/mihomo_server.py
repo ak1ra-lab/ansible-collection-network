@@ -30,6 +30,56 @@ from typing import Any, NoReturn
 
 from ansible.errors import AnsibleFilterError
 
+DOCUMENTATION = r"""
+---
+name: mihomo_server
+short_description: Build mihomo server listeners and client nodes
+description:
+  - This file provides two filter plugins used by the mihomo server role.
+  - C(mihomo_server_config) validates the role's server contract and returns
+    the complete mihomo configuration with the per-protocol C(listeners)
+    entries.
+  - C(mihomo_server_client_proxies) returns the clash-format client nodes for
+    the same server contract, named C(<prefix>-<REGION>-<host>[-<user>]-<proto>)
+    so the mihomo client region groups pick them up.
+  - The full input contract, including listener, TLS, REALITY, JLS, and
+    padding options, is documented in C(roles/mihomo_server/README.md).
+options:
+  config:
+    description:
+      - Server mapping assembled by the role (and, for the client filter,
+        extended with C(hostname), C(region), and C(client_node_prefix)).
+    type: dict
+    required: true
+author:
+  - ak1ra
+"""
+
+EXAMPLES = r"""
+- name: Render the server configuration
+  ansible.builtin.set_fact:
+    mihomo_server_config_rendered: >-
+      {{ mihomo_server_spec | ak1ra_lab.network.mihomo_server_config }}
+
+- name: Render the clash-format client nodes
+  ansible.builtin.set_fact:
+    mihomo_server_client_nodes: >-
+      {{ mihomo_server_spec
+         | combine({'hostname': mihomo_server_hostname,
+                    'region': mihomo_server_client_node_region,
+                    'client_node_prefix': mihomo_server_client_node_prefix})
+         | ak1ra_lab.network.mihomo_server_client_proxies }}
+"""
+
+RETURN = r"""
+_raw:
+  description:
+    - The server configuration mapping for C(mihomo_server_config), or a
+      mapping with a C(proxies) list for C(mihomo_server_client_proxies).
+  type: dict
+  returned: always
+"""
+
 # Fixed listener order and the per-protocol facts the generation branches on.
 # The fallback defaults below mirror roles/mihomo_server/defaults/main.yaml;
 # the role passes its full spec, so they only cover direct filter calls.

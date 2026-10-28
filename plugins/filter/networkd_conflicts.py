@@ -14,6 +14,57 @@ import base64
 import fnmatch
 import re
 
+DOCUMENTATION = r"""
+---
+name: networkd_conflicts
+short_description: Find systemd-networkd files that claim a managed device
+description:
+  - Reads C([Match]) C(Name=) patterns (shell-style globs with C(!) negation)
+    from candidate systemd-networkd files and reports the paths that can
+    match one of the managed devices.
+  - Files carrying the caller's marker comment are ignored, so the role never
+    reports its own files.
+  - The filter is used by the C(systemd_bridge) preflight check.
+options:
+  pairs:
+    description:
+      - List of C([path, base64_encoded_content]) pairs, usually the
+        C(ansible.builtin.slurp) results zipped with the file list.
+    type: list
+    elements: list
+    required: true
+  marker:
+    description: Marker comment identifying files owned by the role.
+    type: str
+    required: true
+  devices:
+    description: Device names the role manages.
+    type: list
+    elements: str
+    required: true
+author:
+  - ak1ra
+"""
+
+EXAMPLES = r"""
+- name: Find foreign networkd files that claim a managed interface
+  ansible.builtin.set_fact:
+    networkd_conflicts_found: >-
+      {{ (candidate_paths | ansible.builtin.zip(
+            slurp_results | map(attribute='content') | list))
+         | map('list') | list
+         | ak1ra_lab.network.networkd_conflicts(
+             systemd_bridge_file_marker, systemd_bridge_devices) }}
+"""
+
+RETURN = r"""
+_raw:
+  description: Paths of conflicting systemd-networkd files.
+  type: list
+  elements: str
+  returned: always
+"""
+
 _NAME_LINE = re.compile(r"^Name=(.+)$", re.MULTILINE)
 
 
