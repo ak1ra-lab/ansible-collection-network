@@ -16,7 +16,7 @@ tags:
 dependencies:
   ansible.utils: ">=6.0.0"
 repository: https://github.com/ak1ra-lab/ansible-collection-network
-documentation: https://github.com/ak1ra-lab/ansible-collection-network
+documentation: https://ak1ra-lab.github.io/ansible-collection-network/
 homepage: https://github.com/ak1ra-lab/ansible-collection-network
 issues: https://github.com/ak1ra-lab/ansible-collection-network/issues
 # https://setuptools.pypa.io/en/latest/userguide/miscellaneous.html

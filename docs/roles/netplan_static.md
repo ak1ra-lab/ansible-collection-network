@@ -1,0 +1,1 @@
+--8<-- "roles/netplan_static/README.md"

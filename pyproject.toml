@@ -23,7 +23,14 @@ test = [
     "ansible-core>=2.19.12",
     "pytest>=9.1.1",
 ]
+docs = [
+    "mkdocs>=1.6,<2",
+    "mkdocs-ansible-collection>=1.1.0",
+    "mkdocs-material>=9.7.7,<10",
+    "pymdown-extensions>=12.3,<13",
+]
 dev = [
     { include-group = "lint" },
     { include-group = "test" },
+    { include-group = "docs" },
 ]

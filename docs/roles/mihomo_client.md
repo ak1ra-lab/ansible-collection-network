@@ -1,0 +1,1 @@
+--8<-- "roles/mihomo_client/README.md"

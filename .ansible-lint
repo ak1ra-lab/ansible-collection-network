@@ -12,6 +12,8 @@ exclude_paths:
   # Agent plans/sessions are documentation and reference snippets, not
   # Ansible source.
   - .agents/
+  # MkDocs site configuration is documentation tooling, not Ansible source.
+  - mkdocs.yaml
   # Controller-local generated data (mihomo_server client nodes, profile
   # mirrors): not Ansible source.  The directory is gitignored (config/*),
   # but ansible-lint does not read .gitignore.

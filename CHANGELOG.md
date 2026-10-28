@@ -8,6 +8,12 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Added
 
+- Documentation site built with MkDocs Material: hand-written guides under
+  `docs/`, role pages included from the canonical `roles/<role>/README.md`
+  files, and plugin pages generated from the in-code `DOCUMENTATION` blocks.
+  The GitHub Pages workflow publishes the site from `master`; the contributor
+  workflow now lives in `CONTRIBUTING.md`, and `README.md` is a consumer
+  landing page.
 - `ak1ra_lab.network.cloud_init`: cloud-init drop-ins under
   `/etc/cloud/cloud.cfg.d` - network ownership (`network: {config:
   disabled}`, optional `disable_network_activation`), stable SSH host keys

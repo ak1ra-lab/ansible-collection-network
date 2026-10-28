@@ -11,7 +11,7 @@ default:
     @just --list --unsorted
 
 # Run all available recipes
-all: lint typecheck unit-test ansible-lint
+all: lint typecheck unit-test ansible-lint docs-build
 
 # Sync development dependencies (may update uv.lock if pyproject.toml changed)
 sync *ARGS:
@@ -58,6 +58,14 @@ molecule-test-one scenario: ansible-collection-install ansible-requirements-inst
 molecule-list:
     MOLECULE_GLOB='extensions/molecule/**/molecule.yml' molecule list
 
+# Serve the documentation site locally
+docs-serve: ansible-collection-install
+    ANSIBLE_COLLECTIONS_PATH="$PWD/.ansible/collections" NO_MKDOCS_2_WARNING=1 uv run mkdocs serve
+
+# Build the documentation site into site/
+docs-build: ansible-collection-install
+    ANSIBLE_COLLECTIONS_PATH="$PWD/.ansible/collections" NO_MKDOCS_2_WARNING=1 uv run mkdocs build --strict
+
 # Create the shared test containers used by every scenario
 molecule-create: ansible-collection-install ansible-requirements-install
     molecule create
@@ -68,6 +76,6 @@ molecule-destroy:
 
 # Remove build artifacts
 clean:
-    rm -rf .ansible/ .molecule/ .cache/ .pytest_cache/ .ruff_cache/
+    rm -rf .ansible/ .molecule/ .cache/ .pytest_cache/ .ruff_cache/ site/
     find plugins/ -type f -name "*.pyc" -delete
     find plugins/ -type d -name "__pycache__" -delete

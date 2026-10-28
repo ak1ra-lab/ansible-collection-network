@@ -1,0 +1,75 @@
+---
+site_name: ak1ra_lab.network
+site_description: Shared Ansible roles for network infrastructure
+site_url: https://ak1ra-lab.github.io/ansible-collection-network/
+site_author: ak1ra
+copyright: "(c) 2026 ak1ra"
+repo_url: https://github.com/ak1ra-lab/ansible-collection-network
+repo_name: ak1ra-lab/ansible-collection-network
+docs_dir: docs
+site_dir: site
+dev_addr: 0.0.0.0:8000
+
+nav:
+  - Home: index.md
+  - Guide:
+      - Getting Started: getting-started.md
+      - Architecture: architecture.md
+      - Playbooks: playbooks.md
+  - Roles:
+      - roles/index.md
+      - tproxy: roles/tproxy.md
+      - flow_offload: roles/flow_offload.md
+      - proxy_guard: roles/proxy_guard.md
+      - systemd_bridge: roles/systemd_bridge.md
+      - systemd_netns: roles/systemd_netns.md
+      - cloud_init: roles/cloud_init.md
+      - netplan_static: roles/netplan_static.md
+      - systemd_resolved: roles/systemd_resolved.md
+      - mihomo_install: roles/mihomo_install.md
+      - mihomo_client: roles/mihomo_client.md
+      - mihomo_server: roles/mihomo_server.md
+  - Plugins: ak1ra_lab.network
+  - Project:
+      - Contributing: contributing.md
+      - Changelog: changelog.md
+
+theme:
+  name: material
+  language: en
+  features:
+    - content.code.copy
+    - navigation.footer
+    - navigation.sections
+    - navigation.top
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path:
+        - .
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - ansible-collection:
+      collections:
+        - fqcn: ak1ra_lab.network
+
+watch:
+  - roles
+  - CONTRIBUTING.md
+  - CHANGELOG.md
+  - README.md
