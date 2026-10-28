@@ -1,0 +1,18 @@
+---
+# ak1ra_lab.network.cloud_init - collection playbook entry point.
+#
+# Manages cloud-init drop-ins under /etc/cloud/cloud.cfg.d.  The role defaults
+# are no-ops; set cloud_init_network: disabled (and optionally
+# cloud_init_network_activation: disabled) for a network takeover, and
+# cloud_init_ssh_deletekeys: false to keep the SSH host keys stable.
+#
+# The contract is the cloud_init_* variable namespace documented in
+# roles/cloud_init/README.md; override it via group_vars/host_vars or
+# extra-vars - role defaults apply otherwise.
+
+- name: cloud-init drop-ins
+  hosts: "{{ playbook_hosts | default('cloud-image-vms') }}"
+  become: true
+  gather_facts: true
+  roles:
+    - ak1ra_lab.network.cloud_init

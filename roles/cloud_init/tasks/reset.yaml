@@ -1,0 +1,15 @@
+---
+# tasks/reset.yaml - remove every drop-in this role manages.  The directory
+# and the cloud-init package are left in place.
+
+- name: remove the role-managed cloud-init drop-ins
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ _cloud_init_network_file }}"
+    - "{{ _cloud_init_ssh_file }}"
+    - "{{ _cloud_init_host_file }}"
+    - "{{ _cloud_init_extra_file }}"
+  loop_control:
+    label: "{{ item }}"

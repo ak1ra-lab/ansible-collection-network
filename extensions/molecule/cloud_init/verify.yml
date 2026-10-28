@@ -1,0 +1,98 @@
+---
+# cloud_init scenario - assert the drop-in content and permissions an
+# operator observes after the converge.
+
+- name: verify the cloud-init drop-ins
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: read the managed cloud-init drop-ins
+      ansible.builtin.slurp:
+        src: "{{ item }}"
+      loop:
+        - /etc/cloud/cloud.cfg.d/99-ansible-network.cfg
+        - /etc/cloud/cloud.cfg.d/99-ansible-ssh.cfg
+        - /etc/cloud/cloud.cfg.d/99-ansible-host.cfg
+        - /etc/cloud/cloud.cfg.d/99-ansible-extra.cfg
+      register: _cloud_init_dropins
+      loop_control:
+        label: "{{ item }}"
+
+    - name: decode the drop-in content
+      ansible.builtin.set_fact:
+        _cloud_init_dropin_text: >-
+          {{ dict(_cloud_init_dropins.results
+                  | map(attribute='item')
+                  | zip(_cloud_init_dropins.results
+                        | map(attribute='content')
+                        | map('ansible.builtin.b64decode'))) }}
+
+    - name: assert the network drop-in disables both layers
+      ansible.builtin.assert:
+        that:
+          - >-
+            _cloud_init_dropin_text['/etc/cloud/cloud.cfg.d/99-ansible-network.cfg']
+            is ansible.builtin.search('network: \{config: disabled\}')
+          - >-
+            _cloud_init_dropin_text['/etc/cloud/cloud.cfg.d/99-ansible-network.cfg']
+            is ansible.builtin.search('disable_network_activation: true')
+        fail_msg: "the network drop-in must disable network config and activation"
+        quiet: true
+
+    - name: assert the SSH drop-in keeps the host keys
+      ansible.builtin.assert:
+        that:
+          - >-
+            _cloud_init_dropin_text['/etc/cloud/cloud.cfg.d/99-ansible-ssh.cfg']
+            is ansible.builtin.search('ssh_deletekeys: false')
+        fail_msg: "the SSH drop-in must set ssh_deletekeys: false"
+        quiet: true
+
+    - name: assert the host drop-in preserves hosts and hostname
+      ansible.builtin.assert:
+        that:
+          - >-
+            _cloud_init_dropin_text['/etc/cloud/cloud.cfg.d/99-ansible-host.cfg']
+            is ansible.builtin.search('manage_etc_hosts: false')
+          - >-
+            _cloud_init_dropin_text['/etc/cloud/cloud.cfg.d/99-ansible-host.cfg']
+            is ansible.builtin.search('preserve_hostname: true')
+        fail_msg: "the host drop-in must preserve /etc/hosts and the hostname"
+        quiet: true
+
+    - name: parse the extra drop-in
+      ansible.builtin.set_fact:
+        _cloud_init_extra: >-
+          {{ _cloud_init_dropin_text['/etc/cloud/cloud.cfg.d/99-ansible-extra.cfg']
+             | ansible.builtin.from_yaml }}
+
+    - name: assert the extra drop-in carries the raw configuration
+      ansible.builtin.assert:
+        that:
+          - _cloud_init_extra['phone_home']['url'] == 'http://telemetry.example/instance'
+        fail_msg: "the extra drop-in must render cloud_init_extra_config"
+        quiet: true
+
+    - name: collect the drop-in permissions
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/cloud/cloud.cfg.d/99-ansible-network.cfg
+        - /etc/cloud/cloud.cfg.d/99-ansible-ssh.cfg
+        - /etc/cloud/cloud.cfg.d/99-ansible-host.cfg
+        - /etc/cloud/cloud.cfg.d/99-ansible-extra.cfg
+      register: _cloud_init_dropin_stats
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert every drop-in is root-only
+      ansible.builtin.assert:
+        that:
+          - item.stat.mode == '0600'
+          - item.stat.pw_name == 'root'
+          - item.stat.gr_name == 'root'
+        fail_msg: "cloud-init drop-ins must be 0600 root:root"
+        quiet: true
+      loop: "{{ _cloud_init_dropin_stats.results }}"
+      loop_control:
+        label: "{{ item.item }}"

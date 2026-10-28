@@ -10,6 +10,7 @@ Shared Ansible roles for network infrastructure, published as the
 | `ak1ra_lab.network.tproxy` | Engine-agnostic TPROXY transparent proxy plumbing: nftables marking, policy routing (`ip rule` / `ip route`), sysctl. Any proxy engine with a TPROXY inbound (sing-box, mihomo, ...) plugs in via variables. |
 | `ak1ra_lab.network.flow_offload` | nftables flowtable offloading for forwarded traffic (opt-in). |
 | `ak1ra_lab.network.proxy_guard` | Per-client TCP abuse protection (throttle / auto-ban) for transparent-proxy gateways (opt-in). |
+| `ak1ra_lab.network.cloud_init` | cloud-init drop-ins under `/etc/cloud/cloud.cfg.d`: network ownership (`network: {config: disabled}`, optional `disable_network_activation`), stable SSH host keys (`ssh_deletekeys: false`), `/etc/hosts`/hostname preservation and a raw `cloud_init_extra_config` escape hatch. Defaults are no-ops. |
 | `ak1ra_lab.network.systemd_bridge` | Declarative host-level Linux bridges (one per dedicated physical interface) via systemd-networkd: `.netdev` + enslave `.network` files, NetworkManager unmanaged-devices drop-ins. Stable shared infrastructure (opt-in). |
 | `ak1ra_lab.network.systemd_netns` | Dedicated-segment egress isolation: bridged network namespaces for per-service egress over the shared host-level bridges of `systemd_bridge` - namespace veth legs with real segment addresses and an arbitrary per-service next-hop gateway (e.g. a TPROXY gateway when only the hooked service should be proxied). No host-side routing/NAT (opt-in). |
 | `ak1ra_lab.network.mihomo_install` | Shared mihomo binary installer: the official statically linked `.gz` archive from the MetaCubeX/mihomo GitHub releases (resolved with `ak1ra_lab.general.github_releases_info`: platform + amd64 microarchitecture asset selection, digest checksum) decompressed to `/usr/local/bin/mihomo`. Distribution-neutral on systemd-based Linux; no package manager, no service identity. Version policy `present` / `latest` / pinned. |
@@ -69,6 +70,7 @@ from a git worktree.
 
 | Playbook | Description |
 | --- | --- |
+| `ak1ra_lab.network.cloud_init` | Thin wrapper around the `cloud_init` role (root privileges, fact gathering); the `cloud_init_*` contract drives it. |
 | `ak1ra_lab.network.systemd_bridge` | Thin wrapper around the `systemd_bridge` role (root privileges, fact gathering); drive it entirely through the `systemd_bridge_*` variable contract. |
 | `ak1ra_lab.network.systemd_netns` | Entry point for the `systemd_netns` role: applies the host bridges declared for the run (`systemd_bridge_bridges`) first, then the namespace (root privileges, fact gathering); the `systemd_netns_*` contract drives the namespace. |
 | `ak1ra_lab.network.mihomo_install` | Thin wrapper around the `mihomo_install` role (binary only, root privileges, fact gathering); the `mihomo_install_*` contract drives it. |
@@ -76,6 +78,7 @@ from a git worktree.
 | `ak1ra_lab.network.mihomo_server` | Entry point for the `mihomo_server` role: applies `mihomo_install` first, optionally applies `ak1ra_lab.general.certbot` (`mihomo_server_tls_certbot_enabled`), then the server role (root privileges, fact gathering; the `mihomo_server_*` contract). |
 
 ```shell
+ansible-playbook ak1ra_lab.network.cloud_init -e playbook_hosts=cloud-image-vms
 ansible-playbook ak1ra_lab.network.systemd_bridge -e systemd_bridge_bridges='[{"name": "br_wan", "interface": "enp36s0"}]'
 ansible-playbook ak1ra_lab.network.systemd_netns -e systemd_netns_name=qbittorrent
 ansible-playbook ak1ra_lab.network.mihomo_client -e mihomo_install_version=latest

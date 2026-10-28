@@ -1,0 +1,100 @@
+---
+# tasks/present.yaml - apply the configured cloud-init drop-ins.
+
+- name: check whether cloud-init is installed
+  ansible.builtin.stat:
+    path: "{{ _cloud_init_config_file }}"
+  register: _cloud_init_installed
+
+- name: require cloud-init when configured
+  when:
+    - cloud_init_require_installed
+    - not _cloud_init_installed.stat.exists
+  ansible.builtin.fail:
+    msg: >-
+      cloud-init is not installed ({{ _cloud_init_config_file }} is missing).
+      Set cloud_init_require_installed: false only for controlled fixtures.
+
+- name: ensure the cloud-init drop-in directory exists
+  ansible.builtin.file:
+    path: "{{ _cloud_init_config_dir }}"
+    owner: root
+    group: root
+    mode: "0755"
+    state: directory
+
+- name: manage the cloud-init network drop-in
+  block:
+    - name: write the cloud-init network drop-in
+      when: >-
+        cloud_init_network == 'disabled'
+        or cloud_init_network_activation == 'disabled'
+      ansible.builtin.template:
+        src: etc/cloud/cloud.cfg.d/99-ansible-network.cfg.j2
+        dest: "{{ _cloud_init_network_file }}"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: remove the cloud-init network drop-in
+      when: >-
+        cloud_init_network == 'managed'
+        and cloud_init_network_activation == 'enabled'
+      ansible.builtin.file:
+        path: "{{ _cloud_init_network_file }}"
+        state: absent
+
+- name: manage the cloud-init SSH host-key drop-in
+  block:
+    - name: preserve the SSH host keys
+      when: not cloud_init_ssh_deletekeys
+      ansible.builtin.template:
+        src: etc/cloud/cloud.cfg.d/99-ansible-ssh.cfg.j2
+        dest: "{{ _cloud_init_ssh_file }}"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: restore cloud-init's default SSH key handling
+      when: cloud_init_ssh_deletekeys
+      ansible.builtin.file:
+        path: "{{ _cloud_init_ssh_file }}"
+        state: absent
+
+- name: manage the cloud-init host identity drop-in
+  block:
+    - name: write the cloud-init host identity drop-in
+      when: >-
+        not cloud_init_manage_etc_hosts
+        or cloud_init_preserve_hostname
+      ansible.builtin.template:
+        src: etc/cloud/cloud.cfg.d/99-ansible-host.cfg.j2
+        dest: "{{ _cloud_init_host_file }}"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: remove the cloud-init host identity drop-in
+      when: >-
+        cloud_init_manage_etc_hosts
+        and not cloud_init_preserve_hostname
+      ansible.builtin.file:
+        path: "{{ _cloud_init_host_file }}"
+        state: absent
+
+- name: manage the extra cloud-init drop-in
+  block:
+    - name: write the extra cloud-init drop-in
+      when: cloud_init_extra_config | length > 0
+      ansible.builtin.template:
+        src: etc/cloud/cloud.cfg.d/99-ansible-extra.cfg.j2
+        dest: "{{ _cloud_init_extra_file }}"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: remove the extra cloud-init drop-in
+      when: cloud_init_extra_config | length == 0
+      ansible.builtin.file:
+        path: "{{ _cloud_init_extra_file }}"
+        state: absent

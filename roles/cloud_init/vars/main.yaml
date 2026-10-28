@@ -1,0 +1,19 @@
+---
+# ak1ra_lab.network.cloud_init - internal constants.
+
+cloud_init_state_available:
+  - present
+  - absent
+cloud_init_network_available:
+  - managed
+  - disabled
+cloud_init_network_activation_available:
+  - enabled
+  - disabled
+
+_cloud_init_config_dir: /etc/cloud/cloud.cfg.d
+_cloud_init_config_file: /etc/cloud/cloud.cfg
+_cloud_init_network_file: "{{ _cloud_init_config_dir }}/99-ansible-network.cfg"
+_cloud_init_ssh_file: "{{ _cloud_init_config_dir }}/99-ansible-ssh.cfg"
+_cloud_init_host_file: "{{ _cloud_init_config_dir }}/99-ansible-host.cfg"
+_cloud_init_extra_file: "{{ _cloud_init_config_dir }}/99-ansible-extra.cfg"

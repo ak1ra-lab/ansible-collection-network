@@ -1,0 +1,14 @@
+---
+# tasks file for ak1ra_lab.network.cloud_init
+# Dispatcher: validation first, then branch on cloud_init_state.
+
+- name: validate contract variables
+  ansible.builtin.import_tasks: validation.yaml
+
+- name: "remove managed drop-ins (cloud_init_state: absent)"
+  when: cloud_init_state == 'absent'
+  ansible.builtin.import_tasks: reset.yaml
+
+- name: "apply cloud-init drop-ins (cloud_init_state: present)"
+  when: cloud_init_state == 'present'
+  ansible.builtin.import_tasks: present.yaml

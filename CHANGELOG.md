@@ -8,6 +8,13 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Added
 
+- `ak1ra_lab.network.cloud_init`: cloud-init drop-ins under
+  `/etc/cloud/cloud.cfg.d` - network ownership (`network: {config:
+  disabled}`, optional `disable_network_activation`), stable SSH host keys
+  (`ssh_deletekeys: false`), `/etc/hosts`/hostname preservation and a raw
+  `cloud_init_extra_config` escape hatch.  The defaults are no-ops, so the
+  role only changes cloud-init behavior when explicitly opted in.  `absent`
+  removes every role-managed drop-in.
 - `ak1ra_lab.network.mihomo_install`: shared mihomo binary installer - the
   official **statically linked** `.gz` archive from the MetaCubeX/mihomo
   GitHub releases, resolved with `ak1ra_lab.general.github_releases_info`

@@ -1,0 +1,50 @@
+---
+# ak1ra_lab.network.cloud_init - public variable contract
+#
+# Manages cloud-init drop-ins under /etc/cloud/cloud.cfg.d.  The defaults are
+# deliberately no-ops: applying the role without overrides leaves the
+# distribution's cloud-init behaviour untouched.  A cloud-image network
+# takeover sets cloud_init_network: disabled (and optionally
+# cloud_init_network_activation: disabled) so netplan_static can own the
+# network configuration.
+
+# Declarative state:
+#   present - apply the configured drop-ins
+#   absent  - remove every drop-in this role manages
+cloud_init_state: present
+
+# Network configuration ownership:
+#   managed  - remove the role's network drop-in; cloud-init keeps managing
+#              the network (the distribution default)
+#   disabled - write network: {config: disabled}; cloud-init no longer
+#              generates or applies network configuration
+cloud_init_network: managed
+
+# Datasource network activation:
+#   enabled  - leave cloud-init's network activation behaviour untouched
+#   disabled - write disable_network_activation: true; cloud-init will not
+#              bring up interfaces described by the datasource metadata.
+#              This is a second safety layer for a network takeover and is
+#              optional when cloud_init_network is already disabled.
+cloud_init_network_activation: enabled
+
+# cloud-init's ssh_deletekeys setting.  true is the upstream default and
+# regenerates /etc/ssh/ssh_host_* when the instance identity changes; false
+# keeps the host keys stable across cloud-init drive changes.
+cloud_init_ssh_deletekeys: true
+
+# cloud-init's manage_etc_hosts setting.  Set false to stop cloud-init from
+# rewriting /etc/hosts.
+cloud_init_manage_etc_hosts: true
+
+# cloud-init's preserve_hostname setting.  Set true to stop cloud-init from
+# changing the hostname from datasource metadata.
+cloud_init_preserve_hostname: false
+
+# Extra cloud-init configuration, rendered last (99-ansible-extra.cfg) so it
+# can override the typed settings above.  Keep secrets in Ansible Vault.
+cloud_init_extra_config: {}
+
+# Fail when cloud-init is not installed.  Set false only for controlled test
+# fixtures where the drop-in directory is populated without the package.
+cloud_init_require_installed: true

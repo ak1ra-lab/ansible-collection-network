@@ -1,0 +1,31 @@
+---
+# cloud_init scenario - assert the teardown removed every role-managed
+# drop-in.
+
+- name: verify the cloud-init teardown
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the drop-in state after teardown
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/cloud/cloud.cfg.d/99-ansible-network.cfg
+        - /etc/cloud/cloud.cfg.d/99-ansible-ssh.cfg
+        - /etc/cloud/cloud.cfg.d/99-ansible-host.cfg
+        - /etc/cloud/cloud.cfg.d/99-ansible-extra.cfg
+      register: _cloud_init_dropins_after
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert no role-managed drop-in is left behind
+      ansible.builtin.assert:
+        that:
+          - >-
+            _cloud_init_dropins_after.results
+            | selectattr('stat.exists') | list | length == 0
+        fail_msg: >-
+          leftover cloud-init drop-ins:
+          {{ _cloud_init_dropins_after.results
+             | selectattr('stat.exists') | map(attribute='item') | list }}
+        quiet: true

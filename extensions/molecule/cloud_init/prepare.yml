@@ -1,0 +1,28 @@
+---
+# cloud_init scenario - install the package whose drop-in directory the role
+# manages.
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml
+
+- name: prepare the cloud-init fixture
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: install cloud-init
+      ansible.builtin.package:
+        name:
+          - cloud-init
+        state: present
+
+    - name: assert the cloud-init configuration file exists
+      ansible.builtin.stat:
+        path: /etc/cloud/cloud.cfg
+      register: _cloud_init_config
+
+    - name: fail when cloud-init was not installed
+      ansible.builtin.assert:
+        that:
+          - _cloud_init_config.stat.exists
+        fail_msg: "cloud-init must be installed for the cloud_init scenario"
+        quiet: true

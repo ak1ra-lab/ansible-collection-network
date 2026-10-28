@@ -1,0 +1,14 @@
+---
+# cloud_init scenario - remove the role-managed drop-ins.  Runs before
+# prepare on every lifecycle, so it must tolerate a fresh host.
+
+- name: "tear down the cloud-init drop-ins (cloud_init_state: absent)"
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true
+  vars:
+    cloud_init_state: absent
+  tasks:
+    - name: apply the cloud_init teardown
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.cloud_init

@@ -1,0 +1,49 @@
+---
+# tasks/validation.yaml - fail fast on contract violations before touching
+# the host.
+
+- name: validate cloud_init_state
+  ansible.builtin.assert:
+    that:
+      - cloud_init_state in cloud_init_state_available
+    fail_msg: "cloud_init_state must be one of {{ cloud_init_state_available }} (got: {{ cloud_init_state }})"
+    quiet: true
+
+- name: validate cloud_init_network
+  ansible.builtin.assert:
+    that:
+      - cloud_init_network in cloud_init_network_available
+    fail_msg: >-
+      cloud_init_network must be one of {{ cloud_init_network_available }}
+      (got: {{ cloud_init_network }})
+    quiet: true
+
+- name: validate cloud_init_network_activation
+  ansible.builtin.assert:
+    that:
+      - cloud_init_network_activation in cloud_init_network_activation_available
+    fail_msg: >-
+      cloud_init_network_activation must be one of
+      {{ cloud_init_network_activation_available }}
+      (got: {{ cloud_init_network_activation }})
+    quiet: true
+
+- name: validate cloud_init boolean switches
+  ansible.builtin.assert:
+    that:
+      - cloud_init_ssh_deletekeys | ansible.builtin.type_debug == 'bool'
+      - cloud_init_manage_etc_hosts | ansible.builtin.type_debug == 'bool'
+      - cloud_init_preserve_hostname | ansible.builtin.type_debug == 'bool'
+      - cloud_init_require_installed | ansible.builtin.type_debug == 'bool'
+    fail_msg: >-
+      cloud_init_ssh_deletekeys, cloud_init_manage_etc_hosts,
+      cloud_init_preserve_hostname and cloud_init_require_installed must be
+      YAML booleans (true/false)
+    quiet: true
+
+- name: validate cloud_init_extra_config
+  ansible.builtin.assert:
+    that:
+      - cloud_init_extra_config | ansible.builtin.type_debug == 'dict'
+    fail_msg: "cloud_init_extra_config must be a mapping"
+    quiet: true

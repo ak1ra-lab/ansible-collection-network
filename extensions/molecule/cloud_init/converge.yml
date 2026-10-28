@@ -1,0 +1,20 @@
+---
+# cloud_init scenario - exercise every typed drop-in plus the raw escape
+# hatch.  The role is idempotent; the idempotence re-run uses the same vars.
+
+- name: apply the cloud-init drop-ins
+  hosts: all
+  gather_facts: true
+  vars:
+    cloud_init_network: disabled
+    cloud_init_network_activation: disabled
+    cloud_init_ssh_deletekeys: false
+    cloud_init_manage_etc_hosts: false
+    cloud_init_preserve_hostname: true
+    cloud_init_extra_config:
+      phone_home:
+        url: "http://telemetry.example/instance"
+  tasks:
+    - name: apply the cloud_init role
+      ansible.builtin.import_role:
+        name: ak1ra_lab.network.cloud_init
