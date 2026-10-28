@@ -1,0 +1,68 @@
+---
+# tasks/reset.yaml - hand the network configuration back to cloud-init.
+#
+# The backup is the pre-takeover 50-cloud-init.yaml content.  When it exists
+# it is restored before the role file is removed.  Without a backup the role
+# refuses to remove its only persistent configuration unless the operator
+# explicitly accepts that cloud-init will regenerate its file on the next
+# boot.
+
+- name: inspect the role-managed netplan file
+  ansible.builtin.stat:
+    path: "{{ netplan_static_config_file }}"
+  register: _netplan_static_role_file
+
+- name: inspect the cloud-init backup
+  ansible.builtin.stat:
+    path: "{{ _netplan_static_backup_file }}"
+  register: _netplan_static_backup
+
+- name: require a backup before removing the role file
+  when:
+    - netplan_static_takeover_cloud_init
+    - _netplan_static_role_file.stat.exists
+    - not _netplan_static_backup.stat.exists
+    - not netplan_static_allow_absent_without_backup
+  ansible.builtin.fail:
+    msg: >-
+      there is no cloud-init backup at {{ _netplan_static_backup_file }} and
+      {{ netplan_static_config_file }} still exists.  Restoring cloud-init
+      ownership would leave the host without a persistent network
+      configuration until the next boot.  Re-enable cloud-init and reboot,
+      or set netplan_static_allow_absent_without_backup: true explicitly.
+
+- name: warn when removing the role file without a backup
+  when:
+    - netplan_static_takeover_cloud_init
+    - _netplan_static_role_file.stat.exists
+    - not _netplan_static_backup.stat.exists
+    - netplan_static_allow_absent_without_backup
+  ansible.builtin.debug:
+    msg: >-
+      removing {{ netplan_static_config_file }} without a cloud-init backup;
+      make sure cloud-init network configuration is enabled and reboot to
+      regenerate {{ netplan_static_cloud_init_file }}.
+
+- name: restore the cloud-init netplan file from the backup
+  when:
+    - netplan_static_takeover_cloud_init
+    - _netplan_static_backup.stat.exists
+  ansible.builtin.copy:
+    src: "{{ _netplan_static_backup_file }}"
+    dest: "{{ netplan_static_cloud_init_file }}"
+    remote_src: true
+    force: true
+    owner: root
+    group: root
+    mode: "0600"
+  notify:
+    - netplan_static generate
+    - netplan_static apply
+
+- name: remove the role-managed netplan file
+  ansible.builtin.file:
+    path: "{{ netplan_static_config_file }}"
+    state: absent
+  notify:
+    - netplan_static generate
+    - netplan_static apply

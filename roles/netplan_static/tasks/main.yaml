@@ -1,0 +1,14 @@
+---
+# tasks file for ak1ra_lab.network.netplan_static
+# Dispatcher: validation first, then branch on netplan_static_state.
+
+- name: validate contract variables
+  ansible.builtin.import_tasks: validation.yaml
+
+- name: "restore cloud-init and remove the role file (netplan_static_state: absent)"
+  when: netplan_static_state == 'absent'
+  ansible.builtin.import_tasks: reset.yaml
+
+- name: "capture and apply the static netplan configuration (netplan_static_state: present)"
+  when: netplan_static_state == 'present'
+  ansible.builtin.import_tasks: present.yaml

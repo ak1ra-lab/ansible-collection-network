@@ -1,0 +1,56 @@
+---
+# netplan_static scenario - install netplan/cloud-init and create a synthetic
+# cloud-init netplan file for the takeover/backup path.
+
+- name: run the shared container preparation
+  import_playbook: ../shared/prepare.yml
+
+- name: prepare the netplan_static fixture
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: install netplan and cloud-init
+      ansible.builtin.package:
+        name:
+          - netplan.io
+          - cloud-init
+        state: present
+
+    - name: remove leftover role artifacts from an interrupted run
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/netplan/90-ansible-static.yaml
+        - /etc/netplan/10-mtu.yaml
+        - /var/lib/ansible/ak1ra_lab/network/netplan_static/etc/netplan/50-cloud-init.yaml
+
+    - name: create a complementary netplan file
+      ansible.builtin.copy:
+        content: |
+          # complementary split configuration (molecule)
+          network:
+            version: 2
+            renderer: networkd
+            ethernets:
+              {{ ansible_facts['default_ipv4']['interface'] }}:
+                mtu: 9000
+        dest: /etc/netplan/10-mtu.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: create the synthetic cloud-init netplan file
+      ansible.builtin.copy:
+        content: |
+          # synthetic cloud-init netplan file (molecule)
+          network:
+            version: 2
+            renderer: networkd
+            ethernets:
+              eth0:
+                dhcp4: true
+        dest: /etc/netplan/50-cloud-init.yaml
+        owner: root
+        group: root
+        mode: "0600"

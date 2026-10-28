@@ -1,0 +1,41 @@
+---
+# tasks/present.yaml - capture the live state and render the static file.
+
+- name: normalize the captured interface facts
+  ansible.builtin.import_tasks: facts.yaml
+
+- name: run the netplan preflight
+  ansible.builtin.import_tasks: preflight.yaml
+
+- name: render the static netplan configuration
+  ansible.builtin.template:
+    src: "{{ _netplan_static_config_template_resolved }}"
+    dest: "{{ netplan_static_config_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify:
+    - netplan_static generate
+    - netplan_static apply
+
+- name: remove the cloud-init netplan file after the takeover
+  when:
+    - netplan_static_takeover_cloud_init
+    - _netplan_static_cloud_init_stat.stat.exists
+  ansible.builtin.file:
+    path: "{{ netplan_static_cloud_init_file }}"
+    state: absent
+  notify:
+    - netplan_static generate
+    - netplan_static apply
+
+- name: warn when cloud-init keeps ownership of its netplan file
+  when:
+    - not netplan_static_takeover_cloud_init
+    - _netplan_static_cloud_init_stat.stat.exists
+  ansible.builtin.debug:
+    msg: >-
+      netplan_static_takeover_cloud_init is false; cloud-init may keep
+      rewriting {{ netplan_static_cloud_init_file }} on every boot.  The
+      90-ansible-static.yaml file wins on overlapping keys, but the two
+      configurations are still merged.

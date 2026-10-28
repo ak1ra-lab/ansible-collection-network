@@ -1,0 +1,37 @@
+---
+# netplan_static scenario - compose the cloud_init drop-in (the takeover
+# precondition) with the static netplan capture.  Address overrides exercise
+# the multi-address path without touching the container's live addresses.
+
+- name: apply the cloud-init network handover
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: apply the cloud_init role
+      ansible.builtin.import_role:
+        name: ak1ra_lab.network.cloud_init
+      vars:
+        cloud_init_network: disabled
+        cloud_init_ssh_deletekeys: false
+
+- name: apply the static netplan takeover
+  hosts: all
+  gather_facts: true
+  vars:
+    netplan_static_apply: false
+    netplan_static_nameservers:
+      - 1.1.1.1
+      - 8.8.8.8
+    netplan_static_allow_ipv6_loss: true
+  tasks:
+    - name: build the per-interface address override
+      ansible.builtin.set_fact:
+        _netplan_static_test_addresses: >-
+          {{ {ansible_facts['default_ipv4']['interface']:
+              ['192.0.2.10/24', '192.0.2.11/24']} }}
+
+    - name: apply the netplan_static role
+      ansible.builtin.import_role:
+        name: ak1ra_lab.network.netplan_static
+      vars:
+        netplan_static_addresses: "{{ _netplan_static_test_addresses }}"

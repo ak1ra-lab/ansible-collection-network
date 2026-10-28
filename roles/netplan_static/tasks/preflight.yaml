@@ -1,0 +1,178 @@
+---
+# tasks/preflight.yaml - package, ownership and conflict checks before the
+# role renders anything.
+
+- name: ensure netplan is installed
+  ansible.builtin.package:
+    name:
+      - netplan.io
+    state: present
+
+- name: ensure the netplan configuration directory exists
+  ansible.builtin.file:
+    path: /etc/netplan
+    owner: root
+    group: root
+    mode: "0700"
+    state: directory
+
+- name: inspect the cloud-init netplan file
+  ansible.builtin.stat:
+    path: "{{ netplan_static_cloud_init_file }}"
+  register: _netplan_static_cloud_init_stat
+
+- name: check whether cloud-init itself is installed
+  ansible.builtin.stat:
+    path: "{{ _netplan_static_cloud_init_config_file }}"
+  register: _netplan_static_cloud_init_installed
+
+- name: check that cloud-init network configuration is disabled
+  when:
+    - netplan_static_takeover_cloud_init
+    - netplan_static_require_cloud_init_disabled
+    - _netplan_static_cloud_init_installed.stat.exists
+  ansible.builtin.command:
+    argv:
+      - grep
+      - -REq
+      - "{{ _netplan_static_cloud_init_disabled_pattern }}"
+      - /etc/cloud/cloud.cfg.d
+  register: _netplan_static_cloud_init_disabled
+  changed_when: false
+  failed_when: false
+
+- name: require the cloud-init network disable drop-in before the takeover
+  when:
+    - netplan_static_takeover_cloud_init
+    - netplan_static_require_cloud_init_disabled
+    - _netplan_static_cloud_init_installed.stat.exists
+  ansible.builtin.assert:
+    that:
+      - _netplan_static_cloud_init_disabled.rc == 0
+    fail_msg: >-
+      cloud-init network configuration is still enabled; a removed
+      {{ netplan_static_cloud_init_file }} would be regenerated on the next
+      boot.  Apply ak1ra_lab.network.cloud_init with
+      cloud_init_network: disabled first, or set
+      netplan_static_require_cloud_init_disabled: false when cloud-init is
+      disabled through another mechanism.
+    quiet: true
+
+- name: inspect the netplan configuration directories
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /lib/netplan
+    - /usr/lib/netplan
+    - /etc/netplan
+    - /run/netplan
+  register: _netplan_static_netplan_dirs
+  loop_control:
+    label: "{{ item }}"
+
+- name: select the netplan directories present on the host
+  ansible.builtin.set_fact:
+    _netplan_static_scan_dirs: >-
+      {{ _netplan_static_netplan_dirs.results
+         | selectattr('stat.isdir', 'defined')
+         | selectattr('stat.isdir')
+         | map(attribute='item')
+         | list }}
+
+- name: find the other netplan configuration files
+  when: _netplan_static_scan_dirs | length > 0
+  ansible.builtin.find:
+    paths: "{{ _netplan_static_scan_dirs }}"
+    patterns: "*.yaml"
+    file_type: file
+    recurse: false
+  register: _netplan_static_netplan_find
+
+- name: select the files that may conflict with the managed interfaces
+  ansible.builtin.set_fact:
+    _netplan_static_conflict_candidates: >-
+      {{ _netplan_static_netplan_find.files | default([])
+         | map(attribute='path')
+         | reject('equalto', netplan_static_config_file)
+         | reject('equalto', netplan_static_cloud_init_file)
+         | list }}
+
+- name: read the candidate netplan files
+  ansible.builtin.slurp:
+    src: "{{ item }}"
+  loop: "{{ _netplan_static_conflict_candidates }}"
+  loop_control:
+    label: "{{ item }}"
+  register: _netplan_static_conflict_slurp
+
+- name: build the path/content pairs for the conflict filter
+  ansible.builtin.set_fact:
+    _netplan_static_conflict_pairs: >-
+      {{ _netplan_static_conflict_slurp.results
+         | map(attribute='item')
+         | zip(_netplan_static_conflict_slurp.results | map(attribute='content'))
+         | list }}
+
+- name: define the key paths this role owns
+  ansible.builtin.set_fact:
+    _netplan_static_managed_keys: >-
+      {{ ['match', 'set-name', 'dhcp4', 'dhcp6', 'accept-ra', 'addresses']
+         + (['routes', 'gateway4', 'gateway6']
+            if netplan_static_gateway | length > 0 else [])
+         + (['nameservers.addresses']
+            if netplan_static_nameservers | length > 0 else []) }}
+
+- name: classify foreign netplan configuration for the managed interfaces
+  ansible.builtin.set_fact:
+    _netplan_static_conflicts: >-
+      {{ _netplan_static_conflict_pairs
+         | ak1ra_lab.network.netplan_conflicts(
+             _netplan_static_interfaces | map(attribute='name') | list,
+             _netplan_static_interfaces | map(attribute='macaddress') | list,
+             _netplan_static_managed_keys,
+             netplan_static_config_file,
+             _netplan_static_file_marker,
+             netplan_static_conflict_check) }}
+
+- name: fail on hard netplan conflicts
+  when:
+    - netplan_static_conflict_check != 'none'
+    - _netplan_static_conflicts['hard'] | length > 0
+  ansible.builtin.fail:
+    msg: |
+      other netplan configuration would override the role-managed interface:
+      {{ _netplan_static_conflicts['hard'] | ansible.builtin.to_nice_yaml(indent=2) }}
+      Remove the conflicting keys/files, move them before
+      {{ netplan_static_config_file }}, or choose a different
+      netplan_static_conflict_check policy.
+
+- name: warn about netplan configuration shadowed by the role file
+  when:
+    - netplan_static_conflict_check != 'none'
+    - _netplan_static_conflicts['shadowed'] | length > 0
+  ansible.builtin.debug:
+    msg: |
+      netplan files set keys that the role file shadows (the role wins):
+      {{ _netplan_static_conflicts['shadowed'] | ansible.builtin.to_nice_yaml(indent=2) }}
+
+- name: ensure the backup directory exists
+  when: netplan_static_takeover_cloud_init
+  ansible.builtin.file:
+    path: "{{ _netplan_static_backup_file | dirname }}"
+    owner: root
+    group: root
+    mode: "0700"
+    state: directory
+
+- name: back up the cloud-init netplan file before the takeover
+  when:
+    - netplan_static_takeover_cloud_init
+    - _netplan_static_cloud_init_stat.stat.exists
+  ansible.builtin.copy:
+    src: "{{ netplan_static_cloud_init_file }}"
+    dest: "{{ _netplan_static_backup_file }}"
+    remote_src: true
+    force: false
+    owner: root
+    group: root
+    mode: "0600"

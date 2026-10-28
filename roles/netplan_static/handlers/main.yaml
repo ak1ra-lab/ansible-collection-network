@@ -1,0 +1,16 @@
+---
+# handlers file for ak1ra_lab.network.netplan_static
+- name: netplan_static generate
+  ansible.builtin.command:
+    argv:
+      - netplan
+      - generate
+  changed_when: true
+
+- name: netplan_static apply
+  when: netplan_static_apply
+  ansible.builtin.command:
+    argv:
+      - netplan
+      - apply
+  changed_when: true

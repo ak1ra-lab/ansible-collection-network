@@ -1,0 +1,27 @@
+---
+# Role metadata for ak1ra_lab.network.netplan_static
+
+galaxy_info:
+  author: ak1ra
+  description: Capture live IPv4 state into a static netplan file and take over from cloud-init
+  license: MIT
+  min_ansible_version: "2.18"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+        - jammy
+    - name: Debian
+      versions:
+        - trixie
+        - bookworm
+
+  galaxy_tags:
+    - network
+    - netplan
+    - systemd
+
+dependencies: []
+
+allow_duplicates: false

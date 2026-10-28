@@ -1,0 +1,89 @@
+---
+# tasks/validation.yaml - fail fast on contract violations before touching
+# the host.
+
+- name: validate netplan_static_state
+  ansible.builtin.assert:
+    that:
+      - netplan_static_state in netplan_static_state_available
+    fail_msg: >-
+      netplan_static_state must be one of {{ netplan_static_state_available }}
+      (got: {{ netplan_static_state }})
+    quiet: true
+
+- name: validate netplan_static paths
+  ansible.builtin.assert:
+    that:
+      - netplan_static_config_file is ansible.builtin.match('^/etc/netplan/.+\.yaml$')
+      - netplan_static_cloud_init_file is ansible.builtin.match('^/etc/netplan/.+\.yaml$')
+      - netplan_static_backup_dir is ansible.builtin.match('^/')
+      - netplan_static_config_file != netplan_static_cloud_init_file
+    fail_msg: >-
+      netplan_static_config_file and netplan_static_cloud_init_file must be
+      distinct /etc/netplan/*.yaml paths, and netplan_static_backup_dir must
+      be absolute
+    quiet: true
+
+- name: validate netplan_static_gateway
+  ansible.builtin.assert:
+    that:
+      - netplan_static_gateway | ansible.builtin.type_debug == 'str'
+      - >-
+        netplan_static_gateway | length == 0
+        or (netplan_static_gateway | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy
+    fail_msg: "netplan_static_gateway must be empty or a valid IPv4 address"
+    quiet: true
+
+- name: validate netplan_static_nameservers
+  ansible.builtin.assert:
+    that:
+      - netplan_static_nameservers | ansible.builtin.type_debug == 'list'
+      - item is string
+      - "'#' not in item"
+      - (item | ansible.utils.ipaddr('ipv4')) is ansible.builtin.truthy
+    fail_msg: >-
+      netplan_static_nameservers must be a list of plain IPv4 addresses
+      (DoT server names belong in systemd_resolved_nameservers)
+    quiet: true
+  loop: "{{ netplan_static_nameservers }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: validate netplan_static_addresses
+  ansible.builtin.assert:
+    that:
+      - netplan_static_addresses | ansible.builtin.type_debug == 'dict'
+    fail_msg: "netplan_static_addresses must be a mapping of interface to CIDR list"
+    quiet: true
+
+- name: validate netplan_static_config_template
+  ansible.builtin.assert:
+    that:
+      - netplan_static_config_template | ansible.builtin.type_debug == 'str'
+    fail_msg: "netplan_static_config_template must be a string"
+    quiet: true
+
+- name: validate netplan_static_conflict_check
+  ansible.builtin.assert:
+    that:
+      - netplan_static_conflict_check in netplan_static_conflict_check_available
+    fail_msg: >-
+      netplan_static_conflict_check must be one of
+      {{ netplan_static_conflict_check_available }}
+      (got: {{ netplan_static_conflict_check }})
+    quiet: true
+
+- name: validate netplan_static boolean switches
+  ansible.builtin.assert:
+    that:
+      - netplan_static_takeover_cloud_init | ansible.builtin.type_debug == 'bool'
+      - netplan_static_allow_absent_without_backup | ansible.builtin.type_debug == 'bool'
+      - netplan_static_apply | ansible.builtin.type_debug == 'bool'
+      - netplan_static_allow_ipv6_loss | ansible.builtin.type_debug == 'bool'
+      - netplan_static_require_cloud_init_disabled | ansible.builtin.type_debug == 'bool'
+    fail_msg: >-
+      netplan_static_takeover_cloud_init,
+      netplan_static_allow_absent_without_backup, netplan_static_apply,
+      netplan_static_allow_ipv6_loss and
+      netplan_static_require_cloud_init_disabled must be YAML booleans
+    quiet: true

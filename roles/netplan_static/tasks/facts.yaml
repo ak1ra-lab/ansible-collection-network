@@ -1,0 +1,82 @@
+---
+# tasks/facts.yaml - normalize the live interface state into the small model
+# consumed by the template.
+
+- name: require a default IPv4 route
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['default_ipv4'] is defined
+      - ansible_facts['default_ipv4']['interface'] is defined
+    fail_msg: >-
+      netplan_static needs ansible_facts['default_ipv4']; gather facts and
+      make sure the host has an IPv4 default route
+    quiet: true
+
+- name: build the normalized interface list
+  ansible.builtin.set_fact:
+    _netplan_static_interfaces: >-
+      {{ ansible_facts
+         | ak1ra_lab.network.netplan_static_interfaces(netplan_static_addresses) }}
+
+- name: require at least one captured ethernet interface
+  ansible.builtin.assert:
+    that:
+      - _netplan_static_interfaces | length > 0
+    fail_msg: >-
+      no physical ethernet interface with an IPv4 address (or an explicit
+      netplan_static_addresses override) was found
+    quiet: true
+
+- name: require the default interface in the captured list
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['default_ipv4']['interface'] in (_netplan_static_interfaces | map(attribute='name') | list)
+    fail_msg: >-
+      the default IPv4 interface
+      {{ ansible_facts['default_ipv4']['interface'] }} was not captured; add
+      an explicit netplan_static_addresses entry for it
+    quiet: true
+
+- name: require unique MAC addresses
+  ansible.builtin.assert:
+    that:
+      - >-
+        _netplan_static_interfaces | map(attribute='macaddress') | list | unique | length
+        == _netplan_static_interfaces | length
+    fail_msg: "two captured interfaces share the same MAC address"
+    quiet: true
+
+- name: collect global IPv6 addresses on the captured interfaces
+  ansible.builtin.set_fact:
+    _netplan_static_global_ipv6: >-
+      {{ _netplan_static_interfaces
+         | map(attribute='name')
+         | map('extract', ansible_facts)
+         | map(attribute='ipv6', default=[])
+         | flatten
+         | selectattr('scope', 'defined')
+         | selectattr('scope', 'equalto', 'global')
+         | list }}
+
+- name: fail closed on an existing IPv6 configuration
+  when: not netplan_static_allow_ipv6_loss
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['default_ipv6'] is not defined
+      - _netplan_static_global_ipv6 | length == 0
+    fail_msg: >-
+      netplan_static is IPv4-only and would drop the existing IPv6
+      configuration (default route:
+      {{ ansible_facts['default_ipv6'] | default('none') }}, global addresses:
+      {{ _netplan_static_global_ipv6 | map(attribute='address') | list }}).
+      Set netplan_static_allow_ipv6_loss: true to accept this explicitly.
+    quiet: true
+
+- name: warn about the explicitly accepted IPv6 loss
+  when:
+    - netplan_static_allow_ipv6_loss
+    - (ansible_facts['default_ipv6'] is defined) or (_netplan_static_global_ipv6 | length > 0)
+  ansible.builtin.debug:
+    msg: >-
+      netplan_static_allow_ipv6_loss is true: the rendered static IPv4
+      configuration will not preserve the existing IPv6 addresses/routes.

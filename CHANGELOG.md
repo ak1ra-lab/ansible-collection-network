@@ -15,6 +15,29 @@ The format is based on Keep a Changelog, and this project does not currently gua
   `cloud_init_extra_config` escape hatch.  The defaults are no-ops, so the
   role only changes cloud-init behavior when explicitly opted in.  `absent`
   removes every role-managed drop-in.
+- `ak1ra_lab.network.netplan_static`: capture the live IPv4 state of the
+  physical ethernet interfaces (primary + `ipv4_secondaries`) into
+  `/etc/netplan/90-ansible-static.yaml`, with per-interface CIDR overrides,
+  one default gateway, optional nameservers and a MAC-matched `set-name`.
+  The role validates the config with `netplan generate`, applies it through a
+  handler, backs up/removes cloud-init's `50-cloud-init.yaml` only after the
+  cloud-init network drop-in is disabled, runs a merge-aware conflict
+  preflight against `/lib/netplan`, `/usr/lib/netplan`, `/etc/netplan` and
+  `/run/netplan`
+  (`strict` / `overlap` / `none`), and hands the network back to cloud-init on
+  `netplan_static_state: absent` (restoring the backup, or failing closed
+  without one).  IPv4-only and fail-closed on an existing IPv6 default
+  route/global address unless `netplan_static_allow_ipv6_loss: true`.
+  Advanced netplan features use `netplan_static_config_template`.
+- Filter plugins for `netplan_static`: `netplan_static_interfaces`
+  normalizes Ansible interface facts into the minimal address/MAC model and
+  validates IPv4 CIDR overrides; `netplan_conflicts` classifies foreign
+  netplan files against the role-managed interfaces.  The merge-aware
+  `overlap` policy allows complementary split configuration (for example a
+  separate `mtu` file), warns about earlier shadowed keys and hard-fails on
+  later key overrides, different IDs matching the same device, or a
+  same-named `/run/netplan` file shadowing the role file.  Unit tests cover
+  the normalization, merge-order and conflict paths.
 - `ak1ra_lab.network.mihomo_install`: shared mihomo binary installer - the
   official **statically linked** `.gz` archive from the MetaCubeX/mihomo
   GitHub releases, resolved with `ak1ra_lab.general.github_releases_info`

@@ -1,0 +1,31 @@
+---
+# netplan_static scenario - hand the network file back to cloud-init and
+# remove the cloud-init drop-in.  Runs before prepare on every lifecycle.
+
+- name: hand the netplan configuration back to cloud-init
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true
+  vars:
+    netplan_static_state: absent
+    netplan_static_apply: false
+  tasks:
+    - name: apply the netplan_static teardown
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.netplan_static
+
+- name: remove the cloud-init network drop-in and complementary fixture
+  hosts: all
+  gather_facts: false
+  ignore_unreachable: true
+  vars:
+    cloud_init_state: absent
+  tasks:
+    - name: apply the cloud_init teardown
+      ansible.builtin.include_role:
+        name: ak1ra_lab.network.cloud_init
+
+    - name: remove the complementary netplan file
+      ansible.builtin.file:
+        path: /etc/netplan/10-mtu.yaml
+        state: absent

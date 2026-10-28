@@ -1,0 +1,20 @@
+---
+# ak1ra_lab.network.netplan_static - collection playbook entry point.
+#
+# Captures the live IPv4 state of the physical ethernet interfaces into a
+# static netplan file, optionally backs up and removes cloud-init's
+# 50-cloud-init.yaml, and applies the result.  This playbook can change the
+# host's network path: run it against an explicit inventory group, keep a
+# console/out-of-band access path, and review the gateway/DNS/address
+# overrides before the first run.
+#
+# The contract is the netplan_static_* variable namespace documented in
+# roles/netplan_static/README.md; override it via group_vars/host_vars or
+# extra-vars - role defaults apply otherwise.
+
+- name: static netplan takeover
+  hosts: "{{ playbook_hosts | default('cloud-image-vms') }}"
+  become: true
+  gather_facts: true
+  roles:
+    - ak1ra_lab.network.netplan_static

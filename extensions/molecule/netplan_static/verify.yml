@@ -1,0 +1,124 @@
+---
+# netplan_static scenario - assert the rendered file, the cloud-init backup,
+# the takeover state and netplan's own parser.
+
+- name: verify the static netplan configuration
+  hosts: all
+  gather_facts: true
+  vars:
+    _netplan_static_default_interface: "{{ ansible_facts['default_ipv4']['interface'] }}"
+  tasks:
+    - name: read the rendered netplan file
+      ansible.builtin.slurp:
+        src: /etc/netplan/90-ansible-static.yaml
+      register: _netplan_static_rendered
+
+    - name: parse the rendered netplan file
+      ansible.builtin.set_fact:
+        _netplan_static_config: >-
+          {{ _netplan_static_rendered.content
+             | ansible.builtin.b64decode
+             | ansible.builtin.from_yaml }}
+
+    - name: assert the static interface configuration
+      ansible.builtin.assert:
+        that:
+          - _netplan_static_config['network']['renderer'] == 'networkd'
+          - _netplan_static_default_interface in _netplan_static_config['network']['ethernets']
+          - >-
+            _netplan_static_config['network']['ethernets'][_netplan_static_default_interface]['addresses']
+            == ['192.0.2.10/24', '192.0.2.11/24']
+          - >-
+            _netplan_static_config['network']['ethernets'][_netplan_static_default_interface]['routes'][0]['to']
+            == 'default'
+          - >-
+            _netplan_static_config['network']['ethernets'][_netplan_static_default_interface]['nameservers']['addresses']
+            == ['1.1.1.1', '8.8.8.8']
+          - >-
+            _netplan_static_config['network']['ethernets'][_netplan_static_default_interface]['dhcp4']
+            is false
+          - >-
+            _netplan_static_config['network']['ethernets'][_netplan_static_default_interface]['accept-ra']
+            is false
+        fail_msg: >-
+          the rendered netplan file does not match the capture contract:
+          {{ _netplan_static_config | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: collect the netplan file permissions
+      ansible.builtin.stat:
+        path: /etc/netplan/90-ansible-static.yaml
+      register: _netplan_static_file_stat
+
+    - name: assert the netplan file is root-only
+      ansible.builtin.assert:
+        that:
+          - _netplan_static_file_stat.stat.mode == '0600'
+          - _netplan_static_file_stat.stat.pw_name == 'root'
+          - _netplan_static_file_stat.stat.gr_name == 'root'
+        fail_msg: "the rendered netplan file must be 0600 root:root"
+        quiet: true
+
+    - name: collect the cloud-init takeover state
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/netplan/50-cloud-init.yaml
+        - /var/lib/ansible/ak1ra_lab/network/netplan_static/etc/netplan/50-cloud-init.yaml
+        - /etc/cloud/cloud.cfg.d/99-ansible-network.cfg
+      register: _netplan_static_takeover_state
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert the takeover removed cloud-init's file and kept the backup
+      ansible.builtin.assert:
+        that:
+          - not _netplan_static_takeover_state.results[0].stat.exists
+          - _netplan_static_takeover_state.results[1].stat.exists
+          - _netplan_static_takeover_state.results[2].stat.exists
+        fail_msg: >-
+          expected cloud-init netplan missing, backup and cloud-init network
+          drop-in present
+        quiet: true
+
+    - name: read the cloud-init backup
+      ansible.builtin.slurp:
+        src: /var/lib/ansible/ak1ra_lab/network/netplan_static/etc/netplan/50-cloud-init.yaml
+      register: _netplan_static_backup
+
+    - name: assert the backup is the pre-takeover file
+      ansible.builtin.assert:
+        that:
+          - >-
+            _netplan_static_backup.content | ansible.builtin.b64decode
+            is ansible.builtin.search('dhcp4: true')
+          - >-
+            _netplan_static_backup.content | ansible.builtin.b64decode
+            is ansible.builtin.search('synthetic cloud-init')
+        fail_msg: "the backup must contain the pre-takeover cloud-init netplan file"
+        quiet: true
+
+    - name: validate the rendered file with netplan generate
+      ansible.builtin.command:
+        argv:
+          - netplan
+          - generate
+      changed_when: false
+
+    - name: read the merged MTU from the complementary file
+      ansible.builtin.command:
+        argv:
+          - netplan
+          - get
+          - "ethernets.{{ _netplan_static_default_interface }}.mtu"
+      changed_when: false
+      register: _netplan_static_merged_mtu
+
+    - name: assert the complementary MTU survived the merge
+      ansible.builtin.assert:
+        that:
+          - _netplan_static_merged_mtu.stdout | trim == '9000'
+        fail_msg: >-
+          the complementary mtu from 10-mtu.yaml must survive the netplan
+          merge, got: {{ _netplan_static_merged_mtu.stdout }}
+        quiet: true

@@ -1,0 +1,4 @@
+---
+# netplan_static scenario - renders and validates a static netplan file on
+# the shared containers.  The role is converged with netplan_static_apply:
+# false so the test never changes the container's live network path.

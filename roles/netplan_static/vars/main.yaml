@@ -1,0 +1,21 @@
+---
+# ak1ra_lab.network.netplan_static - internal constants.
+
+netplan_static_state_available:
+  - present
+  - absent
+netplan_static_conflict_check_available:
+  - strict
+  - overlap
+  - none
+
+_netplan_static_default_template: etc/netplan/90-ansible-static.yaml.j2
+_netplan_static_config_template_resolved: >-
+  {{ netplan_static_config_template
+     if netplan_static_config_template | length > 0
+     else _netplan_static_default_template }}
+_netplan_static_file_marker: ak1ra_lab.network.netplan_static
+_netplan_static_backup_file: >-
+  {{ netplan_static_backup_dir ~ '/' ~ netplan_static_cloud_init_file[1:] }}
+_netplan_static_cloud_init_config_file: /etc/cloud/cloud.cfg
+_netplan_static_cloud_init_disabled_pattern: 'network:\s*\{\s*config:\s*disabled\s*\}'

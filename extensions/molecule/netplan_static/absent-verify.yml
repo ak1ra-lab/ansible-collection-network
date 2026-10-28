@@ -1,0 +1,49 @@
+---
+# netplan_static scenario - assert the role file is gone and cloud-init's
+# netplan file/backup were restored.
+
+- name: verify the netplan_static teardown
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: collect the role and cloud-init netplan state
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/netplan/90-ansible-static.yaml
+        - /etc/netplan/50-cloud-init.yaml
+        - /etc/cloud/cloud.cfg.d/99-ansible-network.cfg
+        - /etc/netplan/10-mtu.yaml
+      register: _netplan_static_state_after
+      loop_control:
+        label: "{{ item }}"
+
+    - name: assert the role file and cloud-init drop-in are gone
+      ansible.builtin.assert:
+        that:
+          - not _netplan_static_state_after.results[0].stat.exists
+          - _netplan_static_state_after.results[1].stat.exists
+          - not _netplan_static_state_after.results[2].stat.exists
+          - not _netplan_static_state_after.results[3].stat.exists
+        fail_msg: >-
+          expected the role netplan file and cloud-init drop-in removed,
+          cloud-init's 50-cloud-init.yaml restored, and the complementary
+          fixture removed
+        quiet: true
+
+    - name: read the restored cloud-init netplan file
+      ansible.builtin.slurp:
+        src: /etc/netplan/50-cloud-init.yaml
+      register: _netplan_static_restored
+
+    - name: assert the restored file is the pre-takeover content
+      ansible.builtin.assert:
+        that:
+          - >-
+            _netplan_static_restored.content | ansible.builtin.b64decode
+            is ansible.builtin.search('synthetic cloud-init')
+          - >-
+            _netplan_static_restored.content | ansible.builtin.b64decode
+            is ansible.builtin.search('dhcp4: true')
+        fail_msg: "the cloud-init netplan file must be restored from the backup"
+        quiet: true
