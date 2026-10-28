@@ -23,6 +23,18 @@ The format is based on Keep a Changelog, and this project does not currently gua
 - `netplan_static` treats an empty `ansible_facts.default_ipv6` mapping as
   "no IPv6 default route" instead of failing the IPv6-loss gate on hosts with
   IPv6 disabled.
+- The Docs workflow installs `distlib` through the docs dependency group, so
+  `ansible-galaxy` can read the `galaxy.yml` manifest when installing the
+  collection from source. The `just` collection recipes use the uv
+  environment for the same reason.
+- Molecule keeps `systemd-resolved` pointed at the container runtime's
+  upstream DNS, so the resolver scenarios no longer break package downloads
+  in later scenarios.
+
+### Changed
+
+- Refreshed CI action pins: `actions/setup-python` 7.1.0,
+  `astral-sh/setup-uv` 10.3.1 and `actions/upload-pages-artifact` 5.0.0.
 
 ## [v0.3.0] - 2026-10-28
 
