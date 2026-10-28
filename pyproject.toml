@@ -24,6 +24,8 @@ test = [
     "pytest>=9.1.1",
 ]
 docs = [
+    # ansible-galaxy reads the galaxy.yml manifest through distlib.
+    "distlib>=0.4.4",
     "mkdocs>=1.6,<2",
     "mkdocs-ansible-collection>=1.1.0",
     "mkdocs-material>=9.7.7,<10",

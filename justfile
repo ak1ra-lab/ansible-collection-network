@@ -34,13 +34,13 @@ unit-test:
 # (the collection under test plus the ak1ra_lab.general local checkout)
 ansible-collection-install:
     mkdir -p .ansible/collections
-    ansible-galaxy collection install --force --collections-path .ansible/collections .
-    ansible-galaxy collection install --force --collections-path .ansible/collections "{{GENERAL_COLLECTION}}"
+    uv run ansible-galaxy collection install --force --collections-path .ansible/collections .
+    uv run ansible-galaxy collection install --force --collections-path .ansible/collections "{{GENERAL_COLLECTION}}"
 
 # Install the collections required by the Molecule scenarios
 ansible-requirements-install:
     mkdir -p .ansible/collections
-    ansible-galaxy collection install -r requirements.yaml -p .ansible/collections
+    uv run ansible-galaxy collection install -r requirements.yaml -p .ansible/collections
 
 # Lint all Ansible content with ansible-lint (production profile)
 ansible-lint:
