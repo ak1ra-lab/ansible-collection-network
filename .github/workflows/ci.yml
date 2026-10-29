@@ -143,5 +143,4 @@ jobs:
       - name: Run the Molecule scenarios
         run: >-
           sudo env "PATH=${GITHUB_WORKSPACE}/.venv/bin:${PATH}"
-          MOLECULE_GLOB='extensions/molecule/**/molecule.yml'
           molecule test --all

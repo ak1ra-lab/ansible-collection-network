@@ -46,17 +46,17 @@ ansible-requirements-install:
 ansible-lint:
     uv run ansible-lint
 
-# Run every Molecule scenario (nested scenarios need the recursive glob)
+# Run every Molecule scenario
 molecule-test: ansible-collection-install ansible-requirements-install
-    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' uv run molecule test --all
+    uv run molecule test --all
 
 # Run one Molecule scenario, e.g. `just molecule-test-one systemd_netns`
 molecule-test-one scenario: ansible-collection-install ansible-requirements-install
-    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' uv run molecule test -s {{scenario}}
+    uv run molecule test -s {{scenario}}
 
 # List the Molecule scenarios
 molecule-list:
-    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' uv run molecule list
+    uv run molecule list
 
 # Serve the documentation site locally
 docs-serve: ansible-collection-install
