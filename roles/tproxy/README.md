@@ -1,5 +1,9 @@
 # ak1ra_lab.network.tproxy
 
+> The canonical variable reference for this role is
+> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
+> narrative and deployed-artifact details; update both when the contract changes.
+
 !!! warning "Experimental role"
     `tproxy` is marked **experimental**.  The role name is stable, but its
     variable contract and deployed artifacts may change without a deprecation

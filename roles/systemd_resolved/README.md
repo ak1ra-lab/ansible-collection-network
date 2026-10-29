@@ -1,5 +1,9 @@
 # ak1ra_lab.network.systemd_resolved
 
+> The canonical variable reference for this role is
+> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
+> narrative and deployed-artifact details; update both when the contract changes.
+
 Manages `systemd-resolved` as the host resolver:
 
 - the global DNS drop-in (`DNS=`, optional `FallbackDNS=`, `Domains=`,

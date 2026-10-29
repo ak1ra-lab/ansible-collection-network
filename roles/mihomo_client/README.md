@@ -1,5 +1,9 @@
 # ak1ra_lab.network.mihomo_client
 
+> The canonical variable reference for this role is
+> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
+> narrative and deployed-artifact details; update both when the contract changes.
+
 Deploys [mihomo](https://github.com/MetaCubeX/mihomo) as a TUN
 transparent-proxy client, based on the hand-written
 [mihomo-setup](https://github.com/ak1ra-lab/mihomo-setup) deployment:

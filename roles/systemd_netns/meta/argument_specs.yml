@@ -1,0 +1,68 @@
+argument_specs:
+  main:
+    short_description: Run systemd services in a network namespace
+    description:
+      - Create a network namespace whose veth legs attach to host-level Linux bridges, configure its addresses and default
+        route, and join selected systemd units to it through drop-ins.
+    options:
+      systemd_netns_state:
+        description: 'Declarative state: present - apply the namespace infrastructure absent - tear down everything this role
+          created (namespace, veth legs, resolv.conf, hook drop-ins, unit). Bridges are shared infrastructure owned by ak1ra_lab.network.systemd_bridge
+          (or the host''s own network layer) and are never touched by this role.'
+        type: str
+        choices:
+          - present
+          - absent
+        default: present
+        required: false
+      systemd_netns_name:
+        description: Namespace identifier. Doubles as the unit name component (netns-<name>.service), the /etc/netns/<name>
+          resolv.conf directory and other per-invocation names, so it must be a valid ip netns name and systemd unit name
+          component. The default follows the role's reference workload (see systemd_netns_sysctl_params); run the role once
+          per namespace with a distinct name.
+        type: str
+        default: qbittorrent
+        required: false
+      systemd_netns_links:
+        description: Namespace veth legs, one per segment. Each entry supports bridge, address, gateway, and mac.
+        type: list
+        default: []
+        required: false
+      systemd_netns_dns_servers:
+        description: Resolvers for the namespace, written to the iproute2-convention path /etc/netns/<name>/resolv.conf (ip
+          netns exec bind-mounts it automatically; systemd drop-ins bind this path directly).
+        type: list
+        default:
+          - 223.5.5.5
+          - 119.29.29.29
+        required: false
+        elements: str
+      systemd_netns_hook_services:
+        description: Optional systemd units to join to this namespace via a drop-in written at /etc/systemd/system/<unit>.d/netns.conf
+          (NetworkNamespacePath= plus the PartOf=/Requires=/After= wiring). The role only writes/removes the drop-in; it never
+          enables, starts, restarts or otherwise manages these units. Template units work by passing e.g. "qbittorrent-nox@.service".
+        type: list
+        default: []
+        required: false
+      systemd_netns_disable_ipv6:
+        description: Disable IPv6 inside the namespace. The bridged legs can carry IPv6, but segments are often v4-only; disabling
+          avoids happy-eyeballs stalls when no v6 route exists.
+        type: bool
+        default: true
+        required: false
+      systemd_netns_sysctl_params:
+        description: Per-netns sysctls re-applied after every namespace recreation.
+        type: dict
+        default: {}
+        required: false
+      systemd_netns_verify:
+        description: 'Informational reachability check after deployment: curl the exit-IP echo service from inside the namespace
+          and from the host. Never fails the run - comparing the two addresses is the operator''s verdict.'
+        type: bool
+        default: false
+        required: false
+      systemd_netns_verify_url:
+        description: Exit-IP echo service used by the optional reachability check.
+        type: str
+        default: https://ip.sb
+        required: false

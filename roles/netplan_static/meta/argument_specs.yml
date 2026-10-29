@@ -1,0 +1,116 @@
+argument_specs:
+  main:
+    short_description: Capture IPv4 state into a static netplan configuration
+    description:
+      - Capture the current IPv4 state of physical Ethernet interfaces into a role-owned netplan file, optionally take over
+        from cloud-init, validate conflicts, and apply the result.
+    options:
+      netplan_static_state:
+        description: 'Declarative state: present - render and (optionally) apply the static netplan configuration absent -
+          remove the role''s file and restore the cloud-init backup when one exists.'
+        type: str
+        choices:
+          - present
+          - absent
+        default: present
+        required: false
+      netplan_static_config_file:
+        description: Where the role renders its own netplan file. Netplan reads *.yaml from /etc/netplan; the role never writes
+          cloud-init's own file path.
+        type: str
+        default: /etc/netplan/90-ansible-static.yaml
+        required: false
+      netplan_static_config_template:
+        description: Optional custom template override. Empty uses the role's capture template; point this at a copy to add
+          unsupported netplan features. The template receives _netplan_static_interfaces (name, macaddress, addresses) and
+          the public netplan_static_* variables.
+        type: str
+        default: ''
+        required: false
+      netplan_static_takeover_cloud_init:
+        description: 'Take over from cloud-init: true - back up and remove /etc/netplan/50-cloud-init.yaml after the role
+          file is rendered; the cloud-init network drop-in must already be disabled (see netplan_static_require_cloud_init_disabled)
+          false - leave cloud-init''s file in place; the role file still has the lexicographically later 90- prefix and wins
+          on overlapping keys.'
+        type: bool
+        default: true
+        required: false
+      netplan_static_cloud_init_file:
+        description: 'cloud-init''s generated netplan file and the role-owned backup root. The backup mirrors the absolute
+          source path below this directory, for example: /var/lib/ansible/ak1ra_lab/network/netplan_static/etc/netplan/50-cloud-init.yaml
+          The path is fixed (first backup wins); it is a rollback snapshot, not a timestamped backup history.'
+        type: str
+        default: /etc/netplan/50-cloud-init.yaml
+        required: false
+      netplan_static_backup_dir:
+        description: Backup root for the cloud-init netplan file. The absolute source path is mirrored below it; the first
+          backup wins.
+        type: str
+        default: /var/lib/ansible/ak1ra_lab/network/netplan_static
+        required: false
+      netplan_static_allow_absent_without_backup:
+        description: Refuse to remove the role file on teardown when the cloud-init backup is missing and the role file still
+          exists. Set true only when the operator accepts that the host may have no persistent network configuration until
+          cloud-init regenerates its file on the next boot.
+        type: bool
+        default: false
+        required: false
+      netplan_static_apply:
+        description: Validate and apply the rendered configuration through netplan handlers. Set false to render and run netplan
+          generate only (useful in containers).
+        type: bool
+        default: true
+        required: false
+      netplan_static_conflict_check:
+        description: 'Conflict policy for other netplan files that touch a managed interface. Netplan merges files by filename
+          order: later files amend new mapping keys and override the same keys; list values are replaced, not concatenated.
+          overlap - merge-aware default: fail when a later file sets a key this role owns (or claims the same device under
+          a different ID); warn when an earlier file sets such a key; allow complementary keys strict - any other file defining
+          the managed interface is a conflict none - do not inspect other netplan files.'
+        type: str
+        choices:
+          - strict
+          - overlap
+          - none
+        default: overlap
+        required: false
+      netplan_static_default_interface:
+        description: 'Physical interface that carries the static default route. Empty auto-selects: the live default IPv4
+          interface when it is a captured ethernet interface, otherwise the only captured interface with a default route in
+          the kernel main table. Set this explicitly when a TUN (mihomo0) owns ansible_facts.default_ipv4 or when multiple
+          physical default routes exist.'
+        type: str
+        default: ''
+        required: false
+      netplan_static_gateway:
+        description: Default route installed on netplan_static_default_interface. "auto" captures the live gateway from the
+          kernel main-table default route; set an IPv4 address to override it, or an empty string to render no default route.
+          ansible_facts.default_ipv4 is not used for the capture because a TUN client's policy routing can point it at mihomo0.
+        type: str
+        default: auto
+        required: false
+      netplan_static_nameservers:
+        description: Optional per-interface nameservers, rendered on the default interface only. The list accepts IPv4 addresses;
+          use systemd_resolved for global DNS and DoT. Empty renders no nameservers block.
+        type: list
+        default: []
+        required: false
+      netplan_static_addresses:
+        description: 'Per-interface address overrides. When an interface appears here, the list replaces the captured primary
+          + secondary IPv4 addresses exactly: netplan_static_addresses: enp0s17: - 172.16.0.42/24 - 172.16.1.42/24 This also
+          covers the "wrong netmask in the original configuration" case without a separate scalar prefix override.'
+        type: dict
+        default: {}
+        required: false
+      netplan_static_allow_ipv6_loss:
+        description: The role is IPv4-only. With false (the default) it fails when the selected interfaces carry a global
+          IPv6 address or when a default IPv6 route exists; set true to explicitly accept dropping the IPv6 configuration.
+        type: bool
+        default: false
+        required: false
+      netplan_static_require_cloud_init_disabled:
+        description: Require the ak1ra_lab.network.cloud_init network drop-in before removing cloud-init's netplan file. Set
+          false when cloud-init is disabled through another mechanism (kernel command line, a hand-written drop-in, ...).
+        type: bool
+        default: true
+        required: false

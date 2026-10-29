@@ -1,5 +1,9 @@
 # ak1ra_lab.network.systemd_bridge
 
+> The canonical variable reference for this role is
+> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
+> narrative and deployed-artifact details; update both when the contract changes.
+
 Declarative host-level Linux bridges, managed entirely by
 `systemd-networkd`.  Each bridge optionally enslaves a dedicated physical
 interface as its uplink and behaves like a L2 switch on that segment; any

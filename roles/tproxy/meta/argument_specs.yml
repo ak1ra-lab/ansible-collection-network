@@ -1,0 +1,136 @@
+argument_specs:
+  main:
+    short_description: Engine-agnostic TPROXY transparent proxy plumbing (experimental)
+    description:
+      - Configure nftables marking, policy routing, sysctl tuning, and kernel modules for a proxy engine that exposes a TPROXY
+        inbound. This role is experimental; its contract may still change.
+    options:
+      tproxy_mode:
+        description: 'Deployment shape: gateway proxies forwarded LAN and local traffic; local proxies local traffic only.'
+        type: str
+        choices:
+          - gateway
+          - local
+        default: gateway
+        required: false
+      tproxy_state:
+        description: 'Declarative state: present applies the TPROXY plumbing; absent tears down everything this role created.'
+        type: str
+        choices:
+          - present
+          - absent
+        default: present
+        required: false
+      tproxy_listen_port:
+        description: Proxy engine TPROXY inbound port. DNS transparent interception also delivers packets to this port.
+        type: int
+        default: 7895
+        required: false
+      tproxy_uid:
+        description: UID of the proxy engine runtime user. Its packets get the bypass mark.
+        type: int
+        default: 13
+        required: false
+      tproxy_gid:
+        description: GID of the proxy engine runtime user.
+        type: int
+        default: 13
+        required: false
+      tproxy_route_table:
+        description: Policy routing table number.
+        type: int
+        default: 224
+        required: false
+      tproxy_fwmark:
+        description: fwmark that selects the policy routing table.
+        type: int
+        default: 224
+        required: false
+      tproxy_bypass_mark:
+        description: fwmark applied to engine-originated traffic so it bypasses interception.
+        type: int
+        default: 225
+        required: false
+      tproxy_interface:
+        description: IPv4 exit interface. Defaults to the fact-detected default interface.
+        type: str
+        default: |-
+          {{ ansible_facts['default_ipv4'].interface
+             if ansible_facts['default_ipv4'] is defined
+             and ansible_facts['default_ipv4'].interface is defined
+             else '' }}
+        required: false
+      tproxy_interface6:
+        description: IPv6 exit interface. Defaults to the fact-detected default IPv6 interface.
+        type: str
+        default: |-
+          {{ ansible_facts['default_ipv6'].interface
+             if ansible_facts['default_ipv6'] is defined
+             and ansible_facts['default_ipv6'].interface is defined
+             else '' }}
+        required: false
+      tproxy_enable_ipv6:
+        description: Enable IPv6 interception. Defaults to whether a default IPv6 interface exists.
+        type: str
+        default: |-
+          {{ ansible_facts['default_ipv6'] is defined
+             and ansible_facts['default_ipv6'].interface is defined }}
+        required: false
+      tproxy_bypass_cidr4:
+        description: IPv4 CIDRs that never enter the transparent proxy path.
+        type: list
+        default: []
+        required: false
+      tproxy_bypass_cidr6:
+        description: IPv6 CIDRs that never enter the transparent proxy path.
+        type: list
+        default: []
+        required: false
+      tproxy_reject_cidr4:
+        description: IPv4 CIDRs rejected at the kernel level.
+        type: list
+        default: []
+        required: false
+      tproxy_reject_cidr6:
+        description: IPv6 CIDRs rejected at the kernel level.
+        type: list
+        default: []
+        required: false
+      tproxy_tcp_bbr_enabled:
+        description: Temporarily enable TCP BBR in this role. The final home of this setting is undecided.
+        type: bool
+        default: true
+        required: false
+      tproxy_sysctl_nf_conntrack:
+        description: Apply nf_conntrack sysctl tuning for the interception path.
+        type: bool
+        default: true
+        required: false
+      tproxy_sysctl_nf_conntrack_buckets:
+        description: nf_conntrack hash table bucket count.
+        type: int
+        default: 65536
+        required: false
+      tproxy_sysctl_nf_conntrack_max:
+        description: nf_conntrack maximum entry count.
+        type: int
+        default: 262144
+        required: false
+      tproxy_sysctl_nf_conntrack_tcp_timeout_established:
+        description: nf_conntrack established TCP timeout in seconds.
+        type: int
+        default: 3600
+        required: false
+      tproxy_etc_resolv_conf:
+        description: Write a static /etc/resolv.conf. DNS is intercepted transparently, so the contents are informational.
+        type: bool
+        default: true
+        required: false
+      tproxy_etc_resolv_conf_servers:
+        description: Nameservers written to the static /etc/resolv.conf.
+        type: list
+        default:
+          - 1.1.1.1
+          - 1.0.0.1
+        required: false
+        elements: str

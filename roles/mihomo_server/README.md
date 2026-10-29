@@ -1,5 +1,9 @@
 # ak1ra_lab.network.mihomo_server
 
+> The canonical variable reference for this role is
+> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
+> narrative and deployed-artifact details; update both when the contract changes.
+
 Deploys [mihomo](https://github.com/MetaCubeX/mihomo) on a VPS as a proxy
 server and produces the client artifacts consumed by
 `ak1ra_lab.network.mihomo_client`:

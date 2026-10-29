@@ -1,0 +1,64 @@
+argument_specs:
+  main:
+    short_description: Manage cloud-init drop-ins
+    description:
+      - Manage cloud-init drop-ins under /etc/cloud/cloud.cfg.d, including network ownership, datasource network activation,
+        SSH host key handling, and extra configuration.
+    options:
+      cloud_init_state:
+        description: 'Declarative state: present - apply the configured drop-ins absent - remove every drop-in this role manages.'
+        type: str
+        choices:
+          - present
+          - absent
+        default: present
+        required: false
+      cloud_init_network:
+        description: 'Network configuration ownership: managed - remove the role''s network drop-in; cloud-init keeps managing
+          the network (the distribution default) disabled - write network: {config: disabled}; cloud-init no longer generates
+          or applies network configuration.'
+        type: str
+        choices:
+          - managed
+          - disabled
+        default: managed
+        required: false
+      cloud_init_network_activation:
+        description: 'Datasource network activation: enabled - leave cloud-init''s network activation behaviour untouched
+          disabled - write disable_network_activation: true; cloud-init will not bring up interfaces described by the datasource
+          metadata. This is a second safety layer for a network takeover and is optional when cloud_init_network is already
+          disabled.'
+        type: str
+        choices:
+          - enabled
+          - disabled
+        default: enabled
+        required: false
+      cloud_init_ssh_deletekeys:
+        description: cloud-init's ssh_deletekeys setting. true is the upstream default and regenerates /etc/ssh/ssh_host_*
+          when the instance identity changes; false keeps the host keys stable across cloud-init drive changes.
+        type: bool
+        default: true
+        required: false
+      cloud_init_manage_etc_hosts:
+        description: cloud-init's manage_etc_hosts setting. Set false to stop cloud-init from rewriting /etc/hosts.
+        type: bool
+        default: true
+        required: false
+      cloud_init_preserve_hostname:
+        description: cloud-init's preserve_hostname setting. Set true to stop cloud-init from changing the hostname from datasource
+          metadata.
+        type: bool
+        default: false
+        required: false
+      cloud_init_extra_config:
+        description: Extra cloud-init configuration rendered last as 99-ansible-extra.cfg. Keep secrets in Ansible Vault.
+        type: dict
+        default: {}
+        required: false
+      cloud_init_require_installed:
+        description: Fail when cloud-init is not installed. Set false only for controlled test fixtures where the drop-in
+          directory is populated without the package.
+        type: bool
+        default: true
+        required: false

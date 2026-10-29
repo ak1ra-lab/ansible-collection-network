@@ -1,5 +1,9 @@
 # ak1ra_lab.network.cloud_init
 
+> The canonical variable reference for this role is
+> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
+> narrative and deployed-artifact details; update both when the contract changes.
+
 Manages cloud-init drop-ins under `/etc/cloud/cloud.cfg.d`. The role is
 deliberately narrow: it changes cloud-init's own behavior (network ownership,
 SSH host-key handling, host identity) and never touches netplan, DNS or

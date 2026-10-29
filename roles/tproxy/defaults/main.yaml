@@ -36,8 +36,18 @@ tproxy_fwmark: 224
 tproxy_bypass_mark: 225
 
 # Exit interfaces.  Defaults auto-detect from facts; override to pin.
-tproxy_interface: "{{ ansible_facts['default_ipv4'].interface }}"
-tproxy_interface6: "{{ ansible_facts['default_ipv6'].interface }}"
+# An absent default route yields an empty string so role argument validation
+# does not fail on hosts that never use the corresponding address family.
+tproxy_interface: >-
+  {{ ansible_facts['default_ipv4'].interface
+     if ansible_facts['default_ipv4'] is defined
+     and ansible_facts['default_ipv4'].interface is defined
+     else '' }}
+tproxy_interface6: >-
+  {{ ansible_facts['default_ipv6'].interface
+     if ansible_facts['default_ipv6'] is defined
+     and ansible_facts['default_ipv6'].interface is defined
+     else '' }}
 
 # IPv6 support.  Defaults to auto-detection of a default IPv6 interface;
 # override to force on/off.

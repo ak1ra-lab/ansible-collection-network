@@ -1,5 +1,9 @@
 # ak1ra_lab.network.systemd_netns
 
+> The canonical variable reference for this role is
+> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
+> narrative and deployed-artifact details; update both when the contract changes.
+
 Dedicated-segment egress isolation: systemd services run inside a network
 namespace that attaches veth legs to host-level Linux bridges, and the
 namespace carries real addresses + a default route on the bridged segments.

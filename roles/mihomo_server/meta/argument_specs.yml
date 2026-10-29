@@ -1,0 +1,350 @@
+argument_specs:
+  main:
+    short_description: Deploy mihomo proxy server listeners
+    description:
+      - Deploy mihomo on a VPS as a proxy server, render the server configuration and systemd unit, and write the matching
+        client artifacts for ak1ra_lab.network.mihomo_client.
+    options:
+      mihomo_server_state:
+        description: 'Declarative state: present applies, absent tears down the role-managed artifacts.'
+        type: str
+        choices:
+          - present
+          - absent
+        default: present
+        required: false
+      mihomo_server_hostname:
+        description: Server address and TLS SNI.
+        type: str
+        default: '{{ ansible_facts[''fqdn''] }}'
+        required: false
+      mihomo_server_region:
+        description: Region token embedded in generated client node names. Required when state=present.
+        type: str
+        default: ''
+        required: false
+      mihomo_server_log_level:
+        description: mihomo log level.
+        type: str
+        default: warning
+        required: false
+      mihomo_server_listen:
+        description: Listener bind address.
+        type: str
+        default: 0.0.0.0
+        required: false
+      mihomo_server_external_controller:
+        description: Optional Clash API listen address on the server. Empty disables it.
+        type: str
+        default: ''
+        required: false
+      mihomo_server_external_controller_secret:
+        description: Clash API secret when the external controller is exposed.
+        type: str
+        default: ''
+        required: false
+        no_log: true
+      mihomo_server_user_count:
+        description: Number of users auto-generated from the predefined name pool (1-10).
+        type: int
+        default: 1
+        required: false
+      mihomo_server_enable_shadowsocks:
+        description: Enable the shadowsocks listener.
+        type: bool
+        default: true
+        required: false
+      mihomo_server_shadowsocks_port:
+        description: shadowsocks listener port.
+        type: int
+        default: 9442
+        required: false
+      mihomo_server_shadowsocks_method:
+        description: shadowsocks cipher. 2022-blake3 ciphers use an exact-length base64 key; classic ciphers use a passphrase.
+        type: str
+        default: 2022-blake3-aes-128-gcm
+        required: false
+      mihomo_server_shadowsocks_password:
+        description: Single-user shadowsocks server password (base64). Generated when empty.
+        type: str
+        default: ''
+        required: false
+        no_log: true
+      mihomo_server_enable_trojan:
+        description: Enable the trojan listener.
+        type: bool
+        default: false
+        required: false
+      mihomo_server_trojan_port:
+        description: trojan listener port.
+        type: int
+        default: 9443
+        required: false
+      mihomo_server_trojan_users:
+        description: trojan users as name/password mappings. Generated when empty.
+        type: list
+        default: []
+        required: false
+        no_log: true
+      mihomo_server_enable_hysteria2:
+        description: Enable the hysteria2 listener.
+        type: bool
+        default: true
+        required: false
+      mihomo_server_hysteria2_port:
+        description: hysteria2 listener port.
+        type: int
+        default: 9444
+        required: false
+      mihomo_server_hysteria2_users:
+        description: hysteria2 users as name/password mappings. Generated when empty.
+        type: list
+        default: []
+        required: false
+        no_log: true
+      mihomo_server_hysteria2_up_mbps:
+        description: Server-side Brutal upload cap in Mbps. 0 omits it.
+        type: int
+        default: 0
+        required: false
+      mihomo_server_hysteria2_down_mbps:
+        description: Server-side Brutal download cap in Mbps. 0 omits it.
+        type: int
+        default: 0
+        required: false
+      mihomo_server_hysteria2_obfs_enabled:
+        description: Enable salamander obfuscation for hysteria2.
+        type: bool
+        default: false
+        required: false
+      mihomo_server_hysteria2_obfs_password:
+        description: salamander obfuscation password. Generated when enabled and empty.
+        type: str
+        default: ''
+        required: false
+        no_log: true
+      mihomo_server_hysteria2_masquerade_enabled:
+        description: Enable HTTP/3 masquerade for hysteria2.
+        type: bool
+        default: true
+        required: false
+      mihomo_server_hysteria2_masquerade_url:
+        description: HTTP/3 masquerade URL.
+        type: str
+        default: https://www.bing.com
+        required: false
+      mihomo_server_enable_vless:
+        description: Enable the vless listener.
+        type: bool
+        default: true
+        required: false
+      mihomo_server_vless_port:
+        description: vless listener port.
+        type: int
+        default: 9445
+        required: false
+      mihomo_server_vless_users:
+        description: vless users as name/uuid mappings. Generated when empty.
+        type: list
+        default: []
+        required: false
+        no_log: true
+      mihomo_server_vless_flow:
+        description: Per-user vless flow. Set to an empty string for plain vless.
+        type: str
+        default: xtls-rprx-vision
+        required: false
+      mihomo_server_vless_reality_enabled:
+        description: Use reality-config instead of certificate/key material for the vless listener.
+        type: bool
+        default: true
+        required: false
+      mihomo_server_vless_reality_dest:
+        description: Borrowed TLS 1.3 destination as host:port.
+        type: str
+        default: www.microsoft.com:443
+        required: false
+      mihomo_server_vless_reality_private_key:
+        description: REALITY X25519 private key. Generated on the target when both keys are empty.
+        type: str
+        default: ''
+        required: false
+        no_log: true
+      mihomo_server_vless_reality_public_key:
+        description: REALITY X25519 public key. Generated on the target when both keys are empty.
+        type: str
+        default: ''
+        required: false
+      mihomo_server_vless_reality_short_id:
+        description: REALITY short ID (even-length hex). Generated when empty.
+        type: str
+        default: ''
+        required: false
+      mihomo_server_vless_reality_server_names:
+        description: Accepted REALITY SNI list. Defaults to the dest host when empty.
+        type: list
+        default: []
+        required: false
+      mihomo_server_vless_reality_client_fingerprint:
+        description: uTLS fingerprint on the generated client node.
+        type: str
+        default: chrome
+        required: false
+      mihomo_server_enable_tuic:
+        description: Enable the tuic listener.
+        type: bool
+        default: false
+        required: false
+      mihomo_server_tuic_port:
+        description: tuic listener port.
+        type: int
+        default: 9446
+        required: false
+      mihomo_server_tuic_users:
+        description: tuic users as name/uuid/password mappings. Generated when empty.
+        type: list
+        default: []
+        required: false
+        no_log: true
+      mihomo_server_tuic_congestion_control:
+        description: tuic congestion controller.
+        type: str
+        default: bbr
+        required: false
+      mihomo_server_enable_anytls:
+        description: Enable the anytls listener.
+        type: bool
+        default: true
+        required: false
+      mihomo_server_anytls_port:
+        description: anytls listener port.
+        type: int
+        default: 9447
+        required: false
+      mihomo_server_anytls_users:
+        description: anytls users as name/password mappings. Generated when empty.
+        type: list
+        default: []
+        required: false
+        no_log: true
+      mihomo_server_anytls_security_mode:
+        description: 'AnyTLS outer TLS mode: certificate or jls.'
+        type: str
+        choices:
+          - certificate
+          - jls
+        default: certificate
+        required: false
+      mihomo_server_anytls_jls_dest:
+        description: JLS fallback TLS destination as host:port.
+        type: str
+        default: www.microsoft.com:443
+        required: false
+      mihomo_server_anytls_jls_sni:
+        description: JLS SNI. Empty derives it from the dest host.
+        type: str
+        default: ''
+        required: false
+      mihomo_server_anytls_jls_alpn:
+        description: JLS outer ALPN list.
+        type: list
+        default:
+          - h2
+          - http/1.1
+        required: false
+        elements: str
+      mihomo_server_anytls_jls_users:
+        description: JLS users as name/password mappings. Generated per AnyTLS user when empty.
+        type: list
+        default: []
+        required: false
+        no_log: true
+      mihomo_server_anytls_jls_rate_limit:
+        description: Fallback forwarding limit in bit/s. 0 means unlimited.
+        type: int
+        default: 0
+        required: false
+      mihomo_server_anytls_padding_scheme:
+        description: Optional AnyTLS padding scheme. Empty uses mihomo's default scheme.
+        type: str
+        default: ''
+        required: false
+      mihomo_server_anytls_client_fingerprint:
+        description: Client uTLS fingerprint for anytls. Empty falls back to Go's standard-library TLS fingerprint.
+        type: str
+        default: chrome
+        required: false
+      mihomo_server_anytls_idle_session_check_interval:
+        description: Client idle-session check interval in seconds.
+        type: int
+        default: 30
+        required: false
+      mihomo_server_anytls_idle_session_timeout:
+        description: Client idle-session timeout in seconds.
+        type: int
+        default: 30
+        required: false
+      mihomo_server_anytls_min_idle_session:
+        description: Client idle sessions kept warm. 0 disables the reserved pool.
+        type: int
+        default: 0
+        required: false
+      mihomo_server_extra_listeners:
+        description: Raw extra listeners appended after the generated ones. Each entry needs name and type.
+        type: list
+        default: []
+        required: false
+      mihomo_server_tls_dir:
+        description: Destination directory for role-managed TLS material copies.
+        type: str
+        default: /etc/mihomo/tls
+        required: false
+      mihomo_server_tls_certificate_path:
+        description: Listener certificate path. Derived when a source pair is set; manual mode points at an existing readable
+          pair.
+        type: str
+        default: |-
+          {{ (mihomo_server_tls_dir ~ '/fullchain.pem')
+             if mihomo_server_tls_source_certificate_path | length > 0 else '' }}
+        required: false
+      mihomo_server_tls_key_path:
+        description: Listener private key path. Derived when a source pair is set; manual mode points at an existing readable
+          pair.
+        type: str
+        default: |-
+          {{ (mihomo_server_tls_dir ~ '/privkey.pem')
+             if mihomo_server_tls_source_key_path | length > 0 else '' }}
+        required: false
+      mihomo_server_tls_source_certificate_path:
+        description: Optional source certificate path. Set together with the source key path to copy the pair into the role-managed
+          destination.
+        type: str
+        default: ''
+        required: false
+      mihomo_server_tls_source_key_path:
+        description: Optional source private key path. Set together with the source certificate path.
+        type: str
+        default: ''
+        required: false
+      mihomo_server_alpn:
+        description: ALPN list for hysteria2/tuic listeners and their generated client nodes.
+        type: list
+        default:
+          - h3
+        required: false
+        elements: str
+      mihomo_server_client_node_prefix:
+        description: Prefix of the generated client node names.
+        type: str
+        default: selfhost
+        required: false
+      mihomo_server_local_artifacts_dir:
+        description: Controller-local output directory for generated client artifacts.
+        type: str
+        default: '{{ playbook_dir | ansible.builtin.dirname }}/config/client_outbounds'
+        required: false
+      mihomo_server_host_vars_file:
+        description: Controller-local generated credentials file. Playbook-adjacent paths are auto-loaded on later runs.
+        type: str
+        default: '{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yaml'
+        required: false

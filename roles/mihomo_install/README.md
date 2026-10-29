@@ -1,5 +1,9 @@
 # ak1ra_lab.network.mihomo_install
 
+> The canonical variable reference for this role is
+> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
+> narrative and deployed-artifact details; update both when the contract changes.
+
 Installs the static [mihomo](https://github.com/MetaCubeX/mihomo) binary from
 the `MetaCubeX/mihomo` GitHub releases:
 

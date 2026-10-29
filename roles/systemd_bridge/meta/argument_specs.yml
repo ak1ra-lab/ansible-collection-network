@@ -1,0 +1,31 @@
+argument_specs:
+  main:
+    short_description: Declare host-level Linux bridges
+    description:
+      - Create declarative host-level Linux bridges with systemd-networkd, optionally enslaving one dedicated physical interface
+        per bridge, and manage teardown and NetworkManager unmanaged drop-ins.
+    options:
+      systemd_bridge_state:
+        description: 'Declarative state: present - apply the bridge configuration absent - tear down the declared bridges:
+          drop-ins, .netdev/.network files and the bridges themselves (any remaining ports are released from the bridge before
+          it is deleted). Per-bridge `absent_release_mode` keeps the host reachable through the freed physical interface (see
+          below).'
+        type: str
+        choices:
+          - present
+          - absent
+        default: present
+        required: false
+      systemd_bridge_bridges:
+        description: Bridges to manage. Each entry supports name, interface, address, gateway, dns, stp, forward_delay, ageing_time,
+          multicast_snooping, vlan_filtering, and absent_release_mode.
+        type: list
+        default: []
+        required: false
+      systemd_bridge_conflict_check:
+        description: 'Strictness of the networkd conflict preflight: fail when other systemd-networkd configuration files
+          (in /etc, /run or /usr/lib) already match an interface or bridge this role is about to manage. Set false to downgrade
+          the check to a warning.'
+        type: bool
+        default: true
+        required: false

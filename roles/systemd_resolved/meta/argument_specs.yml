@@ -1,0 +1,68 @@
+argument_specs:
+  main:
+    short_description: Configure systemd-resolved as the host resolver
+    description:
+      - Manage the systemd-resolved global DNS drop-in, fallback servers, DoT, search and routing domains, and the /etc/resolv.conf
+        symlink mode.
+    options:
+      systemd_resolved_state:
+        description: 'Declarative state: present - install/configure systemd-resolved and its resolv.conf link absent - remove
+          the role drop-in and restore the distro stub symlink (or the pre-role backup when one exists).'
+        type: str
+        choices:
+          - present
+          - absent
+        default: present
+        required: false
+      systemd_resolved_nameservers:
+        description: 'Global DNS servers as IP addresses, optionally with #server-name for DNS over TLS validation.'
+        type: list
+        default: []
+        required: false
+      systemd_resolved_fallback_nameservers:
+        description: FallbackDNS entries with the same IP#server-name syntax.
+        type: list
+        default: []
+        required: false
+      systemd_resolved_domains:
+        description: Domains= entries. The default ~. makes the global servers the default route.
+        type: list
+        default:
+          - ~.
+        required: false
+        elements: str
+      systemd_resolved_dns_over_tls:
+        description: 'Set DNSOverTLS=yes. Strict DoT requires a #server-name on every nameserver.'
+        type: bool
+        default: false
+        required: false
+      systemd_resolved_resolv_conf_mode:
+        description: 'How /etc/resolv.conf is managed: stub, uplink, static, or unmanaged.'
+        type: str
+        choices:
+          - stub
+          - uplink
+          - static
+          - unmanaged
+        default: stub
+        required: false
+      systemd_resolved_stub_listener:
+        description: DNSStubListener value in the role drop-in.
+        type: bool
+        default: true
+        required: false
+      systemd_resolved_resolv_conf_path:
+        description: Resolver path managed by the role. Normally /etc/resolv.conf.
+        type: str
+        default: /etc/resolv.conf
+        required: false
+      systemd_resolved_backup_dir:
+        description: Backup root for the resolver file. The absolute path is mirrored below it; the first backup wins.
+        type: str
+        default: /var/lib/ansible/ak1ra_lab/network/systemd_resolved
+        required: false
+      systemd_resolved_backup_resolv_conf:
+        description: Keep a backup before replacing a regular resolver file.
+        type: bool
+        default: true
+        required: false

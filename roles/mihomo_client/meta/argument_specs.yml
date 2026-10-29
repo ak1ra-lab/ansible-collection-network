@@ -1,0 +1,162 @@
+argument_specs:
+  main:
+    short_description: Deploy the mihomo TUN client profile
+    description:
+      - Deploy the mihomo TUN transparent-gateway or local profile, the service identity, the systemd unit, and the optional
+        LAN-gateway sysctl drop-in. The mihomo binary is installed by ak1ra_lab.network.mihomo_install.
+    options:
+      mihomo_client_state:
+        description: 'Declarative state: present applies the role-managed artifacts, absent tears them down.'
+        type: str
+        choices:
+          - present
+          - absent
+        default: present
+        required: false
+      mihomo_client_mode:
+        description: gateway deploys the LAN-gateway sysctl drop-in; local removes it for a host-only profile.
+        type: str
+        choices:
+          - gateway
+          - local
+        default: gateway
+        required: false
+      mihomo_client_selfhost_tier:
+        description: Keep self-hosted nodes in a separate *-自建 tier for chain-proxy deployments instead of merging them into
+          the normal region groups.
+        type: bool
+        default: false
+        required: false
+      mihomo_client_config_template:
+        description: Profile template rendered to <mihomo_client_etc_dir>/config.yaml. Defaults to the plain or selfhost-tier
+          shipped template.
+        type: str
+        default: |-
+          {{ 'etc/mihomo/config.selfhost.yaml.j2'
+             if mihomo_client_selfhost_tier | ansible.builtin.bool
+             else 'etc/mihomo/config.yaml.j2' }}
+        required: false
+      mihomo_client_mixed_port:
+        description: Values rendered into the profile template.
+        type: int
+        default: 7890
+        required: false
+      mihomo_client_api_secret:
+        description: Clash API secret. Generated when empty and persisted to mihomo_client_host_vars_file.
+        type: str
+        default: ''
+        required: false
+        no_log: true
+      mihomo_client_external_ui_url:
+        description: Optional dashboard archive URL fetched by mihomo into external-ui at startup.
+        type: str
+        default: ''
+        required: false
+      mihomo_client_dns_manage_resolved:
+        description: Stop and disable systemd-resolved when present so mihomo can bind port 53.
+        type: bool
+        default: true
+        required: false
+      mihomo_client_dns_manage_resolv_conf:
+        description: Take over /etc/resolv.conf and point it at the mihomo DNS listener.
+        type: bool
+        default: true
+        required: false
+      mihomo_client_proxy_providers:
+        description: Proxy provider subscriptions keyed by provider name. Real subscription URLs are credentials.
+        type: dict
+        default: {}
+        required: false
+        no_log: true
+      mihomo_client_selfhost_proxies:
+        description: Inline clash proxy mappings for providers/selfhost.yaml.
+        type: list
+        default: []
+        required: false
+      mihomo_client_selfhost_files:
+        description: Controller-local mihomo_server artifact files merged after the inline self-hosted nodes.
+        type: list
+        default: []
+        required: false
+      mihomo_client_custom_internal_nameservers:
+        description: Resolvers for custom-internal-rule-set. Required when mihomo_client_custom_internal_rule_set_payload
+          is set.
+        type: list
+        default: []
+        required: false
+      mihomo_client_custom_internal_rule_set_payload:
+        description: Domain payload for the custom-internal-rule-set rule provider.
+        type: list
+        default: []
+        required: false
+      mihomo_client_custom_rejected_rule_set_payload:
+        description: Domain payload for the custom-rejected-rule-set rule provider.
+        type: list
+        default: []
+        required: false
+      mihomo_client_custom_rejected_rule_set_ip_payload:
+        description: IP CIDR payload for the custom-rejected-rule-set-ip rule provider.
+        type: list
+        default: []
+        required: false
+      mihomo_client_custom_direct_rule_set_payload:
+        description: Domain payload for the custom-direct-rule-set rule provider.
+        type: list
+        default: []
+        required: false
+      mihomo_client_custom_direct_rule_set_ip_payload:
+        description: IP CIDR payload for the custom-direct-rule-set-ip rule provider.
+        type: list
+        default: []
+        required: false
+      mihomo_client_custom_proxied_rule_set_payload:
+        description: Domain payload for the custom-proxied-rule-set rule provider.
+        type: list
+        default: []
+        required: false
+      mihomo_client_custom_proxied_rule_set_ip_payload:
+        description: IP CIDR payload for the custom-proxied-rule-set-ip rule provider.
+        type: list
+        default: []
+        required: false
+      mihomo_client_data_repo:
+        description: GitHub release repository of the rule-set bundle.
+        type: str
+        default: MetaCubeX/meta-rules-dat
+        required: false
+      mihomo_client_bundle_src:
+        description: 'Rule-set bundle source: controller-local path or http(s)/ftp URL. Takes precedence over the release
+          download.'
+        type: str
+        default: ''
+        required: false
+      mihomo_client_bundle_asset:
+        description: Release asset name of the rule-set bundle.
+        type: str
+        default: BundleMRS.7z
+        required: false
+      mihomo_client_bundle_force:
+        description: Re-download the rule-set bundle on every run.
+        type: bool
+        default: false
+        required: false
+      mihomo_client_local_artifacts_dir:
+        description: Optional controller directory for a rendered profile copy. Empty disables the local render.
+        type: str
+        default: ''
+        required: false
+      mihomo_client_host_vars_file:
+        description: Controller-local generated credentials file. Playbook-adjacent paths are auto-loaded on later runs.
+        type: str
+        default: '{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yaml'
+        required: false
+      mihomo_client_sysctl_ip_forward:
+        description: Gateway-mode net.ipv4.ip_forward value.
+        type: bool
+        default: true
+        required: false
+      mihomo_client_sysctl_rp_filter:
+        description: Gateway-mode net.ipv4.conf.all.rp_filter value; false avoids dropping the asymmetric proxy path.
+        type: bool
+        default: false
+        required: false

@@ -1,0 +1,53 @@
+argument_specs:
+  main:
+    short_description: Install the static mihomo binary
+    description:
+      - Install or upgrade the static mihomo binary from the MetaCubeX/mihomo GitHub releases. The role does not manage configuration,
+        service identity, or systemd units.
+    options:
+      mihomo_install_enabled:
+        description: Install or upgrade the binary. false makes the role a no-op.
+        type: bool
+        default: true
+        required: false
+      mihomo_install_version:
+        description: 'Version policy: present installs the latest release only when missing, latest converges to the latest
+          release, or a version tag such as 1.19.32 / v1.19.32.'
+        type: str
+        default: present
+        required: false
+      mihomo_install_package_src:
+        description: 'Explicit .gz archive override: a controller-local path or an http(s)/ftp URL.'
+        type: str
+        default: ''
+        required: false
+      mihomo_install_force:
+        description: Reinstall the resolved release even when the installed version already matches.
+        type: bool
+        default: false
+        required: false
+      mihomo_install_microarch:
+        description: 'amd64 microarchitecture build preference: auto, none, baseline, v1..v4, or x86-64-vN.'
+        type: str
+        default: auto
+        required: false
+      mihomo_install_repo:
+        description: GitHub release repository. Override for forks.
+        type: str
+        default: MetaCubeX/mihomo
+        required: false
+      mihomo_install_restart_handler:
+        description: Handler notified after an install or upgrade. Empty means no handler.
+        type: str
+        default: ''
+        required: false
+      mihomo_install_binary:
+        description: Installed binary path.
+        type: str
+        default: /usr/local/bin/mihomo
+        required: false
+      mihomo_install_tmp_dir:
+        description: Parent directory of the role-owned temporary download directory.
+        type: str
+        default: /var/tmp
+        required: false
