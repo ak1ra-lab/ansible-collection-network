@@ -1,3 +1,6 @@
+# Copyright: (c) 2026, ak1ra <ak1ra.komj@gmail.com>
+# GNU General Public License v3.0+ (see LICENSE or https://www.gnu.org/licenses/gpl-3.0.txt)
+
 """Ansible filter plugins: generate the mihomo server configuration.
 
 The role ``ak1ra_lab.network.mihomo_server`` deploys mihomo on a VPS as a

@@ -4,8 +4,8 @@
 galaxy_info:
   author: ak1ra
   description: Capture live IPv4 state into a static netplan file and take over from cloud-init
-  license: MIT
-  min_ansible_version: "2.18"
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.19"
 
   platforms:
     - name: Ubuntu

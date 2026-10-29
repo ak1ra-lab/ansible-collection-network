@@ -3,8 +3,8 @@
 galaxy_info:
   author: ak1ra
   description: "Dedicated-segment egress isolation: bridged network namespaces for per-service direct egress over host-level Linux bridges (opt-in)"
-  license: MIT
-  min_ansible_version: "2.18"
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.19"
 
   platforms:
     - name: Ubuntu

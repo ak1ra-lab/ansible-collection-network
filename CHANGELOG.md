@@ -8,6 +8,11 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Added
 
+- Release packaging for `0.4.0`: GPL-3.0-or-later licensing, `ansible-core
+  >= 2.19.0`, the `ak1ra_lab.general >= 0.4.0`, `ansible.posix`,
+  `community.general` and `ansible.utils` dependencies, `build_ignore`
+  instead of `manifest`, controller-side `requirements.txt` (`netaddr`) and
+  `meta/execution-environment.yml`.
 - `netplan_static_default_interface` selects the physical interface that
   carries the static default route. The new
   `netplan_static_default_routes` filter reads the kernel main table

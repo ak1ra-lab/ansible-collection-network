@@ -1,3 +1,6 @@
+# Copyright: (c) 2026, ak1ra <ak1ra.komj@gmail.com>
+# GNU General Public License v3.0+ (see LICENSE or https://www.gnu.org/licenses/gpl-3.0.txt)
+
 """Ansible filter plugins for ``ak1ra_lab.network.netplan_static``.
 
 * ``netplan_static_interfaces`` - normalize Ansible network facts into the

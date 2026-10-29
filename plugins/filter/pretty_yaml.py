@@ -1,3 +1,6 @@
+# Copyright: (c) 2026, ak1ra <ak1ra.komj@gmail.com>
+# GNU General Public License v3.0+ (see LICENSE or https://www.gnu.org/licenses/gpl-3.0.txt)
+
 """Ansible filter plugin: render YAML the way the hand-written files look.
 
 ``ansible.builtin.to_nice_yaml`` uses the libyaml C emitter when available,

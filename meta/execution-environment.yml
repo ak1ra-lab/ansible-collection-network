@@ -1,0 +1,7 @@
+---
+# Controller-side requirements for an ansible-builder execution environment.
+# The collection dependencies in galaxy.yml are resolved by ansible-galaxy;
+# requirements.txt only adds the Python library used by ansible.utils.ipaddr.
+version: 3
+dependencies:
+  python: requirements.txt

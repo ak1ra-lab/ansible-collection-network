@@ -1,3 +1,6 @@
+# Copyright: (c) 2026, ak1ra <ak1ra.komj@gmail.com>
+# GNU General Public License v3.0+ (see LICENSE or https://www.gnu.org/licenses/gpl-3.0.txt)
+
 """Ansible filter plugins: normalize mihomo/clash providers and nodes.
 
 * ``mihomo_proxy_providers`` - normalizes the airport subscription mapping

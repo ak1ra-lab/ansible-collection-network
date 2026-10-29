@@ -1,0 +1,4 @@
+# Controller-side Python requirements for ak1ra_lab.network.
+# ansible.utils.ipaddr (used by the systemd_bridge and systemd_netns roles)
+# requires netaddr on the control node.
+netaddr>=1.3.0

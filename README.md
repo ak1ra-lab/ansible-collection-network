@@ -25,8 +25,12 @@ systemd-networkd host networking, and cloud-image network takeover:
 ansible-galaxy collection install git+https://github.com/ak1ra-lab/ansible-collection-network.git
 ```
 
-The `mihomo_*` roles also need `ak1ra_lab.general`, which is not published to
-Galaxy yet:
+The collection requires `ansible-core >= 2.19` and controller Python >= 3.11.
+Install the controller-side Python dependency (`netaddr`, used by
+`ansible.utils.ipaddr`) from [`requirements.txt`](requirements.txt).
+
+The `mihomo_*` roles also need `ak1ra_lab.general >= 0.4.0`, which is not
+published to Galaxy yet:
 
 ```yaml
 collections:
@@ -98,4 +102,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+GPL-3.0-or-later. See [LICENSE](LICENSE).

@@ -1,12 +1,15 @@
 ---
+# See https://docs.ansible.com/ansible/latest/dev_guide/collections_galaxy_meta.html
+
 namespace: ak1ra_lab
 name: network
-version: 0.3.0
+version: 0.4.0
 readme: README.md
 authors:
   - ak1ra <git@ak1ra.xyz>
 description: Shared Ansible roles for network infrastructure (transparent proxy, routing).
-license_file: LICENSE
+license:
+  - GPL-3.0-or-later
 tags:
   - automation
   - linux
@@ -14,21 +17,41 @@ tags:
   - nftables
   - tproxy
 dependencies:
+  ak1ra_lab.general: ">=0.4.0"
+  ansible.posix: ">=1.5.4"
+  community.general: ">=8.0.0"
   ansible.utils: ">=6.0.0"
 repository: https://github.com/ak1ra-lab/ansible-collection-network
 documentation: https://ak1ra-lab.github.io/ansible-collection-network/
 homepage: https://github.com/ak1ra-lab/ansible-collection-network
 issues: https://github.com/ak1ra-lab/ansible-collection-network/issues
-# https://setuptools.pypa.io/en/latest/userguide/miscellaneous.html
-manifest:
-  omit_default_directives: true
-  directives:
-    - graft roles
-    - graft playbooks
-    - graft plugins
-    - recursive-exclude playbooks/host_vars *
-    - recursive-exclude playbooks/group_vars *
-    - recursive-exclude playbooks/scripts *
-    - recursive-exclude playbooks/templates *
-    - global-exclude *~ *.py[cod] __pycache__ *.bak *.swp *.tmp *.retry
-    - include LICENSE README.md
+
+# Keep local development state, generated artifacts, and consumer inventory
+# out of the Galaxy artifact. `ansible-galaxy collection build` always excludes
+# galaxy.yml, .git and Python cache files.
+build_ignore:
+  - .agents
+  - .ansible
+  - .ansible-lint
+  - .cache
+  - .github
+  - .molecule
+  - .mypy_cache
+  - .pytest_cache
+  - .ruff_cache
+  - .tox
+  - .venv
+  - ansible.cfg
+  - config
+  - justfile
+  - mkdocs.yaml
+  - playbooks/group_vars
+  - playbooks/host_vars
+  - pyproject.toml
+  - requirements.yaml
+  - ruff.toml
+  - site
+  - tests/output
+  - uv.lock
+  - yamlfmt.yaml
+  - "*.tar.gz"

@@ -4,8 +4,8 @@
 galaxy_info:
   author: ak1ra
   description: mihomo TUN transparent-proxy client (LAN gateway or host-only)
-  license: MIT
-  min_ansible_version: "2.18"
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.19"
 
   platforms:
     - name: Ubuntu
