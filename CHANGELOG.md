@@ -27,9 +27,10 @@ The format is based on Keep a Changelog, and this project does not currently gua
   `ansible-galaxy` can read the `galaxy.yml` manifest when installing the
   collection from source. The `just` collection recipes use the uv
   environment for the same reason.
-- Molecule keeps `systemd-resolved` pointed at the container runtime's
-  upstream DNS, so the resolver scenarios no longer break package downloads
-  in later scenarios.
+- Molecule filters the container's loopback resolver stub and reads the
+  systemd-resolved uplink view before configuring the test resolver, so the
+  resolver scenarios no longer break package downloads in later scenarios.
+  The `tproxy` prepare also retries a transient package-download failure.
 
 ### Changed
 

@@ -20,6 +20,12 @@
       ansible.builtin.package:
         name: kmod
         state: present
+      register: _tproxy_kmod
+      # The package download is the last network access in the run; retry a
+      # transient resolver failure rather than losing the whole sequence.
+      until: _tproxy_kmod is not failed
+      retries: 3
+      delay: 5
 
     - name: check the container sees the host kernel module tree
       ansible.builtin.stat:
