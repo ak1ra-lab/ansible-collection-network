@@ -16,10 +16,10 @@ just ansible-requirements-install
 ```
 
 `just sync` installs the `dev` dependency group (ruff, ty, ansible-core,
-pytest, MkDocs). `just ansible-collection-install` installs this collection
-and the local `ak1ra_lab.general` checkout into `.ansible/collections`;
-`just ansible-requirements-install` installs the collections listed in
-`requirements.yaml`.
+ansible-lint, pytest, Molecule, MkDocs). `just ansible-collection-install`
+installs this collection and the local `ak1ra_lab.general` checkout into
+`.ansible/collections`. `just ansible-requirements-install` installs the
+collections listed in `requirements.yaml`.
 
 ## Checks
 

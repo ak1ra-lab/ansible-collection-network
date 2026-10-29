@@ -33,6 +33,9 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Changed
 
+- CI installs ansible-lint and Molecule from the uv dependency groups and
+  runs every Python tool through `uv run`, matching the local just recipes.
+  The Docs workflow grants Pages write access only to the deploy job.
 - Refreshed CI action pins: `actions/setup-python` 7.1.0,
   `astral-sh/setup-uv` 10.3.1 and `actions/upload-pages-artifact` 5.0.0.
 

@@ -14,25 +14,38 @@ package = false
 extra-paths = ["plugins/filter", "plugins/lookup"]
 
 [dependency-groups]
-lint = [
+# Shared Ansible runtime: ansible-galaxy reads the galaxy.yml manifest through
+# distlib when installing the collection from source.
+ansible = [
     "ansible-core>=2.19.12",
+    "distlib>=0.4.4",
+]
+lint = [
+    { include-group = "ansible" },
+    "ansible-lint>=26.8.0",
     "ruff>=0.17.0",
     "ty>=0.0.40",
 ]
 test = [
-    "ansible-core>=2.19.12",
+    { include-group = "ansible" },
     "pytest>=9.1.1",
 ]
 docs = [
-    # ansible-galaxy reads the galaxy.yml manifest through distlib.
-    "distlib>=0.4.4",
+    { include-group = "ansible" },
     "mkdocs>=1.6,<2",
     "mkdocs-ansible-collection>=1.1.0",
     "mkdocs-material>=9.7.7,<10",
     "pymdown-extensions>=12.3,<13",
 ]
+molecule = [
+    { include-group = "ansible" },
+    "molecule>=26.8.0",
+    # ansible.utils.ipaddr is used by the roles' address validation.
+    "netaddr>=1.3.0",
+]
 dev = [
     { include-group = "lint" },
     { include-group = "test" },
     { include-group = "docs" },
+    { include-group = "molecule" },
 ]

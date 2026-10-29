@@ -12,8 +12,8 @@ duplicate role or plugin docs.
 ## Tooling
 
 - Environment: **uv** (`pyproject.toml`, `uv.lock`). `just sync` installs the
-  `dev` group (lint, test, docs). Do not use `pip` or `poetry` to manage this
-  repository's environment.
+  `dev` group (lint, test, docs, molecule). Do not use `pip` or `poetry` to
+  manage this repository's environment.
 - Python lint/format: **ruff** over `plugins/` and `tests/` (`just lint`).
   Typecheck: **ty** over the same paths (`just typecheck`). Do not use
   `black`, `isort`, `flake8`, or `mypy`.

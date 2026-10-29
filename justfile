@@ -44,19 +44,19 @@ ansible-requirements-install:
 
 # Lint all Ansible content with ansible-lint (production profile)
 ansible-lint:
-    ansible-lint
+    uv run ansible-lint
 
 # Run every Molecule scenario (nested scenarios need the recursive glob)
 molecule-test: ansible-collection-install ansible-requirements-install
-    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' molecule test --all
+    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' uv run molecule test --all
 
 # Run one Molecule scenario, e.g. `just molecule-test-one systemd_netns`
 molecule-test-one scenario: ansible-collection-install ansible-requirements-install
-    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' molecule test -s {{scenario}}
+    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' uv run molecule test -s {{scenario}}
 
 # List the Molecule scenarios
 molecule-list:
-    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' molecule list
+    MOLECULE_GLOB='extensions/molecule/**/molecule.yml' uv run molecule list
 
 # Serve the documentation site locally
 docs-serve: ansible-collection-install
@@ -68,11 +68,11 @@ docs-build: ansible-collection-install
 
 # Create the shared test containers used by every scenario
 molecule-create: ansible-collection-install ansible-requirements-install
-    molecule create
+    uv run molecule create
 
 # Remove the shared test containers
 molecule-destroy:
-    molecule destroy
+    uv run molecule destroy
 
 # Remove build artifacts
 clean:
