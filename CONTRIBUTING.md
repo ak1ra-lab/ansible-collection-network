@@ -68,14 +68,18 @@ the containers before Molecule installs anything itself.
 
 ### Container runtime
 
-Run Podman rootful, as CI does. The `systemd_netns` unit uses `ip netns
-exec`, whose recursive `/sys` bind mount is not permitted inside the rootless
-user namespace, and the `tproxy` scenario loads host kernel modules
-(`modprobe nft_tproxy`, `tcp_bbr`, ...), which rootless Podman cannot do
-inside a user namespace either. Every container is also created privileged
-(systemd needs the capabilities, and the shared udev preparation needs a
-writable `/sys`), and the host kernel module tree is bind-mounted read-only
-into the containers through the inventory's `container_volumes`.
+Only the kernel-facing scenarios require host root: `flow_offload` needs the
+host flowtable offload path, the `systemd_netns` unit uses `ip netns exec`
+(whose recursive `/sys` bind mount is not permitted inside the rootless user
+namespace), and `tproxy` loads host kernel modules (`modprobe nft_tproxy`,
+`tcp_bbr`, ...). The remaining scenarios (`cloud_init`, `mihomo_client`,
+`mihomo_server*`, `netplan_static`, `proxy_guard`, `systemd_bridge`,
+`systemd_resolved`) pass with rootless Podman locally. CI still runs the
+whole collection with rootful Podman for a uniform, reliable systemd
+container runtime. Every container is created privileged (systemd needs the
+capabilities, and the shared udev preparation needs a writable `/sys`), and
+the host kernel module tree is bind-mounted read-only into the containers
+through the inventory's `container_volumes`.
 
 A rootful Docker daemon is supported as an alternative: set
 `MOLECULE_CONTAINER_RUNTIME=docker` for every molecule invocation. The
