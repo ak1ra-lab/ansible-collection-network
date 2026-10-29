@@ -58,7 +58,7 @@ mihomo_client_config_template: >-
 # Values rendered into the profile template.
 mihomo_client_mixed_port: 7890
 
-# Clash API secret.  Generated with the ak1ra_lab.network.random_password
+# Clash API secret.  Generated with the ak1ra_lab.general.random_password
 # lookup (control-node CSPRNG) when empty and persisted to
 # `mihomo_client_host_vars_file`, so repeated runs reuse the stored value; an
 # explicit non-empty value always wins.  The controller listens on

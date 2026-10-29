@@ -1,9 +1,8 @@
 """Shared pytest configuration for the collection unit tests.
 
-The filter and lookup plugins are plain Python modules; plain pytest imports
-them directly (ansible-test is not set up in this repository), so this file
-puts ``plugins/filter/`` and ``plugins/lookup/`` on ``sys.path``.  Running
-the tests requires ``ansible-core`` (for ``ansible.errors``) and ``pytest``.
+The filter plugins are plain Python modules; plain pytest imports them
+directly, so this file puts ``plugins/filter/`` on ``sys.path``.  Running the
+tests requires ``ansible-core`` (for ``ansible.errors``) and ``pytest``.
 """
 
 from __future__ import annotations
@@ -16,11 +15,10 @@ import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PLUGIN_ROOTS = (REPO_ROOT / "plugins" / "filter", REPO_ROOT / "plugins" / "lookup")
+FILTER_ROOT = REPO_ROOT / "plugins" / "filter"
 
-for plugin_root in PLUGIN_ROOTS:
-    if str(plugin_root) not in sys.path:
-        sys.path.insert(0, str(plugin_root))
+if str(FILTER_ROOT) not in sys.path:
+    sys.path.insert(0, str(FILTER_ROOT))
 
 
 def _role_defaults(role: str) -> dict[str, Any]:

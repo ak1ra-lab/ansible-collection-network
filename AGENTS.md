@@ -2,8 +2,8 @@
 
 This repository is the `ak1ra_lab.network` Ansible collection (`galaxy.yml`
 namespace/name), not a consumer. It ships reusable roles under `roles/`,
-custom filter and lookup plugins under `plugins/`, and collection playbook
-entry points under `playbooks/`. Role contracts belong in
+custom filter plugins under `plugins/`, and collection playbook entry points
+under `playbooks/`. Role contracts belong in
 `roles/<role>/README.md`; plugin docs belong in the `DOCUMENTATION`,
 `EXAMPLES`, and `RETURN` constants in the plugin source. `README.md` is the
 consumer landing page; `docs/` is the MkDocs site source and must not

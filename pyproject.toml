@@ -8,10 +8,10 @@ dependencies = []
 [tool.uv]
 package = false
 
-# The unit tests import the filter and lookup plugins as top-level modules
-# (the same sys.path entries tests/unit/conftest.py adds at runtime).
+# The unit tests import the filter plugins as top-level modules (the same
+# sys.path entry tests/unit/conftest.py adds at runtime).
 [tool.ty.environment]
-extra-paths = ["plugins/filter", "plugins/lookup"]
+extra-paths = ["plugins/filter"]
 
 [dependency-groups]
 # Shared Ansible runtime: ansible-galaxy reads the galaxy.yml manifest through

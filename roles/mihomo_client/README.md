@@ -303,7 +303,7 @@ black-holing.
 | `mihomo_client_selfhost_tier` | `false` | Keep self-hosted nodes in a separate `*-自建` tier (US/SG/JP + catch-all) for chain-proxy deployments; `false` merges them into the normal region groups |
 | `mihomo_client_config_template` | auto: `etc/mihomo/config.yaml.j2` (plain) or `etc/mihomo/config.selfhost.yaml.j2` (selfhost tier) | Profile template to render; point at a copy to customize |
 | `mihomo_client_mixed_port` | `7890` | HTTP/SOCKS mixed port |
-| `mihomo_client_api_secret` | `""` | Clash API secret; generated with `random_password` when empty and persisted to `mihomo_client_host_vars_file` (an explicit value wins; the controller listens on `0.0.0.0:9090`) |
+| `mihomo_client_api_secret` | `""` | Clash API secret; generated with `ak1ra_lab.general.random_password` when empty and persisted to `mihomo_client_host_vars_file` (an explicit value wins; the controller listens on `0.0.0.0:9090`) |
 | `mihomo_client_external_ui_url` | `""` | Optional dashboard archive URL, fetched by mihomo into `external-ui` (`ui`) at startup |
 | `mihomo_client_dns_manage_resolved` | `true` | Stop/disable systemd-resolved when present (frees `127.0.0.53:53`) |
 | `mihomo_client_dns_manage_resolv_conf` | `true` | Replace `/etc/resolv.conf` with `nameserver 127.0.0.1` (a symlink is removed, not written through) |

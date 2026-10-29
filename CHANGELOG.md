@@ -34,6 +34,10 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Changed
 
+- The `random_password`, `random_base64_key` and `random_uuid` lookup plugins
+  moved to `ak1ra_lab.general` (0.4.0).  Use
+  `ak1ra_lab.general.random_*`; the old `ak1ra_lab.network.random_*` plugins
+  are removed in this release.
 - `tproxy` is marked **experimental**.  The role name is unchanged; its
   variable contract and deployed artifacts may still change without a
   deprecation cycle until the role is promoted.

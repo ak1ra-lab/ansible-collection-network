@@ -137,7 +137,7 @@ The docs workflow publishes `site/` to GitHub Pages from `master`.
 - `roles/` - role implementations and their canonical READMEs.
 - `playbooks/` - collection playbook entry points; they orchestrate roles but
   keep role contracts in the roles.
-- `plugins/filter/`, `plugins/lookup/` - Python plugins and their docs.
+- `plugins/filter/` - Python filter plugins and their docs.
 - `extensions/molecule/` - Molecule scenarios.
 - `tests/unit/` - pytest tests for plugins and the client profile template.
 - `docs/`, `mkdocs.yaml` - documentation site source and configuration.

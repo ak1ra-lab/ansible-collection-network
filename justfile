@@ -26,7 +26,7 @@ lint:
 typecheck:
     uv run ty check plugins/ tests/
 
-# Run the plugin unit tests (filters + lookups)
+# Run the filter plugin and template unit tests
 unit-test:
     uv run pytest tests/unit -q
 
