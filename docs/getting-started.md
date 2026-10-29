@@ -72,8 +72,10 @@ Role-specific requirements:
   out-of-band access because it can change the host's network path.
 - `systemd_resolved`: root privileges; the `systemd-resolved` package. The
   role must be the only owner of `/etc/resolv.conf` on the host.
-- `tproxy`: root privileges; nftables and the kernel modules the role loads
-  (`nft_tproxy`, `nf_conntrack`, `tcp_bbr`, ...).
+- `tproxy` (**experimental**): root privileges; nftables and the kernel
+  modules the role loads (`nft_tproxy`, `nf_conntrack`, `tcp_bbr`, ...).  The
+  role name is stable, but pin a collection version and review the changelog
+  before upgrading.
 - `mihomo_client`: a writable `/dev/net/tun`, the `tun` module, and kernel
   nftables support for the default TUN `auto-redirect`. Debian and Ubuntu
   stock kernels provide it; kernels without it need `DISABLE_NFTABLES=true`

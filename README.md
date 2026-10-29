@@ -41,7 +41,7 @@ and the managed-node matrix.
 
 | Role | Description |
 | --- | --- |
-| [`tproxy`](roles/tproxy/README.md) | Engine-agnostic TPROXY plumbing: nftables marks, policy routing, sysctl. |
+| [`tproxy`](roles/tproxy/README.md) | **Experimental.** Engine-agnostic TPROXY plumbing: nftables marks, policy routing, sysctl. |
 | [`flow_offload`](roles/flow_offload/README.md) | nftables flowtable offloading for forwarded traffic. |
 | [`proxy_guard`](roles/proxy_guard/README.md) | Per-client TCP throttle and auto-ban for transparent-proxy gateways. |
 | [`systemd_bridge`](roles/systemd_bridge/README.md) | Declarative host-level Linux bridges through systemd-networkd. |

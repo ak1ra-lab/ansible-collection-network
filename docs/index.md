@@ -34,9 +34,10 @@ filter and lookup plugins only.
 
 The proxy roles are deliberately split by engine and by deployment shape:
 
-- `tproxy` is the engine-agnostic TPROXY plumbing. It marks and routes
-  traffic but installs no proxy engine; an engine with a TPROXY inbound plugs
-  in through variables.
+- `tproxy` (experimental) is the engine-agnostic TPROXY plumbing. It marks
+  and routes traffic but installs no proxy engine; an engine with a TPROXY
+  inbound plugs in through variables.  The role name is stable; its contract
+  may still change.
 - `mihomo_client` uses mihomo's TUN inbound instead of the TPROXY contract.
   It does not depend on `tproxy`.
 - `mihomo_server` produces the VPS-side listeners and the clash-format client

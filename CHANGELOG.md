@@ -34,6 +34,9 @@ The format is based on Keep a Changelog, and this project does not currently gua
 
 ### Changed
 
+- `tproxy` is marked **experimental**.  The role name is unchanged; its
+  variable contract and deployed artifacts may still change without a
+  deprecation cycle until the role is promoted.
 - CI installs ansible-lint and Molecule from the uv dependency groups and
   runs every Python tool through `uv run`, matching the local just recipes.
   The Docs workflow grants Pages write access only to the deploy job.

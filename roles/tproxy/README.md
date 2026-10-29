@@ -1,5 +1,11 @@
 # ak1ra_lab.network.tproxy
 
+!!! warning "Experimental role"
+    `tproxy` is marked **experimental**.  The role name is stable, but its
+    variable contract and deployed artifacts may change without a deprecation
+    cycle until it is promoted.  Pin a collection version and review the
+    changelog before upgrading.
+
 Engine-agnostic TPROXY transparent proxy plumbing for Linux gateways:
 nftables marking (fwmark), policy routing (`ip rule` / `ip route`), sysctl
 tuning and kernel module loading. Installs and configures **no proxy engine**.

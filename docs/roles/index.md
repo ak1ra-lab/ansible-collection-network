@@ -11,7 +11,7 @@ the contract changes.
 
 | Role | Description |
 | --- | --- |
-| [`tproxy`](tproxy.md) | Engine-agnostic TPROXY plumbing: nftables marks, policy routing, sysctl. |
+| [`tproxy`](tproxy.md) | **Experimental.** Engine-agnostic TPROXY plumbing: nftables marks, policy routing, sysctl. |
 | [`flow_offload`](flow_offload.md) | nftables flowtable offloading for forwarded traffic. |
 | [`proxy_guard`](proxy_guard.md) | Per-client TCP throttle and auto-ban for transparent-proxy gateways. |
 | [`systemd_bridge`](systemd_bridge.md) | Declarative host-level Linux bridges through systemd-networkd. |

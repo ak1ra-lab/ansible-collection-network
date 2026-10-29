@@ -3,7 +3,7 @@
 
 galaxy_info:
   author: ak1ra
-  description: Engine-agnostic TPROXY transparent proxy plumbing (nftables + policy routing)
+  description: "Experimental: engine-agnostic TPROXY transparent proxy plumbing (nftables + policy routing)"
   license: MIT
   min_ansible_version: "2.18"
 
