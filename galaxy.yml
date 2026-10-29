@@ -35,6 +35,7 @@ build_ignore:
   - .ansible-lint
   - .cache
   - .github
+  - .gitignore
   - .molecule
   - .mypy_cache
   - .pytest_cache
@@ -42,6 +43,7 @@ build_ignore:
   - .tox
   - .venv
   - ansible.cfg
+  - collections
   - config
   - importer_result.json
   - justfile

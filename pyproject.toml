@@ -8,11 +8,6 @@ dependencies = []
 [tool.uv]
 package = false
 
-# The unit tests import the filter plugins as top-level modules (the same
-# sys.path entry tests/unit/conftest.py adds at runtime).
-[tool.ty.environment]
-extra-paths = ["plugins/filter"]
-
 [dependency-groups]
 # Shared Ansible runtime: ansible-galaxy reads the galaxy.yml manifest through
 # distlib when installing the collection from source.
@@ -23,12 +18,15 @@ ansible = [
 lint = [
     { include-group = "ansible" },
     "ansible-lint>=26.8.0",
+    "galaxy-importer>=0.4.31",
+    "mypy>=1.18.0",
     "ruff>=0.17.0",
-    "ty>=0.0.40",
 ]
 test = [
     { include-group = "ansible" },
-    "pytest>=9.1.1",
+    "pytest>=8",
+    "tox>=4.2",
+    "tox-ansible>=26.10.0",
 ]
 docs = [
     { include-group = "ansible" },
@@ -49,3 +47,37 @@ dev = [
     { include-group = "docs" },
     { include-group = "molecule" },
 ]
+
+# Filter tests import the collection through the installed namespace
+# (ansible_collections.ak1ra_lab.network.plugins.filter...). Install the
+# collection into .ansible/collections before running mypy (`just typecheck`
+# does this), or point mypy_path at an equivalent collection root.
+[tool.mypy]
+python_version = "3.11"
+files = ["plugins", "tests"]
+mypy_path = ".ansible/collections"
+allow_redefinition = true
+check_untyped_defs = true
+# mihomo_server annotates the same local in mutually exclusive branches; the
+# existing plugin code is deliberately left untouched during the reorg.
+disable_error_code = ["no-redef"]
+ignore_missing_imports = true
+no_implicit_optional = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+# Standard tox-ansible harness. The plugin generates the ansible-core 2.19,
+# 2.20, 2.21 and devel/milestone matrix from the upstream support matrix;
+# `tox list --ansible` shows the result. Do not add an ad-hoc skip list: drop
+# an environment with `tox -e <env> --ansible` instead.
+#
+# Until ak1ra_lab.general 0.4.0 is published, ADE cannot resolve the
+# galaxy.yml dependency for network environments. See CONTRIBUTING.md for the
+# temporary local-checkout bridge.
+[tool.tox]
+requires = ["tox>=4.2"]
+
+[tool.tox-ansible]
+molecule = "auto"

@@ -1,19 +1,16 @@
 ---
-# Collection CI: ansible-lint, the plugin unit tests and the Molecule
-# scenarios.
+# Collection CI: lint/typecheck/docs, the tox-ansible sanity and unit matrix,
+# the Galaxy build-import gate, and the Molecule scenarios.
 #
-# All Python tooling comes from the uv-managed environment.  Each job syncs
-# the dependency groups it needs once and then runs the tools through
-# `uv run --no-sync`; do not add pip installs here, declare the tool in
-# `pyproject.toml` instead.
+# Python tooling comes from the uv-managed environment. The Molecule job stays
+# separate and does not use the full Python x ansible-core matrix. It runs
+# rootful Podman because systemd_netns and tproxy need host kernel facilities
+# that rootless containers cannot provide.
 #
-# The Molecule scenarios run with rootful Podman on the runner (the same
-# recipe as ak1ra-lab/docker-systemd): the systemd_netns role's unit calls
-# `ip netns exec`, which performs a recursive /sys bind mount that rootless
-# Podman cannot do inside a user namespace, and the tproxy scenario loads
-# host kernel modules (`modprobe nft_tproxy`, `tcp_bbr`, ...), which a
-# rootless runtime cannot do inside a user namespace.  Rootful Podman also
-# supports the privileged containers every scenario uses.
+# The collection depends on the not-yet-published ak1ra_lab.general 0.4.0.
+# The lint job checks out the sibling repository into .deps; tox-ansible
+# environments cannot resolve that dependency through ADE until general is
+# published (see CONTRIBUTING.md for the temporary local bridge).
 name: CI
 
 on:
@@ -22,6 +19,10 @@ on:
     branches:
       - master
       - dev
+      - reorg/collections-2026-10
+  schedule:
+    # Weekly devel/milestone coverage (Monday 03:17 UTC).
+    - cron: "17 3 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -33,9 +34,55 @@ concurrency:
 
 jobs:
   lint:
-    name: Lint
+    name: Lint and docs
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check out the unpublished general collection
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ak1ra-lab/ansible-collection-general
+          ref: reorg/collections-2026-10
+          path: .deps/ansible-collection-general
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
+      - name: Sync the lint and docs dependencies
+        run: uv sync --locked --no-dev --group lint --group docs
+      - name: Install the collections without Galaxy dependency resolution
+        run: |
+          mkdir -p .ansible/collections
+          uv run --no-sync ansible-galaxy collection install \
+            --force --no-deps -p .ansible/collections .
+          uv run --no-sync ansible-galaxy collection install \
+            --no-deps -p .ansible/collections .deps/ansible-collection-general
+          uv run --no-sync ansible-galaxy collection install \
+            -r requirements.yaml -p .ansible/collections
+      - name: Run ansible-lint
+        run: uv run --no-sync ansible-lint
+      - name: Run ruff and mypy
+        run: |
+          uv run --no-sync ruff check plugins/ tests/
+          uv run --no-sync ruff format --check plugins/ tests/
+          uv run --no-sync mypy plugins/ tests/
+      - name: Build the documentation site
+        env:
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
+          NO_MKDOCS_2_WARNING: "1"
+        run: uv run --no-sync mkdocs build --strict
+
+  build-import:
+    name: Build and import
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -47,42 +94,124 @@ jobs:
           python-version: "3.13"
       - name: Install uv
         uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
-      - name: Sync the lint and docs dependencies
-        run: uv sync --locked --no-dev --group lint --group docs
-      - name: Install the collection under test and the required collections
+      - name: Sync the lint dependencies
+        run: uv sync --locked --no-dev --group lint
+      - name: Build the collection
         run: |
-          mkdir -p .ansible/collections
-          # The repository's ansible.cfg points collections_path at
-          # ./.ansible/collections; install the collection under test (for
-          # the ak1ra_lab.network.* references in playbooks) and the
-          # scenario requirements there.
-          uv run --no-sync ansible-galaxy collection install \
-            --force --collections-path .ansible/collections .
-          uv run --no-sync ansible-galaxy collection install \
-            -r requirements.yaml -p .ansible/collections
-          # The mihomo_* roles also need ak1ra_lab.general
-          # (github_releases_info / cpu_info); it is not on Galaxy yet, so
-          # install it from git.
-          uv run --no-sync ansible-galaxy collection install \
-            "git+https://github.com/ak1ra-lab/ansible-collection-general.git,master" \
-            -p .ansible/collections
-      - name: Run ansible-lint
-        run: uv run --no-sync ansible-lint
-      - name: Run ruff and ty
+          rm -rf dist
+          uv run --no-sync ansible-galaxy collection build --output-path dist
+      - name: Verify the collection metadata and tarball contents
         run: |
-          uv run --no-sync ruff check plugins/ tests/
-          uv run --no-sync ruff format --check plugins/ tests/
-          uv run --no-sync ty check plugins/ tests/
-      - name: Build the documentation site
-        env:
-          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
-          NO_MKDOCS_2_WARNING: "1"
-        run: uv run --no-sync mkdocs build --strict
+          uv run --no-sync python - <<'PY'
+          import pathlib
+          import yaml
+
+          galaxy = yaml.safe_load(pathlib.Path("galaxy.yml").read_text(encoding="utf-8"))
+          assert "build_ignore" in galaxy, "galaxy.yml must use build_ignore"
+          assert "manifest" not in galaxy, "galaxy.yml must not use the old manifest key"
+          assert galaxy["version"] == "0.4.0", galaxy["version"]
+          assert galaxy["license"] == ["GPL-3.0-or-later"], galaxy["license"]
+          assert galaxy["dependencies"]["ak1ra_lab.general"] == ">=0.4.0"
+          PY
+          tarball=$(ls dist/*.tar.gz)
+          for required in meta/runtime.yml README.md LICENSE CHANGELOG.md; do
+            tar -tzf "$tarball" | grep -qx "$required"
+          done
+          if tar -tzf "$tarball" | grep -Eq '^(\.agents|\.ansible|\.venv|site|tests/output|playbooks/(host|group)_vars|config)(/|$)'; then
+            echo "local/test-only content leaked into the tarball" >&2
+            exit 1
+          fi
+      - name: Run galaxy-importer
+        run: |
+          rm -rf /tmp/collection-import
+          uv run --no-sync python -m galaxy_importer.main \
+            --git-clone-path . \
+            --output-path /tmp/collection-import \
+            --print-result
+      - name: Smoke-test a clean install
+        run: |
+          tmp=$(mktemp -d)
+          uv run --no-sync ansible-galaxy collection install --force --no-deps \
+            dist/*.tar.gz -p "$tmp/collections"
+          ANSIBLE_COLLECTIONS_PATH="$tmp/collections" \
+            uv run --no-sync ansible-doc -t filter ak1ra_lab.network.pretty_yaml >/dev/null
+
+  sanity:
+    name: Sanity py${{ matrix.python }}-${{ matrix.ansible }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.11"
+            ansible: "2.19"
+          - python: "3.12"
+            ansible: "2.20"
+          - python: "3.13"
+            ansible: "2.21"
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
+      - name: Sync the test dependencies
+        run: uv sync --locked --no-dev --group test
+      - name: Run ansible-test sanity through tox-ansible
+        run: >-
+          uv run --no-sync tox
+          -e sanity-py${{ matrix.python }}-${{ matrix.ansible }}
+          --ansible
 
   unit:
-    name: Unit tests
+    name: Unit py${{ matrix.python }}-${{ matrix.ansible }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.11"
+            ansible: "2.19"
+          - python: "3.12"
+            ansible: "2.20"
+          - python: "3.13"
+            ansible: "2.21"
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
+      - name: Sync the test dependencies
+        run: uv sync --locked --no-dev --group test
+      - name: Run ansible-test units through tox-ansible
+        run: >-
+          uv run --no-sync tox
+          -e unit-py${{ matrix.python }}-${{ matrix.ansible }}
+          --ansible
+
+  devel:
+    name: ${{ matrix.test }} py3.13-${{ matrix.ansible }}
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [sanity, unit]
+        ansible: [devel, milestone]
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -96,8 +225,11 @@ jobs:
         uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
       - name: Sync the test dependencies
         run: uv sync --locked --no-dev --group test
-      - name: Run the filter plugin and template unit tests
-        run: uv run --no-sync pytest tests/unit -q
+      - name: Run the weekly devel/milestone environment
+        run: >-
+          uv run --no-sync tox
+          -e ${{ matrix.test }}-py3.13-${{ matrix.ansible }}
+          --ansible
 
   molecule:
     name: Molecule
@@ -120,11 +252,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y podman
-      # The scenarios search the project-local collections path
-      # (ANSIBLE_COLLECTIONS_PATH in extensions/molecule/config.yml), and
-      # the shared default scenario's create/destroy run before
-      # ansible-compat's prerun installs anything. Install the collection
-      # under test and the scenario requirements up front.
+      # WP-6 owns Molecule isolation and removing the manual collection
+      # install. Until then the shared default scenario lifecycle still reads
+      # the project-local collections path.
       - name: Install the collection under test and scenario requirements
         run: |
           mkdir -p .ansible/collections
@@ -132,14 +262,9 @@ jobs:
             --force --collections-path .ansible/collections .
           uv run --no-sync ansible-galaxy collection install \
             -r requirements.yaml -p .ansible/collections
-          # ak1ra_lab.general (needed by the mihomo_* scenarios) is not on
-          # Galaxy yet; install it from git.
           uv run --no-sync ansible-galaxy collection install \
-            "git+https://github.com/ak1ra-lab/ansible-collection-general.git,master" \
+            "git+https://github.com/ak1ra-lab/ansible-collection-general.git,reorg/collections-2026-10" \
             -p .ansible/collections
-      # Rootful Podman is required (see the workflow header). Put the
-      # uv-managed virtualenv first on PATH so the root shell runs the same
-      # Molecule and ansible-core binaries as the unprivileged steps.
       - name: Run the Molecule scenarios
         run: >-
           sudo env "PATH=${GITHUB_WORKSPACE}/.venv/bin:${PATH}"

@@ -9,7 +9,10 @@ astral-plane emoji, which the generated profiles are full of.
 
 from __future__ import annotations
 
-from pretty_yaml import FilterModule, to_pretty_yaml
+from ansible_collections.ak1ra_lab.network.plugins.filter.pretty_yaml import (
+    FilterModule,
+    to_pretty_yaml,
+)
 
 
 def test_registered_filters() -> None:

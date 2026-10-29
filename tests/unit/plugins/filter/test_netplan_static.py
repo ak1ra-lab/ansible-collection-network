@@ -9,7 +9,11 @@ import base64
 
 import pytest
 from ansible.errors import AnsibleFilterError
-from netplan_static import netplan_conflicts, netplan_static_default_routes, netplan_static_interfaces
+from ansible_collections.ak1ra_lab.network.plugins.filter.netplan_static import (
+    netplan_conflicts,
+    netplan_static_default_routes,
+    netplan_static_interfaces,
+)
 
 
 def _facts(*interfaces: dict) -> dict:

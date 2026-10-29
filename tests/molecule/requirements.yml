@@ -1,0 +1,16 @@
+---
+# Collections installed by tox-ansible/ade for the Molecule scenarios.
+# The collection under test is installed editable by tox-ansible itself.
+# ak1ra_lab.general is declared in galaxy.yml and is intentionally not
+# repeated here: it is not on Galaxy yet, so ADE cannot resolve it until the
+# first general 0.4.0 release. See CONTRIBUTING.md for the temporary local
+# checkout bridge.
+collections:
+  - name: ansible.utils
+    version: ">=6.0.0"
+  - name: ansible.posix
+    version: ">=1.5.4"
+  - name: community.general
+    version: ">=8.0.0"
+  - name: containers.podman
+  - name: community.docker

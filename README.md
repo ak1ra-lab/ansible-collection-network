@@ -96,9 +96,10 @@ just all
 just molecule-test
 ```
 
-`just all` covers lint, typecheck, unit tests, ansible-lint, and the docs
-build. Molecule needs a rootful container runtime and is run separately.
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
+`just all` covers lint, mypy, unit tests, ansible-lint, and the docs build.
+`just tox-list` shows the standard tox-ansible ansible-core/Python matrix.
+Molecule needs a rootful container runtime and is run separately. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
 ## License
 

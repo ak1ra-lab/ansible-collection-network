@@ -21,8 +21,13 @@ from typing import Any
 
 import pytest
 from ansible.errors import AnsibleFilterError
-from mihomo_providers import mihomo_selfhost_proxies
-from mihomo_server import mihomo_server_client_proxies, mihomo_server_config
+from ansible_collections.ak1ra_lab.network.plugins.filter.mihomo_providers import (
+    mihomo_selfhost_proxies,
+)
+from ansible_collections.ak1ra_lab.network.plugins.filter.mihomo_server import (
+    mihomo_server_client_proxies,
+    mihomo_server_config,
+)
 
 CERT = "/etc/mihomo/tls/fullchain.pem"
 KEY = "/etc/mihomo/tls/privkey.pem"

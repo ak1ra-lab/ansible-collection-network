@@ -18,7 +18,10 @@ from typing import Any
 
 import pytest
 from ansible.errors import AnsibleFilterError
-from mihomo_providers import mihomo_proxy_providers, mihomo_selfhost_proxies
+from ansible_collections.ak1ra_lab.network.plugins.filter.mihomo_providers import (
+    mihomo_proxy_providers,
+    mihomo_selfhost_proxies,
+)
 
 PATTERN = "selfhost|自建"
 REGIONS = [

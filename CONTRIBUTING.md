@@ -15,23 +15,60 @@ just ansible-collection-install
 just ansible-requirements-install
 ```
 
-`just sync` installs the `dev` dependency group (ruff, ty, ansible-core,
-ansible-lint, pytest, Molecule, MkDocs). `just ansible-collection-install`
-installs this collection and the local `ak1ra_lab.general` checkout into
-`.ansible/collections`. `just ansible-requirements-install` installs the
-collections listed in `requirements.yaml`.
+`just sync` installs the `dev` dependency group (ruff, mypy, ansible-core,
+ansible-lint, tox-ansible, pytest, Molecule, MkDocs).
+`just ansible-collection-install` installs this collection and the local
+`ak1ra_lab.general` checkout into `.ansible/collections` for lint, mypy, and
+docs. Test environments are installed by tox-ansible/ade instead.
+`just ansible-requirements-install` installs the collections listed in
+`requirements.yaml` for the legacy Molecule recipes.
 
 ## Checks
 
 ```shell
 just lint          # ruff check --fix + ruff format over plugins/ and tests/
-just typecheck     # ty check over plugins/ and tests/
-just unit-test     # uv run pytest tests/unit -q
+just typecheck     # mypy over plugins/ and tests/
+just unit-test     # ansible-test units in the tox-ansible unit-py3.13-2.21 env
+just tox-list      # show the tox-ansible ansible-core/Python matrix
 just ansible-lint  # ansible-lint (profile: production)
 ```
 
 `just all` runs lint, typecheck, unit tests, ansible-lint, and the docs build.
 Molecule is separate because it needs a container runtime.
+
+Tox-ansible defines the ansible-core 2.19/2.20/2.21 plus weekly
+devel/milestone matrix in `[tool.tox]`/`[tool.tox-ansible]`; run one entry with
+`just tox sanity-py3.13-2.21`. Test-only collections come from
+`tests/molecule/requirements.yml` and are installed by `ade`; do not
+pre-install them into `.ansible/collections` for test runs.
+
+### Temporary local bridge for the unpublished general collection
+
+ADE (used by tox-ansible) resolves the `ak1ra_lab.general >=0.4.0` dependency
+declared in `galaxy.yml` from Galaxy, so network tox-ansible environments fail
+before the first general 0.4.0 release:
+
+```text
+[ERROR]: Failed to resolve the requested dependencies map. Could not satisfy
+the following requirements: * ak1ra_lab.general:>=0.4.0 (direct request)
+```
+
+Until general 0.4.0 is published, run `ansible-test` directly in a real (not
+symlinked) collection-layout copy that also contains the sibling general
+checkout:
+
+```shell
+work=$(mktemp -d)
+mkdir -p "$work/ansible_collections/ak1ra_lab"
+cp -a . "$work/ansible_collections/ak1ra_lab/network"
+cp -a ../ansible-collection-general \
+  "$work/ansible_collections/ak1ra_lab/general"
+cd "$work/ansible_collections/ak1ra_lab/network"
+uv run ansible-test sanity --python 3.13
+uv run ansible-test units --python 3.13
+```
+
+Do not publish a modified `galaxy.yml`; the real dependency stays in place.
 
 ## Testing with Molecule
 

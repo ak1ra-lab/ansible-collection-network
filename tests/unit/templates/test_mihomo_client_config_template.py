@@ -16,7 +16,6 @@ provider injection.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -30,10 +29,12 @@ TEMPLATE_PATHS = {
     "selfhost": TEMPLATE_DIR / "config.selfhost.yaml.j2",
 }
 
-sys.path.insert(0, str(REPO_ROOT / "plugins" / "filter"))
-
-from mihomo_providers import mihomo_proxy_providers
-from pretty_yaml import to_pretty_yaml
+from ansible_collections.ak1ra_lab.network.plugins.filter.mihomo_providers import (
+    mihomo_proxy_providers,
+)
+from ansible_collections.ak1ra_lab.network.plugins.filter.pretty_yaml import (
+    to_pretty_yaml,
+)
 
 
 def _bool(value: Any) -> bool:

@@ -3,14 +3,14 @@
 
 """Shared pytest configuration for the collection unit tests.
 
-The filter plugins are plain Python modules; plain pytest imports them
-directly, so this file puts ``plugins/filter/`` on ``sys.path``.  Running the
-tests requires ``ansible-core`` (for ``ansible.errors``) and ``pytest``.
+Tests import the filter plugins through the installed collection namespace
+(``ansible_collections.ak1ra_lab.network.plugins.filter...``). Run them with
+``ansible-test units`` (the tox-ansible ``unit-*`` environments), which puts
+the collection on the import path; do not add a ``sys.path`` shim here.
 """
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -18,10 +18,6 @@ import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-FILTER_ROOT = REPO_ROOT / "plugins" / "filter"
-
-if str(FILTER_ROOT) not in sys.path:
-    sys.path.insert(0, str(FILTER_ROOT))
 
 
 def _role_defaults(role: str) -> dict[str, Any]:

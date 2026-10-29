@@ -22,13 +22,21 @@ lint:
     uv run ruff check --fix plugins/ tests/
     uv run ruff format plugins/ tests/
 
-# Run static type checks with Astral ty
-typecheck:
-    uv run ty check plugins/ tests/
+# Run static type checks with mypy (the collection must be installed first)
+typecheck: ansible-collection-install
+    uv run mypy plugins/ tests/
 
-# Run the filter plugin and template unit tests
+# Run the filter plugin and template unit tests through tox-ansible
 unit-test:
-    uv run pytest tests/unit -q
+    uv run tox -e unit-py3.13-2.21 --ansible
+
+# Show the tox-ansible environment matrix
+tox-list:
+    uv run tox list --ansible
+
+# Run one tox-ansible environment, e.g. `just tox sanity-py3.13-2.21`
+tox env='sanity-py3.13-2.21':
+    uv run tox -e {{env}} --ansible
 
 # Install project-local Ansible collection
 # (the collection under test plus the ak1ra_lab.general local checkout)

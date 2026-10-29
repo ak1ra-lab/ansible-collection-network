@@ -273,6 +273,8 @@ __marimo__/
 
 # The default root path for Ansible config files on the controller
 .ansible/
+# ADE scratch collection root created by tox-ansible.
+collections/
 
 # Adjacent collections symlink farm created by ansible-compat/ansible-lint
 # while linting the collection in place

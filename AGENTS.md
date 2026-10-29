@@ -15,10 +15,14 @@ duplicate role or plugin docs.
   `dev` group (lint, test, docs, molecule). Do not use `pip` or `poetry` to
   manage this repository's environment.
 - Python lint/format: **ruff** over `plugins/` and `tests/` (`just lint`).
-  Typecheck: **ty** over the same paths (`just typecheck`). Do not use
-  `black`, `isort`, `flake8`, or `mypy`.
+  Typecheck: **mypy** over the same paths (`just typecheck`; pragmatic config
+  in `pyproject.toml`). Do not use `black`, `isort`, `flake8`, or `ty`;
+  `ansible-test sanity` remains the authoritative gate.
 - Ansible lint: `just ansible-lint` (`profile: production`).
-- Unit tests: `just unit-test` (`uv run pytest tests/unit -q`).
+- Unit tests: **tox-ansible** (`just tox-list`, `just unit-test` =
+  `unit-py3.13-2.21`). The tests import plugins through the
+  `ansible_collections.ak1ra_lab.network...` namespace, so run them through
+  `ansible-test units`, not plain pytest without an installed collection.
 - Molecule: `just molecule-test`, `just molecule-test-one <scenario>`, or
   `just molecule-list`; scenarios live under `extensions/molecule/`. Run
   Molecule with rootful Podman, or rootful Docker with
