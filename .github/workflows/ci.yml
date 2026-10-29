@@ -114,7 +114,7 @@ jobs:
           assert galaxy["dependencies"]["ak1ra_lab.general"] == ">=0.4.0"
           PY
           tarball=$(ls dist/*.tar.gz)
-          for required in meta/runtime.yml README.md LICENSE CHANGELOG.md; do
+          for required in meta/runtime.yml meta/execution-environment.yml README.md LICENSE CHANGELOG.md; do
             tar -tzf "$tarball" | grep -qx "$required"
           done
           if tar -tzf "$tarball" | grep -Eq '^(\.agents|\.ansible|\.venv|site|tests/output|playbooks/(host|group)_vars|config)(/|$)'; then

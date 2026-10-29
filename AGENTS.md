@@ -49,7 +49,8 @@ That recipe also installs the sibling `ak1ra_lab.general` checkout (required
 by the `mihomo_*` roles) from `../ansible-collection-general`; override
 `GENERAL_COLLECTION=/path/to/checkout` in a worktree. `requirements.yaml`
 holds the extra collections used by Molecule and linting, not the collection's
-runtime dependencies; those belong in `galaxy.yml`.
+runtime dependencies; those belong in `galaxy.yml` and `requirements.yml`
+(consumed by `meta/execution-environment.yml`).
 
 Role variables use the `<role>_*` prefix. Do not add a `kinds:` mapping to
 `.ansible-lint`: remapping role defaults silently disables
