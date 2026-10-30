@@ -4,9 +4,10 @@ This repository is the `ak1ra_lab.network` Ansible collection (`galaxy.yml`
 namespace/name), not a consumer. It ships reusable roles under `roles/`,
 custom filter plugins under `plugins/`, and collection playbook entry points
 under `playbooks/`. Role contracts belong in
-`roles/<role>/README.md`; plugin docs belong in the `DOCUMENTATION`,
+`roles/<role>/meta/argument_specs.yml`; role READMEs keep narrative and
+deployed-artifact details. Plugin docs belong in the `DOCUMENTATION`,
 `EXAMPLES`, and `RETURN` constants in the plugin source. `README.md` is the
-consumer landing page; `docs/` is the MkDocs site source and must not
+consumer landing page; `docs/docsite/` is the Sphinx site source and must not
 duplicate role or plugin docs.
 
 ## Tooling
@@ -26,11 +27,12 @@ duplicate role or plugin docs.
 - Molecule: `just molecule-test`, `just molecule-test-one <scenario>`,
   `just molecule-syntax`, or `just molecule-list`; scenarios live flat under
   `extensions/molecule/` and each one owns its containers. Rootless Podman
-  covers most scenarios; `systemd_netns` and `tproxy` need rootful Podman (or
-  rootful Docker with `MOLECULE_CONTAINER_RUNTIME=docker`).
-- Docs: `just docs-serve` and `just docs-build` (MkDocs Material, config
-  `mkdocs.yaml`). The recipes install the collection first because
-  `mkdocs-ansible-collection` reads it through `ansible-doc`.
+  covers most scenarios; `flow_offload`, `systemd_netns` and `tproxy` need
+  rootful Podman (or rootful Docker with `MOLECULE_CONTAINER_RUNTIME=docker`).
+- Docs: `just docs-lint`, `just docs-build`, and `just docs-serve`
+  (antsibull-docs plus Sphinx, config `docs/docsite/conf.py`). The recipes
+  install the collection first because antsibull-docs reads it through
+  `ansible-doc`.
 - Local gate: `just all` runs lint, typecheck, unit tests, ansible-lint, and
   the docs build. Molecule is separate because it needs a container runtime.
 
@@ -66,14 +68,15 @@ Role variables use the `<role>_*` prefix. Do not add a `kinds:` mapping to
   `playbooks/host_vars/`, `playbooks/group_vars/`, and `site/` are ignored
   generated data.
 - When adding a role, plugin, or playbook, update the relevant role README,
-  the docs nav/index, and `CHANGELOG.md` in the same change.
-- Role documentation: edit `roles/<role>/README.md`; do not copy it into
-  `docs/`. The role pages include it through Markdown snippets.
+  the docs index, and `CHANGELOG.md` in the same change.
+- Role documentation: edit `roles/<role>/meta/argument_specs.yml` and the role
+  README; do not copy either into `docs/`. The generated role pages come from
+  the argument specs.
 - Plugin documentation: edit the `DOCUMENTATION`/`EXAMPLES`/`RETURN` blocks
   in `plugins/<type>/<name>.py`; the docs site generates the pages from them.
 
 ## References
 
 - `CONTRIBUTING.md` for the full development and Molecule workflow.
-- `docs/` for user guides, the role index, and the generated plugin reference.
+- `docs/docsite/` for user guides, the generated role index, and the generated plugin reference.
 - `CHANGELOG.md` and `galaxy.yml` for release state.

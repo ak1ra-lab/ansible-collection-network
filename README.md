@@ -38,7 +38,7 @@ collections:
     version: master
 ```
 
-See [Getting started](docs/getting-started.md) for control-node dependencies
+See [Getting started](docs/docsite/rst/getting-started.rst) for control-node dependencies
 and the managed-node matrix.
 
 ## Roles
@@ -57,8 +57,10 @@ and the managed-node matrix.
 | [`mihomo_client`](roles/mihomo_client/README.md) | mihomo TUN transparent-proxy client. |
 | [`mihomo_server`](roles/mihomo_server/README.md) | mihomo proxy server with generated client artifacts. |
 
-The role READMEs are the canonical variable contracts. The docs site renders
-them as the role reference.
+The role argument specs (`roles/<role>/meta/argument_specs.yml`) are the
+canonical variable contracts; the role READMEs keep narrative and deployed
+artifact details. The docs site renders the argument specs as the role
+reference.
 
 ## Playbooks
 
@@ -85,7 +87,7 @@ ansible-playbook ak1ra_lab.network.mihomo_client -e mihomo_install_version=lates
 ansible-playbook ak1ra_lab.network.mihomo_server -e mihomo_install_version=latest
 ```
 
-See [Playbooks](docs/playbooks.md) for the host defaults and orchestration
+See [Playbooks](docs/docsite/rst/playbooks.rst) for the host defaults and orchestration
 details.
 
 ## Development
@@ -96,7 +98,7 @@ just all
 just molecule-test
 ```
 
-`just all` covers lint, mypy, unit tests, ansible-lint, and the docs build.
+`just all` covers lint, mypy, unit tests, ansible-lint, docs lint, and the docs build.
 `just tox-list` shows the standard tox-ansible ansible-core/Python matrix.
 Molecule runs separately with isolated per-scenario containers; rootless Podman covers most scenarios and `systemd_netns`/`tproxy` need rootful. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.

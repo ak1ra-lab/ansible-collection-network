@@ -1,5 +1,9 @@
 # ak1ra_lab.network.flow_offload
 
+> The canonical variable reference for this role is
+> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
+> narrative and deployed-artifact details; update both when the contract changes.
+
 nftables flowtable offloading for forwarded traffic. Independent opt-in role:
 owns its own table (`table inet ansible_flow_offload`, forward hook) and does
 not depend on `ak1ra_lab.network.tproxy`.

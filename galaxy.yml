@@ -47,12 +47,12 @@ build_ignore:
   - config
   - importer_result.json
   - justfile
-  - mkdocs.yaml
   - playbooks/group_vars
   - playbooks/host_vars
   - pyproject.toml
   - ruff.toml
   - site
+  - docs/docsite/_build
   - tests/output
   - uv.lock
   - yamlfmt.yaml

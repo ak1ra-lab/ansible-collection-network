@@ -1,5 +1,9 @@
 # ak1ra_lab.network.proxy_guard
 
+> The canonical variable reference for this role is
+> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
+> narrative and deployed-artifact details; update both when the contract changes.
+
 Per-client TCP abuse protection for transparent-proxy gateways, implemented as
 a standalone nftables table. Independent opt-in role: does not depend on
 `ak1ra_lab.network.tproxy`.

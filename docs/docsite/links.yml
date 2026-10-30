@@ -1,0 +1,14 @@
+---
+edit_on_github:
+  repository: ak1ra-lab/ansible-collection-network
+  branch: master
+  path_prefix: ""
+
+extra_links:
+  - description: Report an issue
+    url: https://github.com/ak1ra-lab/ansible-collection-network/issues/new/choose
+
+communication:
+  forums:
+    - topic: Ansible Forum
+      url: https://forum.ansible.com/

@@ -1,0 +1,78 @@
+---
+argument_specs:
+  main:
+    short_description: Per-client TCP abuse protection for transparent-proxy gateways
+    description:
+      - Deploy a standalone nftables table that throttles or auto-bans LAN clients by their new TCP connection rate.
+    options:
+      proxy_guard_state:
+        description: 'Declarative state: present applies the proxy guard table; absent removes the table file this role created.'
+        type: str
+        choices:
+          - present
+          - absent
+        default: present
+        required: false
+      proxy_guard_enabled:
+        description: Master switch. When disabled the role removes the drop-in it created and otherwise touches nothing;
+          review all parameters before enabling.
+        type: bool
+        default: false
+        required: false
+      proxy_guard_lan4_subnets:
+        description: IPv4 LAN prefixes subject to protection. Defaults to the three RFC 1918 private-use blocks.
+        type: list
+        elements: str
+        default:
+          - 10.0.0.0/8
+          - 172.16.0.0/12
+          - 192.168.0.0/16
+        required: false
+      proxy_guard_lan6_subnets:
+        description: IPv6 LAN prefixes subject to protection. Empty disables the IPv6 protection rules.
+        type: list
+        elements: str
+        default: []
+        required: false
+      proxy_guard_throttle_enabled:
+        description: Enable rate-based soft protection. Throttled clients have new TCP connections dropped while established
+          connections remain intact.
+        type: bool
+        default: false
+        required: false
+      proxy_guard_throttle_rate:
+        description: New TCP connections per minute that trigger a throttle once the burst allowance is exhausted.
+        type: int
+        default: 600
+        required: false
+      proxy_guard_throttle_burst:
+        description: Token-bucket burst size before the throttle rate takes effect.
+        type: int
+        default: 150
+        required: false
+      proxy_guard_throttle_timeout:
+        description: Duration of a throttle period.
+        type: str
+        default: 2m
+        required: false
+      proxy_guard_auto_ban_enabled:
+        description: Enable rate-based hard protection. Banned clients have all TCP traffic dropped, including established
+          connections.
+        type: bool
+        default: false
+        required: false
+      proxy_guard_auto_ban_rate:
+        description: New TCP connections per minute that trigger a ban once the burst allowance is exhausted.
+        type: int
+        default: 1200
+        required: false
+      proxy_guard_auto_ban_burst:
+        description: Token-bucket burst size before the auto-ban rate takes effect.
+        type: int
+        default: 300
+        required: false
+      proxy_guard_auto_ban_timeout:
+        description: Duration of an auto-ban.
+        type: str
+        default: 5m
+        required: false

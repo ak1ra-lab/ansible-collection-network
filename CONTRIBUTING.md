@@ -15,7 +15,7 @@ just ansible-collection-install
 ```
 
 `just sync` installs the `dev` dependency group (ruff, mypy, ansible-core,
-ansible-lint, tox-ansible, pytest, Molecule, MkDocs).
+ansible-lint, tox-ansible, pytest, Molecule, antsibull-docs, Sphinx).
 `just ansible-collection-install` installs this collection and the local
 `ak1ra_lab.general` checkout into `.ansible/collections` for lint, mypy, docs,
 and the temporary Molecule resolver bridge. Test-only collections come from
@@ -165,20 +165,21 @@ nftables config (the include glob) that a real host gets from
 
 ## Documentation
 
-The docs site is built with MkDocs Material. Configuration lives in
-`mkdocs.yaml`; hand-written guides live in `docs/`. Role pages are Markdown
-snippets that include the canonical `roles/<role>/README.md`; do not copy role
-READMEs into `docs/`. Plugin pages are generated from the plugin's
-`DOCUMENTATION`, `EXAMPLES`, and `RETURN` constants by
-`mkdocs-ansible-collection`, so the collection must be installed in
-`.ansible/collections` before building.
+The docs site is built with Sphinx and antsibull-docs. Configuration lives in
+`docs/docsite/conf.py`; hand-written guides live in `docs/docsite/rst/`. Role
+pages are generated from `roles/<role>/meta/argument_specs.yml`. Plugin pages
+are generated from the plugin's `DOCUMENTATION`, `EXAMPLES`, and `RETURN`
+constants, so the collection must be installed in `.ansible/collections`
+before building (the just recipes do that).
 
 ```shell
+just docs-lint    # antsibull-docs lint-collection-docs
+just docs-build   # regenerate reference pages + sphinx-build -W
 just docs-serve   # http://127.0.0.1:8000
-just docs-build   # writes site/
 ```
 
-The docs workflow publishes `site/` to GitHub Pages from `master`.
+The docs workflow publishes `docs/docsite/_build/html` to GitHub Pages from
+`master`.
 
 ## Repository layout
 
@@ -188,7 +189,7 @@ The docs workflow publishes `site/` to GitHub Pages from `master`.
 - `plugins/filter/` - Python filter plugins and their docs.
 - `extensions/molecule/` - Molecule scenarios.
 - `tests/unit/` - pytest tests for plugins and the client profile template.
-- `docs/`, `mkdocs.yaml` - documentation site source and configuration.
+- `docs/docsite/` - Sphinx documentation source and configuration.
 - `justfile` - the canonical task runner; use its recipes instead of
   reproducing the underlying commands.
 

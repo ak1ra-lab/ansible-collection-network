@@ -1,1 +1,0 @@
---8<-- "roles/systemd_netns/README.md"

@@ -73,11 +73,16 @@ jobs:
           uv run --no-sync ruff check plugins/ tests/
           uv run --no-sync ruff format --check plugins/ tests/
           uv run --no-sync mypy plugins/ tests/
-      - name: Build the documentation site
+      - name: Lint collection documentation
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
-          NO_MKDOCS_2_WARNING: "1"
-        run: uv run --no-sync mkdocs build --strict
+        run: >-
+          uv run --no-sync antsibull-docs lint-collection-docs
+          --plugin-docs --validate-collection-refs self .
+      - name: Build the Sphinx documentation site
+        env:
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
+        run: uv run --no-sync bash docs/docsite/build.sh
 
   build-import:
     name: Build and import

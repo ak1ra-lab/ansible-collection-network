@@ -1,1 +1,0 @@
---8<-- "roles/cloud_init/README.md"
