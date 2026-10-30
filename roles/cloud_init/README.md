@@ -42,7 +42,7 @@ order, so the `99-` prefix wins over the distribution defaults.
 ## Example playbook
 
 ```yaml
-- hosts: cloud-image-vms
+- hosts: cloud_image_vms
   become: true
   gather_facts: true
   roles:

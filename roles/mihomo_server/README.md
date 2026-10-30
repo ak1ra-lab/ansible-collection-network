@@ -229,7 +229,7 @@ TLS-in-TLS/timing weaknesses described by the AnyTLS FAQ.
 This collection ships the `mihomo_server` role only; it does not issue
 certificates and remains independent of any certificate collection. The
 composition that pairs this role with certificate issuance lives in
-`ansible-playbooks-services` as `mihomo_server_certbot.yaml`:
+`ansible-playbooks-services` as `mihomo_server_certbot.yml`:
 `https://github.com/ak1ra-lab/ansible-playbooks-services`.
 
 Use that playbook when the server certificate should be issued and renewed by
@@ -239,7 +239,7 @@ an external certificate pair as described above.
 ## Example playbook
 
 The operational composition lives in `ansible-playbooks-services`
-(`mihomo_server.yaml`), which installs the binary first and then applies this
+(`mihomo_server.yml`), which installs the binary first and then applies this
 role:
 `https://github.com/ak1ra-lab/ansible-playbooks-services`.
 
@@ -247,7 +247,7 @@ Applying the roles directly:
 
 ```yaml
 - name: mihomo proxy server
-  hosts: mihomo-server
+  hosts: mihomo_server
   become: true
   gather_facts: true
   roles:

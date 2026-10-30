@@ -16,4 +16,4 @@ examples, and operational notes.
 
 The collection remains independent of certificate issuance. Compositions that
 combine these roles with certificate automation, such as
-``mihomo_server_certbot.yaml``, also live in ``ansible-playbooks-services``.
+``mihomo_server_certbot.yml``, also live in ``ansible-playbooks-services``.

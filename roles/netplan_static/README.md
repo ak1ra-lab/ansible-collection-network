@@ -151,7 +151,7 @@ Apply `cloud_init` first so cloud-init will not regenerate its netplan file on
 the next boot:
 
 ```yaml
-- hosts: cloud-image-vms
+- hosts: cloud_image_vms
   become: true
   gather_facts: true
   tasks:

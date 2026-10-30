@@ -276,7 +276,7 @@ black-holing.
 ## Example playbook
 
 The operational composition lives in `ansible-playbooks-services`
-(`mihomo_client.yaml`), which installs the binary first and then applies this
+(`mihomo_client.yml`), which installs the binary first and then applies this
 role:
 `https://github.com/ak1ra-lab/ansible-playbooks-services`.
 

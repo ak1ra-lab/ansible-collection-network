@@ -60,7 +60,7 @@ nameserver.
 ## Example playbook
 
 ```yaml
-- hosts: cloud-image-vms
+- hosts: cloud_image_vms
   become: true
   gather_facts: true
   roles:
