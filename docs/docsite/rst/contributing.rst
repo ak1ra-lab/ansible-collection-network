@@ -21,9 +21,9 @@ Common commands
    just docs-lint     # antsibull-docs lint-collection-docs
    just docs-build    # regenerate reference pages and build Sphinx
 
-The docs recipes install the collection under test plus the local
-``../ansible-collection-general`` checkout first, because the generated role
-pages read the installed collection through ``ansible-doc``.
+The docs recipes install the collection under test and its Galaxy
+dependencies first, because the generated role pages read the installed
+collection through ``ansible-doc``.
 
 Documentation sources
 ---------------------

@@ -63,10 +63,8 @@ enabled ports (`mihomo_server_*_port`) yourself.
   `mihomo_client` output); other clients cannot use it.
 - A DNS name pointing at the VPS and a region token the client's region
   regex can match (`mihomo_server_region`, e.g. `US`, `HK`, `JP`).
-- Control node: `ak1ra_lab.general` (>= 0.2.0) for `github_releases_info`
-  (installed from git, not published to Galaxy; see the collection README).
-  The optional certbot integration also needs the
-  `ak1ra_lab.general.certbot` role from general >= 0.3.0.
+- Control node: `ak1ra_lab.general` (>= 0.4.0) for `github_releases_info` and
+  the `random_*` lookups; Galaxy resolves it from the collection dependencies.
 
 ## What it deploys
 

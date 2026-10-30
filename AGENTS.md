@@ -51,10 +51,8 @@ itself before running playbooks or ansible-lint:
 just ansible-collection-install
 ```
 
-That recipe also installs the sibling `ak1ra_lab.general` checkout (required
-by the `mihomo_*` roles and by Molecule's temporary resolver bridge) from
-`../ansible-collection-general`; override
-`GENERAL_COLLECTION=/path/to/checkout` in a worktree. Test-only collections
+The recipe installs the collection and its Galaxy dependencies, including
+`ak1ra_lab.general`, which the `mihomo_*` roles require. Test-only collections
 live in `tests/molecule/requirements.yml`, not the collection's runtime
 dependencies; those belong in `galaxy.yml` and `requirements.yml` (consumed by
 `meta/execution-environment.yml`).

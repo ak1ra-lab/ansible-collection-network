@@ -49,20 +49,11 @@ jobs:
         uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
       - name: Install docs dependencies
         run: uv sync --locked --no-dev --group docs
-      - name: Check out the unpublished general collection
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: ak1ra-lab/ansible-collection-general
-          ref: reorg/collections-2026-10
-          path: .deps/ansible-collection-general
-          persist-credentials: false
-      - name: Install the collections without Galaxy dependency resolution
+      - name: Install the collection and its dependencies
         run: |
           mkdir -p .ansible/collections
           uv run --no-sync ansible-galaxy collection install \
-            --force --no-deps -p .ansible/collections .
-          uv run --no-sync ansible-galaxy collection install \
-            --no-deps -p .ansible/collections .deps/ansible-collection-general
+            --force --collections-path .ansible/collections .
       - name: Lint collection documentation
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections

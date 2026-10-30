@@ -6,11 +6,6 @@
 # separate and does not use the full Python x ansible-core matrix. It runs
 # rootful Podman because systemd_netns and tproxy need host kernel facilities
 # that rootless containers cannot provide.
-#
-# The collection depends on the not-yet-published ak1ra_lab.general 0.4.0.
-# The lint job checks out the sibling repository into .deps; tox-ansible
-# environments cannot resolve that dependency through ADE until general is
-# published (see CONTRIBUTING.md for the temporary local bridge).
 name: CI
 
 on:
@@ -18,8 +13,6 @@ on:
   push:
     branches:
       - master
-      - dev
-      - reorg/collections-2026-10
   schedule:
     # Weekly devel/milestone coverage (Monday 03:17 UTC).
     - cron: "17 3 * * 1"
@@ -42,13 +35,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Check out the unpublished general collection
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: ak1ra-lab/ansible-collection-general
-          ref: reorg/collections-2026-10
-          path: .deps/ansible-collection-general
-          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -57,15 +43,13 @@ jobs:
         uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
       - name: Sync the lint and docs dependencies
         run: uv sync --locked --no-dev --group lint --group docs
-      - name: Install the collections without Galaxy dependency resolution
+      - name: Install the collection and its dependencies
         run: |
           mkdir -p .ansible/collections
           uv run --no-sync ansible-galaxy collection install \
-            --force --no-deps -p .ansible/collections .
+            --force --collections-path .ansible/collections .
           uv run --no-sync ansible-galaxy collection install \
-            --no-deps -p .ansible/collections .deps/ansible-collection-general
-          uv run --no-sync ansible-galaxy collection install \
-            -r tests/molecule/requirements.yml -p .ansible/collections
+            -r tests/molecule/requirements.yml --collections-path .ansible/collections
       - name: Run ansible-lint
         run: uv run --no-sync ansible-lint
       - name: Run ruff and mypy
@@ -253,28 +237,12 @@ jobs:
           python-version: "3.13"
       - name: Install uv
         uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
-      - name: Check out the unpublished general collection
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: ak1ra-lab/ansible-collection-general
-          ref: reorg/collections-2026-10
-          path: .deps/ansible-collection-general
-          persist-credentials: false
       - name: Sync the Molecule dependencies
         run: uv sync --locked --no-dev --group molecule
       - name: Install Podman
         run: |
           sudo apt-get update
           sudo apt-get install -y podman
-      # Temporary bridge until ak1ra_lab.general 0.4.0 is published: the
-      # prerun resolver must find general locally instead of asking Galaxy.
-      # Molecule installs the collection under test and
-      # tests/molecule/requirements.yml itself.
-      - name: Bootstrap the unpublished general dependency
-        run: |
-          mkdir -p .ansible/collections
-          uv run --no-sync ansible-galaxy collection install \
-            --no-deps -p .ansible/collections .deps/ansible-collection-general
       - name: Run the Molecule scenarios
         run: >-
           sudo env "PATH=${GITHUB_WORKSPACE}/.venv/bin:${PATH}"

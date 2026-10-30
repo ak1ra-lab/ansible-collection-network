@@ -58,7 +58,7 @@ reference.
 
 `ak1ra_lab.network` depends on `ak1ra_lab.general` for `cpu_info`,
 `github_releases_info`, and the `random_*` lookups. Galaxy resolves that
-dependency automatically once general `0.4.0` is published.
+dependency automatically.
 
 ## Install
 

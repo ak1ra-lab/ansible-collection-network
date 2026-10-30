@@ -33,15 +33,9 @@ service role's handler notified after an install/upgrade.
 
 - A systemd-based Linux host with `gzip` and a writable `/usr/local/bin`
   (facts gathered: the release lookup uses the target architecture).
-- `ak1ra_lab.general` (>= 0.2.0) installed on the control node for
-  `github_releases_info` and `cpu_info`; the collection is not on Galaxy
-  yet, so install it from git (see the collection README):
-
-  ```yaml
-  collections:
-    - name: git+https://github.com/ak1ra-lab/ansible-collection-general.git
-      version: master
-  ```
+- `ak1ra_lab.general` (>= 0.4.0) installed on the control node for
+  `github_releases_info` and `cpu_info`; Galaxy resolves it from the
+  collection dependencies.
 
 - The release metadata query goes directly to `api.github.com` and
   authenticates with the controller's `GITHUB_TOKEN` environment variable

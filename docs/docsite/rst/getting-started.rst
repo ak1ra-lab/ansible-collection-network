@@ -27,16 +27,11 @@ Or pin it in a consumer ``requirements.yml``:
 
 Galaxy resolves ``ak1ra_lab.general >= 0.4.0``, ``ansible.posix``,
 ``community.general``, and ``ansible.utils`` from ``galaxy.yml``
-automatically. The ``0.4.0`` release is the first Galaxy release; until it is
-published, install from a Git tag or commit and pin the revision instead of
-following a branch.
+automatically. The ``0.4.0`` release is the first Galaxy release.
 
 For development in this repository, ``just ansible-collection-install``
-installs the collection under test plus the local
-``../ansible-collection-general`` checkout into ``.ansible/collections``.
-Override the path with ``GENERAL_COLLECTION=/path/to/checkout`` when working
-from a git worktree. This local copy is a temporary bridge until general
-``0.4.0`` is published and is not part of the consumer install path.
+installs the collection under test and its Galaxy dependencies into
+``.ansible/collections`` for lint, mypy, and docs.
 
 Control-node requirements
 -------------------------
@@ -61,7 +56,7 @@ Control-node requirements
   part of this collection; the consumer supplies the TLS material.
 
 The development environment uses ``uv``; ``just ansible-collection-install``
-installs the collection under test and the local general checkout for
+installs the collection under test and its Galaxy dependencies for
 lint/mypy/docs. Molecule installs the collection under test and the test
 collections from ``tests/molecule/requirements.yml`` itself.
 

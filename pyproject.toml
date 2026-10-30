@@ -73,10 +73,6 @@ warn_unused_ignores = true
 # 2.20, 2.21 and devel/milestone matrix from the upstream support matrix;
 # `tox list --ansible` shows the result. Do not add an ad-hoc skip list: drop
 # an environment with `tox -e <env> --ansible` instead.
-#
-# Until ak1ra_lab.general 0.4.0 is published, ADE cannot resolve the
-# galaxy.yml dependency for network environments. See CONTRIBUTING.md for the
-# temporary local-checkout bridge.
 [tool.tox]
 requires = ["tox>=4.2"]
 

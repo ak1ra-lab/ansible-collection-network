@@ -60,8 +60,8 @@ group_vars).
   be advertised as one); the role only sets `net.ipv4.ip_forward=1` and
   `net.ipv4.conf.all.rp_filter=0`.  Switching back to `local` removes the
   drop-in, but the runtime sysctl values stay in effect until reboot.
-- Control node: `ak1ra_lab.general` (>= 0.2.0) for `github_releases_info`
-  (installed from git, not published to Galaxy; see the collection README).
+- Control node: `ak1ra_lab.general` (>= 0.4.0) for `github_releases_info`;
+  Galaxy resolves it from the collection dependencies.
 
 ## What it deploys
 
