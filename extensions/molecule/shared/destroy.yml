@@ -1,18 +1,21 @@
 ---
-# default scenario - remove the shared test containers.
+# Destroy this scenario's containers.
 
-- name: destroy the shared test containers
+- name: destroy the scenario test containers
   hosts: localhost
   gather_facts: false
   vars:
     _molecule_container_runtime: "{{ lookup('ansible.builtin.env', 'MOLECULE_CONTAINER_RUNTIME') | default('podman', true) }}"
+    _molecule_scenario_hosts: >-
+      {{ groups.get(lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_NAME'),
+                    groups['test_resources']) }}
   tasks:
     - name: remove containers with podman
       when: _molecule_container_runtime == 'podman'
       containers.podman.podman_container:
         name: "{{ hostvars[item]['ansible_host'] }}"
         state: absent
-      loop: "{{ groups['test_resources'] }}"
+      loop: "{{ _molecule_scenario_hosts }}"
       loop_control:
         label: "{{ item }}"
 
@@ -21,6 +24,6 @@
       community.docker.docker_container:
         name: "{{ hostvars[item]['ansible_host'] }}"
         state: absent
-      loop: "{{ groups['test_resources'] }}"
+      loop: "{{ _molecule_scenario_hosts }}"
       loop_control:
         label: "{{ item }}"

@@ -65,7 +65,7 @@ jobs:
           uv run --no-sync ansible-galaxy collection install \
             --no-deps -p .ansible/collections .deps/ansible-collection-general
           uv run --no-sync ansible-galaxy collection install \
-            -r requirements.yaml -p .ansible/collections
+            -r tests/molecule/requirements.yml -p .ansible/collections
       - name: Run ansible-lint
         run: uv run --no-sync ansible-lint
       - name: Run ruff and mypy
@@ -246,25 +246,28 @@ jobs:
           python-version: "3.13"
       - name: Install uv
         uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
+      - name: Check out the unpublished general collection
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ak1ra-lab/ansible-collection-general
+          ref: reorg/collections-2026-10
+          path: .deps/ansible-collection-general
+          persist-credentials: false
       - name: Sync the Molecule dependencies
         run: uv sync --locked --no-dev --group molecule
       - name: Install Podman
         run: |
           sudo apt-get update
           sudo apt-get install -y podman
-      # WP-6 owns Molecule isolation and removing the manual collection
-      # install. Until then the shared default scenario lifecycle still reads
-      # the project-local collections path.
-      - name: Install the collection under test and scenario requirements
+      # Temporary bridge until ak1ra_lab.general 0.4.0 is published: the
+      # prerun resolver must find general locally instead of asking Galaxy.
+      # Molecule installs the collection under test and
+      # tests/molecule/requirements.yml itself.
+      - name: Bootstrap the unpublished general dependency
         run: |
           mkdir -p .ansible/collections
           uv run --no-sync ansible-galaxy collection install \
-            --force --collections-path .ansible/collections .
-          uv run --no-sync ansible-galaxy collection install \
-            -r requirements.yaml -p .ansible/collections
-          uv run --no-sync ansible-galaxy collection install \
-            "git+https://github.com/ak1ra-lab/ansible-collection-general.git,reorg/collections-2026-10" \
-            -p .ansible/collections
+            --no-deps -p .ansible/collections .deps/ansible-collection-general
       - name: Run the Molecule scenarios
         run: >-
           sudo env "PATH=${GITHUB_WORKSPACE}/.venv/bin:${PATH}"

@@ -38,6 +38,6 @@
           - _tproxy_module_tree.stat.isdir | default(false)
         fail_msg: >-
           /lib/modules/{{ ansible_facts['kernel'] }} is not visible in the
-          container; recreate the shared containers (`molecule create`) so
+          container; recreate the scenario containers (`molecule create`) so
           the inventory's container_volumes are applied.
         quiet: true

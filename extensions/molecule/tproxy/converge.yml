@@ -6,7 +6,7 @@
 # drop-ins and the kernel-module persistence files.
 #
 # Two host-only facets of the role are switched off in this scenario, because
-# the shared containers cannot carry them (see the per-variable comments
+# the scenario containers cannot carry them (see the per-variable comments
 # below): the static /etc/resolv.conf and the tcp_bbr / nf_conntrack sysctl
 # tuning.
 

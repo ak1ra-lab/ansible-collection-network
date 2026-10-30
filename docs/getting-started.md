@@ -39,9 +39,9 @@ checkout into `.ansible/collections`. Override the path with
   the consumer supplies the TLS material.
 
 The development environment uses `uv`; `just ansible-collection-install`
-installs the collection under test and the local general checkout, and
-`just ansible-requirements-install` installs the Molecule and lint
-collections from `requirements.yaml`.
+installs the collection under test and the local general checkout for
+lint/mypy/docs. Molecule installs the collection under test and the test
+collections from `tests/molecule/requirements.yml` itself.
 
 ## Managed-node requirements
 
@@ -51,7 +51,6 @@ repository are:
 - `debian:12`
 - `debian:13`
 - `ubuntu:24.04`
-- `ubuntu:26.04`
 
 The `systemd_bridge` and `systemd_netns` roles require `systemd-networkd`,
 which is not available on the RHEL family. Fedora would additionally need the

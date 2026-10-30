@@ -1,17 +1,19 @@
 ---
-# default scenario - lifecycle manager for the shared test containers.
+# Create this scenario's containers.
 #
-# With shared_state enabled, only this scenario runs create/destroy; every
-# component scenario reuses these containers.  The containers are ordinary
-# Ansible managed nodes: the inventory carries the connection details (and
-# the image), this playbook instantiates them on the configured runtime
-# (MOLECULE_CONTAINER_RUNTIME - see inventory/group_vars/test_resources.yml).
+# The inventory declares all supported images and one group per scenario.
+# `MOLECULE_SCENARIO_NAME` selects the group, so a scenario only creates the
+# images it supports.  inventory/hosts.yml derives a container name from the
+# scenario name and the checkout, keeping parallel scenarios/checkouts apart.
 
-- name: create the shared test containers
+- name: create the scenario test containers
   hosts: localhost
   gather_facts: false
   vars:
     _molecule_container_runtime: "{{ lookup('ansible.builtin.env', 'MOLECULE_CONTAINER_RUNTIME') | default('podman', true) }}"
+    _molecule_scenario_hosts: >-
+      {{ groups.get(lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_NAME'),
+                    groups['test_resources']) }}
   tasks:
     - name: create containers with podman
       when: _molecule_container_runtime == 'podman'
@@ -24,7 +26,7 @@
         privileged: "{{ hostvars[item]['container_privileged'] | default(true) }}"
         volumes: "{{ hostvars[item]['container_volumes'] | default([]) }}"
         state: started
-      loop: "{{ groups['test_resources'] }}"
+      loop: "{{ _molecule_scenario_hosts }}"
       loop_control:
         label: "{{ item }}"
       register: _molecule_containers_podman
@@ -39,7 +41,7 @@
         privileged: "{{ hostvars[item]['container_privileged'] | default(true) }}"
         volumes: "{{ hostvars[item]['container_volumes'] | default([]) }}"
         state: started
-      loop: "{{ groups['test_resources'] }}"
+      loop: "{{ _molecule_scenario_hosts }}"
       loop_control:
         label: "{{ item }}"
       register: _molecule_containers_docker
@@ -75,6 +77,6 @@
       retries: 30
       delay: 2
       delegate_to: "{{ item }}"
-      loop: "{{ groups['test_resources'] }}"
+      loop: "{{ _molecule_scenario_hosts }}"
       loop_control:
         label: "{{ item }}"

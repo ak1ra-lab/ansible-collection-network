@@ -1,8 +1,8 @@
 ---
 # Runtime collection dependencies for an ansible-builder execution
 # environment. Keep in sync with galaxy.yml.
-# Test-only collections live in requirements.yaml (legacy Molecule recipes)
-# and tests/molecule/requirements.yml (tox-ansible/ade).
+# Test-only collections live in tests/molecule/requirements.yml (Molecule's
+# dependency action and tox-ansible/ade both install that file).
 collections:
   - name: ak1ra_lab.general
     version: ">=0.4.0"

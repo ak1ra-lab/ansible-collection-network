@@ -1,5 +1,5 @@
 ---
-# mihomo_server scenario - converge the role on the shared containers.
+# mihomo_server scenario - converge the role on the scenario containers.
 #
 # The scenario pins five listener shapes (shadowsocks, trojan, hysteria2,
 # vless with REALITY and anytls) and their ports so it stays independent of

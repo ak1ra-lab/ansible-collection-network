@@ -1,22 +1,21 @@
 ---
 # Shared Molecule configuration for every scenario of this collection.
 #
-# Layout follows the official collection-testing guide: scenarios live under
-# extensions/molecule/<name>/, this base file is deep-merged into every
-# scenario's molecule.yml, and `shared_state: true` makes the `default`
-# scenario the single lifecycle manager for all test containers (create
-# once, destroy once) while the component scenarios only prepare, converge,
-# verify and clean up.
+# Scenarios are flat under extensions/molecule/<name>/ and each one owns its
+# containers.  The sequence destroys stale containers from an interrupted
+# run, creates the scenario's own set, prepares/converges/verifies, runs the
+# role teardown, verifies the teardown, and destroys the containers again.
 #
-# Every scenario shares one inventory (extensions/molecule/inventory/) that
-# declares the supported managed nodes; see inventory/hosts.yml.
+# The inventory declares every supported image, plus one group per scenario
+# with only the images that scenario supports.  `--limit` (scenario group +
+# localhost) keeps a scenario's plays and its create/destroy loops on that
+# subset; container names in inventory/hosts.yml include the scenario name and
+# a checkout hash, so scenarios and parallel checkouts cannot collide.
 #
-# The collection under test and its galaxy.yml dependencies are installed
-# automatically by ansible-compat's prerun before each component scenario.
-# The default scenario's create/destroy run earlier than that, so the
-# collections their playbooks use (requirements.yaml) must already be
-# installed on the control node; the dependency action is disabled to avoid
-# a second, redundant install.
+# The collection under test is installed by ansible-compat's prerun, and the
+# test-only collections by the dependency action from
+# tests/molecule/requirements.yml.  No project-local `.ansible/collections`
+# pre-install is required for Molecule.
 
 ansible:
   executor:
@@ -24,32 +23,38 @@ ansible:
     args:
       ansible_playbook:
         - --inventory=${MOLECULE_PROJECT_DIRECTORY}/extensions/molecule/inventory/
+        - --limit=${MOLECULE_SCENARIO_NAME},localhost
   cfg:
     defaults:
       host_key_checking: false
       retry_files_enabled: false
   env:
     ANSIBLE_FORCE_COLOR: "true"
-    # Match the repository's ansible.cfg collections_path so the shared
-    # default scenario's create/destroy (which run before ansible-compat's
-    # prerun installs anything) and every component scenario search the
-    # same project-local collection path.
-    ANSIBLE_COLLECTIONS_PATH: ${MOLECULE_PROJECT_DIRECTORY}/.ansible/collections
+  playbooks:
+    # Every scenario shares the container lifecycle implementation, but the
+    # inventory gives each scenario its own uniquely named containers.
+    create: ../shared/create.yml
+    destroy: ../shared/destroy.yml
 
 dependency:
-  enabled: false
-
-shared_state: true
+  name: galaxy
+  options:
+    requirements-file: ${MOLECULE_PROJECT_DIRECTORY}/tests/molecule/requirements.yml
+    # There are no scenario role dependencies; point the role dependency
+    # action at an empty file so it does not warn about a missing one.
+    role-file: ${MOLECULE_PROJECT_DIRECTORY}/extensions/molecule/shared/roles-requirements.yml
 
 scenario:
-  # Component scenarios: reset leftovers, prepare prerequisites, converge,
-  # prove idempotence, verify the converged state, then run the role's
-  # teardown in cleanup.yml and verify the teardown in absent-verify.yml.
   test_sequence:
-    - cleanup
+    - dependency
+    # Remove leftovers from a failed run before creating the scenario's own
+    # containers.  The destroy play only touches localhost.
+    - destroy
+    - create
     - prepare
     - converge
     - idempotence
     - verify
     - cleanup
     - verify absent-verify.yml
+    - destroy

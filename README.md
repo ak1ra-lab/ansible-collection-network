@@ -98,7 +98,7 @@ just molecule-test
 
 `just all` covers lint, mypy, unit tests, ansible-lint, and the docs build.
 `just tox-list` shows the standard tox-ansible ansible-core/Python matrix.
-Molecule needs a rootful container runtime and is run separately. See
+Molecule runs separately with isolated per-scenario containers; rootless Podman covers most scenarios and `systemd_netns`/`tproxy` need rootful. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
 ## License

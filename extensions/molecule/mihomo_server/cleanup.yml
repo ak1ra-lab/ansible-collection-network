@@ -1,5 +1,5 @@
 ---
-# mihomo_server scenario - reset the shared containers and remove the
+# mihomo_server scenario - reset the scenario containers and remove the
 # controller-local artifacts.
 #
 # Runs at the start of the scenario (leftovers from an interrupted run), at

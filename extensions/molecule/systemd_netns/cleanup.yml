@@ -1,5 +1,5 @@
 ---
-# systemd_netns scenario - reset the shared containers.
+# systemd_netns scenario - reset the scenario containers.
 #
 # Runs at the start, at the end and before destroy: the namespace is torn
 # down first (the documented order - the bridge carries the namespace leg),

@@ -1,5 +1,5 @@
 ---
-# mihomo_client scenario - converge the role on the shared containers.
+# mihomo_client scenario - converge the role on the scenario containers.
 #
 # The containers run privileged with a real /dev/net/tun, so the TUN inbound
 # (auto-route, ip rules, table 2022) is exercised end to end.  The role is

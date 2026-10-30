@@ -1,5 +1,5 @@
 ---
-# systemd_bridge scenario - reset the shared containers.
+# systemd_bridge scenario - reset the scenario containers.
 #
 # Runs at the start of the scenario (leftovers from an interrupted run), at
 # the end, and before destroy, so it must tolerate a fresh host: the role's

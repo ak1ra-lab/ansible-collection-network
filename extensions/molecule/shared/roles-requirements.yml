@@ -1,0 +1,5 @@
+---
+# The Molecule scenarios do not install any standalone roles.  The dependency
+# action still looks for a role requirements file; an empty requirements list
+# keeps the standard action quiet and is a valid (empty) playbook for linting.
+[]

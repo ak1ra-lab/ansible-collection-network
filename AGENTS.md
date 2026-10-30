@@ -23,11 +23,11 @@ duplicate role or plugin docs.
   `unit-py3.13-2.21`). The tests import plugins through the
   `ansible_collections.ak1ra_lab.network...` namespace, so run them through
   `ansible-test units`, not plain pytest without an installed collection.
-- Molecule: `just molecule-test`, `just molecule-test-one <scenario>`, or
-  `just molecule-list`; scenarios live under `extensions/molecule/`. Run
-  Molecule with rootful Podman, or rootful Docker with
-  `MOLECULE_CONTAINER_RUNTIME=docker`; rootless Podman cannot run the
-  `systemd_netns` and `tproxy` scenarios.
+- Molecule: `just molecule-test`, `just molecule-test-one <scenario>`,
+  `just molecule-syntax`, or `just molecule-list`; scenarios live flat under
+  `extensions/molecule/` and each one owns its containers. Rootless Podman
+  covers most scenarios; `systemd_netns` and `tproxy` need rootful Podman (or
+  rootful Docker with `MOLECULE_CONTAINER_RUNTIME=docker`).
 - Docs: `just docs-serve` and `just docs-build` (MkDocs Material, config
   `mkdocs.yaml`). The recipes install the collection first because
   `mkdocs-ansible-collection` reads it through `ansible-doc`.
@@ -46,11 +46,12 @@ just ansible-collection-install
 ```
 
 That recipe also installs the sibling `ak1ra_lab.general` checkout (required
-by the `mihomo_*` roles) from `../ansible-collection-general`; override
-`GENERAL_COLLECTION=/path/to/checkout` in a worktree. `requirements.yaml`
-holds the extra collections used by Molecule and linting, not the collection's
-runtime dependencies; those belong in `galaxy.yml` and `requirements.yml`
-(consumed by `meta/execution-environment.yml`).
+by the `mihomo_*` roles and by Molecule's temporary resolver bridge) from
+`../ansible-collection-general`; override
+`GENERAL_COLLECTION=/path/to/checkout` in a worktree. Test-only collections
+live in `tests/molecule/requirements.yml`, not the collection's runtime
+dependencies; those belong in `galaxy.yml` and `requirements.yml` (consumed by
+`meta/execution-environment.yml`).
 
 Role variables use the `<role>_*` prefix. Do not add a `kinds:` mapping to
 `.ansible-lint`: remapping role defaults silently disables

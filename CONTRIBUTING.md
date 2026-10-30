@@ -2,8 +2,8 @@
 
 ## Setup
 
-Prerequisites: `uv`, a rootful Podman daemon (or a rootful Docker daemon),
-and a sibling checkout of `ak1ra_lab.general` at
+Prerequisites: `uv`, a Podman daemon (rootless covers most scenarios; CI uses
+rootful), and a sibling checkout of `ak1ra_lab.general` at
 `../ansible-collection-general`. The collection is not published to Galaxy
 yet, and the development recipes test against that checkout so unpushed
 changes can be used. Override the path with `GENERAL_COLLECTION` when working
@@ -12,16 +12,14 @@ from a git worktree.
 ```shell
 just sync
 just ansible-collection-install
-just ansible-requirements-install
 ```
 
 `just sync` installs the `dev` dependency group (ruff, mypy, ansible-core,
 ansible-lint, tox-ansible, pytest, Molecule, MkDocs).
 `just ansible-collection-install` installs this collection and the local
-`ak1ra_lab.general` checkout into `.ansible/collections` for lint, mypy, and
-docs. Test environments are installed by tox-ansible/ade instead.
-`just ansible-requirements-install` installs the collections listed in
-`requirements.yaml` for the legacy Molecule recipes.
+`ak1ra_lab.general` checkout into `.ansible/collections` for lint, mypy, docs,
+and the temporary Molecule resolver bridge. Test-only collections come from
+`tests/molecule/requirements.yml` and are installed by Molecule/ade.
 
 ## Checks
 
@@ -72,67 +70,80 @@ Do not publish a modified `galaxy.yml`; the real dependency stays in place.
 
 ## Testing with Molecule
 
-Molecule scenarios live under `extensions/molecule/` (collection-testing
-layout). The `default` scenario owns the shared container lifecycle
-(`shared_state: true`); the component scenarios (`flow_offload`,
-`proxy_guard`, `systemd_bridge`, `systemd_netns`, `tproxy`, `cloud_init`,
-`netplan_static`, `systemd_resolved`, `mihomo_client`, `mihomo_server`,
-`mihomo_server_certbot`) reuse the same containers and each run prepare,
-converge, idempotence, verify, the role's teardown (cleanup), and a teardown
-verification. `mihomo_server_certbot` runs on the Debian images
-only (Pebble comes from the Debian archive); it issues from a local Pebble
-ACME server and verifies the certbot -> role copy -> renewal hook flow.
+Molecule scenarios live flat under `extensions/molecule/<name>/`. Each
+scenario owns its containers: the shared `create.yml`/`destroy.yml` playbooks
+build names from the scenario name and a checkout hash, so scenarios and
+parallel checkouts cannot collide. There is no shared `default` lifecycle
+scenario and no `shared_state`.
+
+The inventory declares every supported image and one group per scenario with
+only the images that role supports; `--limit=<scenario>,localhost` keeps the
+plays and the create/destroy loops on that subset. No role runs on every image.
+
+| Scenario | Images | Notes |
+| --- | --- | --- |
+| `cloud_init` | Debian 12/13 | |
+| `netplan_static` | Debian 12/13 | render-only (`netplan_static_apply: false`) |
+| `systemd_bridge` | Debian 12, Ubuntu 24.04 | |
+| `systemd_netns` | Debian 12, Ubuntu 24.04 | rootful Podman only |
+| `systemd_resolved` | Debian 12, Ubuntu 24.04 | manages a temporary resolver path |
+| `tproxy` | Debian 12/13 | rootful Podman only (modprobe) |
+| `flow_offload` | Debian 12/13 | rootful Podman only (host flowtable) |
+| `proxy_guard` | Debian 12/13 | |
+| `mihomo_client` | Debian 12/13 | |
+| `mihomo_server` | Debian 12/13 | |
+| `mihomo_server_jls` | Debian 12/13 | |
+
+Ubuntu 26.04 is not in the matrix: the role metadata declares Ubuntu
+22.04/24.04 and Debian 12/13.
 
 ```shell
-just molecule-test                   # every scenario (recursive glob)
-just molecule-test-one systemd_netns # one scenario
+just molecule-test                   # every scenario
+just molecule-test-one systemd_bridge
+just molecule-syntax
 just molecule-list
 ```
 
-The managed nodes are the systemd-enabled container images from
-[ak1ra-lab/docker-systemd](https://github.com/ak1ra-lab/docker-systemd) that
-these roles support: `debian:12`, `debian:13`, `ubuntu:24.04`, and
-`ubuntu:26.04`. The systemd roles require `systemd-networkd`, which is not
-available on the RHEL family; Fedora would additionally need the separate
-`systemd-networkd` package and the `iproute` package name.
+Molecule's dependency action installs `tests/molecule/requirements.yml`;
+ansible-compat's prerun installs the collection under test and its `galaxy.yml`
+dependencies. Do not pre-install the collection or test collections into
+`.ansible/collections` for Molecule.
 
-The Molecule recipes install the collection under test, the scenario
-requirements (`requirements.yaml`), and the local `ak1ra_lab.general`
-checkout into `.ansible/collections` before every run. The scenarios search
-that project-local path (`ANSIBLE_COLLECTIONS_PATH` in
-`extensions/molecule/config.yml`), and the shared `default` scenario creates
-the containers before Molecule installs anything itself.
+Until `ak1ra_lab.general 0.4.0` is published, the prerun resolver needs a
+local copy of general. `just ansible-collection-install` installs it from the
+sibling checkout (`GENERAL_COLLECTION`, default `../ansible-collection-general`)
+into `.ansible/collections`; CI checks out the branch instead. Once general is
+on Galaxy this bootstrap goes away.
 
 ### Container runtime
 
-Only the kernel-facing scenarios require host root: `flow_offload` needs the
-host flowtable offload path, the `systemd_netns` unit uses `ip netns exec`
-(whose recursive `/sys` bind mount is not permitted inside the rootless user
-namespace), and `tproxy` loads host kernel modules (`modprobe nft_tproxy`,
-`tcp_bbr`, ...). The remaining scenarios (`cloud_init`, `mihomo_client`,
-`mihomo_server*`, `netplan_static`, `proxy_guard`, `systemd_bridge`,
-`systemd_resolved`) pass with rootless Podman locally. CI still runs the
-whole collection with rootful Podman for a uniform, reliable systemd
-container runtime. Every container is created privileged (systemd needs the
-capabilities, and the shared udev preparation needs a writable `/sys`), and
-the host kernel module tree is bind-mounted read-only into the containers
-through the inventory's `container_volumes`.
+Rootless Podman works for `cloud_init`, `mihomo_client`, `mihomo_server`,
+`mihomo_server_jls`, `netplan_static`, `proxy_guard`, `systemd_bridge`, and
+`systemd_resolved`. The `flow_offload`, `systemd_netns` and `tproxy` scenarios
+need rootful Podman: `flow_offload` touches the host flowtable offload path,
+`ip netns exec`'s recursive `/sys` bind mount is not permitted inside a
+rootless user namespace, and `tproxy` loads host kernel modules. CI uses
+rootful Podman for the whole suite.
 
-A rootful Docker daemon is supported as an alternative: set
+Every container is created privileged (systemd needs the capabilities, and
+the shared udev preparation needs a writable `/sys`), and the host kernel
+module tree is bind-mounted read-only into the containers through the
+inventory's `container_volumes`.
+
+A Docker daemon is supported as an alternative: set
 `MOLECULE_CONTAINER_RUNTIME=docker` for every molecule invocation. The
-containers are then managed through `community.docker` (installed from the
-root `requirements.yaml`; the `docker` Python SDK must be available to
+containers are then managed through `community.docker` (from
+`tests/molecule/requirements.yml`; the `docker` Python SDK must be available to
 Ansible) and run privileged, like the Podman path.
 
-When iterating with `molecule create` plus `molecule converge -s <scenario>`,
-pass `molecule prepare --force -s <scenario>` first if the shared "prepared"
-state is already set.
+Molecule caches scenario state, so a changed `molecule.yml` needs
+`molecule reset` (or `destroy`).
 
 ### Scenario caveats
 
 The `tproxy` scenario switches off the role's host-only facets, which the
-shared containers cannot carry: the static `/etc/resolv.conf` (a bind-mounted
-file, so the atomic replace of the template module fails) and the `tcp_bbr` /
+containers cannot carry: the static `/etc/resolv.conf` (a bind-mounted file,
+so the atomic replace of the template module fails) and the `tcp_bbr` /
 `nf_conntrack` sysctl tuning (host-global or not writable from a container
 network namespace, which would make the idempotence check fail).
 
