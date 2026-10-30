@@ -11,7 +11,7 @@ default:
     @just --list --unsorted
 
 # Run all available recipes
-all: lint typecheck unit-test ansible-lint docs-lint docs-build
+all: lint typecheck unit-test ansible-lint changelog-lint docs-lint docs-build
 
 # Sync development dependencies (may update uv.lock if pyproject.toml changed)
 sync *ARGS:
@@ -49,6 +49,22 @@ ansible-collection-install:
 # Lint all Ansible content with ansible-lint (production profile)
 ansible-lint:
     uv run ansible-lint
+
+# Lint the antsibull-changelog fragments
+changelog-lint:
+    uv run --group lint antsibull-changelog lint
+
+# Add a release to changelogs/changelog.yaml, consuming the fragments
+changelog-release version:
+    uv run --group lint antsibull-changelog release --version {{version}}
+
+# Regenerate CHANGELOG.rst from changelogs/changelog.yaml
+changelog-generate:
+    uv run --group lint antsibull-changelog generate
+
+# Build the Galaxy artifact into dist/
+build:
+    uv run --group lint ansible-galaxy collection build --force --output-path dist
 
 # Run every Molecule scenario.  Scenarios are flat, each one owns its
 # containers, and the inventory limits each role to its supported images.
@@ -88,6 +104,6 @@ docs-serve: docs-build
 
 # Remove build artifacts
 clean:
-    rm -rf .ansible/ .molecule/ .cache/ .pytest_cache/ .ruff_cache/ site/ docs/docsite/_build/
+    rm -rf .ansible/ .molecule/ .cache/ .pytest_cache/ .ruff_cache/ dist/ site/ docs/docsite/_build/
     find plugins/ -type f -name "*.pyc" -delete
     find plugins/ -type d -name "__pycache__" -delete

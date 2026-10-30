@@ -1,0 +1,47 @@
+===========================================
+ak1ra\_lab.network Collection Release Notes
+===========================================
+
+.. contents:: Topics
+
+v0.4.0
+======
+
+Release Summary
+---------------
+
+First Galaxy release of the reorganized network collection. The collection
+now depends on ``ak1ra_lab.general >= 0.4.0`` and no longer contains the
+``random_*`` lookups. ``flow_offload`` and ``proxy_guard`` remain part of the
+active collection, including their Molecule scenarios and documentation.
+``tproxy`` remains experimental.
+
+The hand-maintained history for 0.1.0 through 0.3.0 is preserved in
+``CHANGELOG-LEGACY.md``; the generated changelog starts with this release.
+
+Minor Changes
+-------------
+
+- Added a protected release workflow that builds, imports and publishes the collection from the ``vX.Y.Z`` GitHub release tag matching ``galaxy.yml``.
+- Added the tox-ansible matrix for ansible-core 2.19/2.20/2.21 and the weekly devel/milestone environments, plus mypy alongside ruff and ansible-lint.
+- CI installs ansible-lint, antsibull-changelog and Molecule from the uv dependency groups and runs every Python tool through ``uv run``, matching the local just recipes. The Docs workflow grants Pages write access only to the deploy job.
+- Flattened the Molecule scenarios, limited each role to its supported Debian/Ubuntu images, and gave each scenario its own containers instead of a shared lifecycle or ``MOLECULE_GLOB``.
+- Migrated release notes to antsibull-changelog. ``CHANGELOG.rst`` is now the canonical changelog, generated from ``changelogs/fragments/``; the pre-Galaxy 0.1.0-0.3.0 history is kept in ``CHANGELOG-LEGACY.md``.
+- Migrated the documentation site to Sphinx and antsibull-docs. Role reference pages are generated from ``meta/argument_specs.yml`` and filter reference pages from the plugin documentation, replacing MkDocs.
+- Prepared the collection for Galaxy with GPL-3.0-or-later licensing, an ansible-core 2.19.0 minimum, the ``ak1ra_lab.general >= 0.4.0``, ``ansible.posix``, ``community.general`` and ``ansible.utils`` dependencies, ``build_ignore`` instead of ``manifest``, controller-side ``requirements.txt`` (``netaddr``) and ``meta/execution-environment.yml``.
+- The ``tproxy`` role is marked **experimental**. The role name is unchanged, but its variable contract and deployed artifacts may still change without a deprecation cycle until the role is promoted.
+- The new ``netplan_static_default_interface`` option selects the physical interface that carries the static default route. The new ``netplan_static_default_routes`` filter reads the kernel main table (``/proc/net/route``), and ``netplan_static_gateway`` defaults to ``auto`` so the gateway is captured from that interface.
+
+Breaking Changes / Porting Guide
+--------------------------------
+
+- The ``random_password``, ``random_base64_key`` and ``random_uuid`` lookup plugins moved to ``ak1ra_lab.general`` 0.4.0. Use the ``ak1ra_lab.general.random_*`` FQCNs; the network-namespaced plugins are removed in this release.
+
+Bugfixes
+--------
+
+- CI action pins were refreshed to ``actions/setup-python`` 7.1.0, ``astral-sh/setup-uv`` 10.3.1 and ``actions/upload-pages-artifact`` 5.0.0.
+- Molecule filters the container's loopback resolver stub and reads the systemd-resolved uplink view before configuring the test resolver, so the resolver scenarios no longer break package downloads in later scenarios. The ``tproxy`` prepare also retries a transient package-download failure.
+- The Docs workflow installs ``distlib`` through the docs dependency group, so ``ansible-galaxy`` can read the ``galaxy.yml`` manifest when installing the collection from source. The ``just`` collection recipes use the uv environment for the same reason.
+- The ``netplan_static`` role no longer fails when a TUN client such as ``mihomo_client`` owns ``ansible_facts.default_ipv4`` through policy routing. The TUN (``mihomo0``) is never rendered; the role selects the captured ethernet interface and gateway from the kernel main table instead.
+- The ``netplan_static`` role treats an empty ``ansible_facts.default_ipv6`` mapping as "no IPv6 default route" instead of failing the IPv6-loss gate on hosts with IPv6 disabled.

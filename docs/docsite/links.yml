@@ -10,5 +10,5 @@ extra_links:
 
 communication:
   forums:
-    - topic: Ansible Forum
-      url: https://forum.ansible.com/
+    - topic: Ansible Forum (ak1ra-lab tag)
+      url: https://forum.ansible.com/tag/ak1ra-lab

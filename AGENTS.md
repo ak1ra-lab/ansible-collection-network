@@ -17,7 +17,7 @@ duplicate role or plugin docs.
   manage this repository's environment.
 - Python lint/format: **ruff** over `plugins/` and `tests/` (`just lint`).
   Typecheck: **mypy** over the same paths (`just typecheck`; pragmatic config
-  in `pyproject.toml`). Do not use `black`, `isort`, `flake8`, or `ty`;
+  in `pyproject.toml`). Do not use `black`, `isort`, or `flake8`;
   `ansible-test sanity` remains the authoritative gate.
 - Ansible lint: `just ansible-lint` (`profile: production`).
 - Unit tests: **tox-ansible** (`just tox-list`, `just unit-test` =
@@ -33,8 +33,12 @@ duplicate role or plugin docs.
   (antsibull-docs plus Sphinx, config `docs/docsite/conf.py`). The recipes
   install the collection first because antsibull-docs reads it through
   `ansible-doc`.
-- Local gate: `just all` runs lint, typecheck, unit tests, ansible-lint, and
-  the docs build. Molecule is separate because it needs a container runtime.
+- Changelog: `just changelog-lint`, `just changelog-release X.Y.Z`, and
+  `just changelog-generate`. `CHANGELOG.rst` is generated from
+  `changelogs/fragments/` and must not be edited by hand.
+- Local gate: `just all` runs lint, typecheck, unit tests, ansible-lint,
+  changelog lint, and the docs build. Molecule is separate because it needs a
+  container runtime.
 
 ## Ansible layout
 
@@ -68,15 +72,29 @@ Role variables use the `<role>_*` prefix. Do not add a `kinds:` mapping to
   `playbooks/host_vars/`, `playbooks/group_vars/`, and `site/` are ignored
   generated data.
 - When adding a role, plugin, or playbook, update the relevant role README,
-  the docs index, and `CHANGELOG.md` in the same change.
+  the docs index, and add a `changelogs/fragments/*.yml` entry in the same
+  change.
 - Role documentation: edit `roles/<role>/meta/argument_specs.yml` and the role
   README; do not copy either into `docs/`. The generated role pages come from
   the argument specs.
 - Plugin documentation: edit the `DOCUMENTATION`/`EXAMPLES`/`RETURN` blocks
   in `plugins/<type>/<name>.py`; the docs site generates the pages from them.
 
+## Releases
+
+Release order: `ak1ra_lab.general 0.4.0`, then `ak1ra_lab.network 0.4.0`.
+The Git tag is `vX.Y.Z` and must match `galaxy.yml`.
+
+Before tagging: run `just all`, the supported sanity/unit environments, the
+release-scope Molecule scenarios, and `just docs-build`; build the artifact and
+run `galaxy-importer`; confirm `meta/runtime.yml` is in the tarball. The
+`Release` workflow publishes only from a published GitHub release in the
+protected `release` environment, using `ANSIBLE_GALAXY_API_KEY`; it does not
+create tags or releases. Never publish to Galaxy from a local shell.
+
 ## References
 
 - `CONTRIBUTING.md` for the full development and Molecule workflow.
 - `docs/docsite/` for user guides, the generated role index, and the generated plugin reference.
-- `CHANGELOG.md` and `galaxy.yml` for release state.
+- `CHANGELOG.rst` (generated), `CHANGELOG-LEGACY.md` (pre-Galaxy history), and
+  `galaxy.yml` for release state.

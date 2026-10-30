@@ -25,7 +25,7 @@ artifacts, and design notes.
 
 .. note::
 
-   The collection is currently installed from Git, not from Galaxy. Use the
-   install command in :doc:`getting-started`; the generated role pages show
-   the eventual Galaxy FQCN for reference. ``tproxy`` is experimental: the
-   role name is stable, but its contract may still change.
+   Install the released collection from Ansible Galaxy; see
+   :doc:`getting-started`. The generated role pages use the Galaxy FQCN.
+   ``tproxy`` is experimental: the role name is stable, but its contract may
+   still change until it is promoted.

@@ -18,6 +18,7 @@ ansible = [
 lint = [
     { include-group = "ansible" },
     "ansible-lint>=26.8.0",
+    "antsibull-changelog>=0.32.0",
     "galaxy-importer>=0.4.31",
     "mypy>=1.18.0",
     "ruff>=0.17.0",

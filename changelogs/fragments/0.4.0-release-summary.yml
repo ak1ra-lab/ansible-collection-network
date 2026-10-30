@@ -1,0 +1,10 @@
+---
+release_summary: |
+  First Galaxy release of the reorganized network collection. The collection
+  now depends on ``ak1ra_lab.general >= 0.4.0`` and no longer contains the
+  ``random_*`` lookups. ``flow_offload`` and ``proxy_guard`` remain part of the
+  active collection, including their Molecule scenarios and documentation.
+  ``tproxy`` remains experimental.
+
+  The hand-maintained history for 0.1.0 through 0.3.0 is preserved in
+  ``CHANGELOG-LEGACY.md``; the generated changelog starts with this release.

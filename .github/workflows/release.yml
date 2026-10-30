@@ -1,0 +1,85 @@
+---
+# Build, import-check and publish ak1ra_lab.network to Ansible Galaxy.
+#
+# Trigger: a published GitHub release. The release tag must be vX.Y.Z and match
+# galaxy.yml. The job runs in the protected "release" environment, which owns
+# the ANSIBLE_GALAXY_API_KEY secret. This workflow never creates tags or
+# releases and never runs from a branch push.
+name: Release
+
+on: # yamllint disable-line rule:truthy
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to publish (vX.Y.Z)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to Galaxy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment:
+      name: release
+      url: https://galaxy.ansible.com/ui/repo/published/ak1ra_lab/network/
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
+      - name: Sync the release dependencies
+        run: uv sync --locked --no-dev --group lint
+      - name: Verify the release tag matches galaxy.yml
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}
+        run: |
+          version=$(uv run --no-sync python -c \
+            'import pathlib, yaml; print(yaml.safe_load(pathlib.Path("galaxy.yml").read_text(encoding="utf-8"))["version"])')
+          expected="v${version}"
+          if [ "$RELEASE_TAG" != "$expected" ]; then
+            echo "release tag '$RELEASE_TAG' does not match galaxy.yml ('$expected')" >&2
+            exit 1
+          fi
+      - name: Build the collection
+        run: |
+          rm -rf dist
+          uv run --no-sync ansible-galaxy collection build --output-path dist
+      - name: Verify the tarball metadata
+        run: |
+          tarball=$(ls dist/*.tar.gz)
+          tar -tzf "$tarball" | grep -qx 'meta/runtime.yml'
+          tar -tzf "$tarball" | grep -qx 'CHANGELOG.rst'
+      - name: Run galaxy-importer
+        run: |
+          rm -rf /tmp/collection-import
+          uv run --no-sync python -m galaxy_importer.main \
+            --git-clone-path . \
+            --output-path /tmp/collection-import \
+            --print-result
+      - name: Publish to Ansible Galaxy
+        env:
+          ANSIBLE_GALAXY_API_KEY: ${{ secrets.ANSIBLE_GALAXY_API_KEY }}
+        run: |
+          if [ -z "$ANSIBLE_GALAXY_API_KEY" ]; then
+            echo "ANSIBLE_GALAXY_API_KEY is not configured on the release environment" >&2
+            exit 1
+          fi
+          uv run --no-sync ansible-galaxy collection publish \
+            dist/*.tar.gz --api-key "$ANSIBLE_GALAXY_API_KEY"

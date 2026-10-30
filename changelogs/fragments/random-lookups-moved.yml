@@ -1,0 +1,6 @@
+---
+breaking_changes:
+  - The ``random_password``, ``random_base64_key`` and ``random_uuid`` lookup
+    plugins moved to ``ak1ra_lab.general`` 0.4.0. Use the
+    ``ak1ra_lab.general.random_*`` FQCNs; the network-namespaced plugins are
+    removed in this release.

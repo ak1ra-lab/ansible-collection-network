@@ -4,6 +4,7 @@ Shared Ansible roles for network infrastructure, published as the
 `ak1ra_lab.network` collection.
 
 Documentation: <https://ak1ra-lab.github.io/ansible-collection-network/>
+Release notes: [CHANGELOG.rst](CHANGELOG.rst)
 
 The collection covers transparent-proxy plumbing, optional nftables helpers,
 systemd-networkd host networking, and cloud-image network takeover:
@@ -18,28 +19,6 @@ systemd-networkd host networking, and cloud-image network takeover:
 - `cloud_init`, `netplan_static`, and `systemd_resolved` take a cloud image
   off cloud-init's network management, capture the live IPv4 state into
   netplan, and put systemd-resolved in charge of the host resolver.
-
-## Install
-
-```shell
-ansible-galaxy collection install git+https://github.com/ak1ra-lab/ansible-collection-network.git
-```
-
-The collection requires `ansible-core >= 2.19` and controller Python >= 3.11.
-Install the controller-side Python dependency (`netaddr`, used by
-`ansible.utils.ipaddr`) from [`requirements.txt`](requirements.txt).
-
-The `mihomo_*` roles also need `ak1ra_lab.general >= 0.4.0`, which is not
-published to Galaxy yet:
-
-```yaml
-collections:
-  - name: git+https://github.com/ak1ra-lab/ansible-collection-general.git
-    version: master
-```
-
-See [Getting started](docs/docsite/rst/getting-started.rst) for control-node dependencies
-and the managed-node matrix.
 
 ## Roles
 
@@ -62,6 +41,76 @@ canonical variable contracts; the role READMEs keep narrative and deployed
 artifact details. The docs site renders the argument specs as the role
 reference.
 
+## Requirements
+
+- Controller: `ansible-core >= 2.19.0`; tested with ansible-core 2.19, 2.20,
+  and 2.21 (plus the weekly `devel`/`milestone` builds).
+- Controller Python: `>= 3.11`; tested with Python 3.11, 3.12, and 3.13.
+  ansible-core 2.20 and 2.21 additionally support Python 3.12-3.14.
+- Controller Python package: `netaddr` for the `ansible.utils.ipaddr` filter
+  used by address validation (see [`requirements.txt`](requirements.txt)).
+- Managed nodes: systemd-based Debian/Ubuntu. Tested images are Debian 12
+  (target Python 3.11), Debian 13 (target Python 3.13), and Ubuntu 24.04
+  (target Python 3.12). The roles use the managed node's `/usr/bin/python3`.
+- Collections: `ak1ra_lab.general >= 0.4.0`, `ansible.posix >= 1.5.4`,
+  `community.general >= 8.0.0`, and `ansible.utils >= 6.0.0` (resolved from
+  [`galaxy.yml`](galaxy.yml)).
+
+`ak1ra_lab.network` depends on `ak1ra_lab.general` for `cpu_info`,
+`github_releases_info`, and the `random_*` lookups. Galaxy resolves that
+dependency automatically once general `0.4.0` is published.
+
+## Install
+
+Install the released collection from Ansible Galaxy:
+
+```shell
+ansible-galaxy collection install ak1ra_lab.network
+```
+
+Or pin it in a consumer `requirements.yml`:
+
+```yaml
+---
+collections:
+  - name: ak1ra_lab.network
+    version: ">=0.4.0"
+```
+
+```shell
+ansible-galaxy collection install -r requirements.yml
+```
+
+Galaxy also installs `ak1ra_lab.general >= 0.4.0` and the other declared
+dependencies. Certificate issuance is **not** part of this collection; the
+consumer supplies the TLS material.
+
+See [Getting started](docs/docsite/rst/getting-started.rst) for control-node
+dependencies and the managed-node matrix.
+
+## Versioning and deprecation
+
+The collection follows semantic versioning once it reaches `1.0.0`. Before
+`1.0.0`, a minor release may contain a documented breaking change; patch
+releases are limited to compatible fixes.
+
+- Breaking changes are listed under **Breaking Changes / Porting Guide** in
+  [CHANGELOG.rst](CHANGELOG.rst).
+- Deprecated role variables and features are documented in the changelog and
+  the role reference, and remain available for at least one minor release
+  before removal. Before `1.0.0`, removal may happen in a minor release.
+- `tproxy` is experimental: its name is stable, but its contract may change
+  without a deprecation cycle until it is promoted.
+- Raising the minimum ansible-core or Python version is treated as a breaking
+  change.
+- The `galaxy.yml` version, the Git tag (`vX.Y.Z`), and the changelog release
+  must match for every release.
+
+Release order for the `ak1ra_lab` collections:
+
+1. `ak1ra_lab.general 0.4.0`
+2. `ak1ra_lab.network 0.4.0` (depends on general `>=0.4.0`)
+
 ## Playbooks
 
 | Playbook | Description |
@@ -73,7 +122,7 @@ reference.
 | [`systemd_resolved`](playbooks/systemd_resolved.yaml) | Thin wrapper around the `systemd_resolved` role. |
 | [`mihomo_install`](playbooks/mihomo_install.yaml) | Installs or upgrades the mihomo binary only. |
 | [`mihomo_client`](playbooks/mihomo_client.yaml) | Applies `mihomo_install`, then the client role. |
-| [`mihomo_server`](playbooks/mihomo_server.yaml) | Applies `mihomo_install`, optional certbot, then the server role. |
+| [`mihomo_server`](playbooks/mihomo_server.yaml) | Applies `mihomo_install`, then the server role; TLS material is supplied externally. |
 
 Quick examples:
 
@@ -87,8 +136,17 @@ ansible-playbook ak1ra_lab.network.mihomo_client -e mihomo_install_version=lates
 ansible-playbook ak1ra_lab.network.mihomo_server -e mihomo_install_version=latest
 ```
 
-See [Playbooks](docs/docsite/rst/playbooks.rst) for the host defaults and orchestration
-details.
+See [Playbooks](docs/docsite/rst/playbooks.rst) for the host defaults and
+orchestration details.
+
+## Communication
+
+- Ansible Forum: use the [`ak1ra-lab` tag](https://forum.ansible.com/tag/ak1ra-lab)
+  for questions and usage discussions.
+- Bug reports and feature requests:
+  <https://github.com/ak1ra-lab/ansible-collection-network/issues>
+- Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), which points to
+  the [Ansible Community Code of Conduct](https://docs.ansible.com/ansible/latest/community/code_of_conduct.html).
 
 ## Development
 
@@ -98,10 +156,12 @@ just all
 just molecule-test
 ```
 
-`just all` covers lint, mypy, unit tests, ansible-lint, docs lint, and the docs build.
-`just tox-list` shows the standard tox-ansible ansible-core/Python matrix.
-Molecule runs separately with isolated per-scenario containers; rootless Podman covers most scenarios and `systemd_netns`/`tproxy` need rootful. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
+`just all` covers lint, mypy, unit tests, ansible-lint, changelog lint, docs
+lint, and the docs build. `just tox-list` shows the standard tox-ansible
+ansible-core/Python matrix. Molecule runs separately with isolated
+per-scenario containers; rootless Podman covers most scenarios and
+`systemd_netns`/`tproxy` need rootful. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the full workflow and release checklist.
 
 ## License
 

@@ -1,0 +1,5 @@
+---
+minor_changes:
+  - The ``tproxy`` role is marked **experimental**. The role name is unchanged, but its
+    variable contract and deployed artifacts may still change without a
+    deprecation cycle until the role is promoted.

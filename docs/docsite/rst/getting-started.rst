@@ -6,31 +6,45 @@ Getting started
 Install the collection
 ----------------------
 
+Install the released collection from Ansible Galaxy:
+
 .. code-block:: shell
 
-   ansible-galaxy collection install git+https://github.com/ak1ra-lab/ansible-collection-network.git
+   ansible-galaxy collection install ak1ra_lab.network
 
-The ``mihomo_*`` roles also need ``ak1ra_lab.general``, which is not published
-to Galaxy yet. Add it to the consuming repository's ``requirements.yaml`` and
-install from Git:
+Or pin it in a consumer ``requirements.yml``:
 
 .. code-block:: yaml
 
+   ---
    collections:
-     - name: git+https://github.com/ak1ra-lab/ansible-collection-general.git
-       version: master
+     - name: ak1ra_lab.network
+       version: ">=0.4.0"
+
+.. code-block:: shell
+
+   ansible-galaxy collection install -r requirements.yml
+
+Galaxy resolves ``ak1ra_lab.general >= 0.4.0``, ``ansible.posix``,
+``community.general``, and ``ansible.utils`` from ``galaxy.yml``
+automatically. The ``0.4.0`` release is the first Galaxy release; until it is
+published, install from a Git tag or commit and pin the revision instead of
+following a branch.
 
 For development in this repository, ``just ansible-collection-install``
 installs the collection under test plus the local
 ``../ansible-collection-general`` checkout into ``.ansible/collections``.
 Override the path with ``GENERAL_COLLECTION=/path/to/checkout`` when working
-from a git worktree.
+from a git worktree. This local copy is a temporary bridge until general
+``0.4.0`` is published and is not part of the consumer install path.
 
 Control-node requirements
 -------------------------
 
-- ``ansible-core >= 2.19.0`` (``meta/runtime.yml``) and controller Python
-  ``>= 3.11``.
+- ``ansible-core >= 2.19.0`` (``meta/runtime.yml``); tested with 2.19, 2.20,
+  and 2.21 plus the weekly ``devel``/``milestone`` builds.
+- Controller Python ``>= 3.11``; tested with 3.11, 3.12, and 3.13.
+  ansible-core 2.20 and 2.21 additionally support Python 3.12-3.14.
 - ``ansible.utils >= 6.0.0`` (a ``galaxy.yml`` dependency) for the ``ipaddr``
   and ``in_network`` filters used by the ``systemd_bridge`` and
   ``systemd_netns`` roles.
@@ -55,16 +69,20 @@ Managed-node requirements
 -------------------------
 
 The roles target systemd-based Linux. The Molecule images used by this
-repository are:
-
-- ``debian:12``
-- ``debian:13``
-- ``ubuntu:24.04``
+repository are Debian 12 (target Python 3.11), Debian 13 (target Python
+3.13), and Ubuntu 24.04 (target Python 3.12). The roles use the managed
+node's ``/usr/bin/python3``.
 
 The ``systemd_bridge`` and ``systemd_netns`` roles require
 ``systemd-networkd``, which is not available on the RHEL family. Fedora would
 additionally need the separate ``systemd-networkd`` package and the
 ``iproute`` package name.
+
+Release order
+-------------
+
+``ak1ra_lab.general 0.4.0`` is published first; ``ak1ra_lab.network 0.4.0``
+depends on it. See :doc:`changelog` for release notes.
 
 Next steps
 ----------

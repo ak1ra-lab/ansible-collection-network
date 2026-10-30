@@ -17,6 +17,7 @@ Common commands
    just typecheck     # mypy against the installed collection namespace
    just unit-test     # tox-ansible unit environment
    just ansible-lint
+   just changelog-lint # antsibull-changelog fragment lint
    just docs-lint     # antsibull-docs lint-collection-docs
    just docs-build    # regenerate reference pages and build Sphinx
 

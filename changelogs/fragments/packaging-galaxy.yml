@@ -1,0 +1,9 @@
+---
+minor_changes:
+  - Prepared the collection for Galaxy with GPL-3.0-or-later licensing, an
+    ansible-core 2.19.0 minimum, the ``ak1ra_lab.general >= 0.4.0``,
+    ``ansible.posix``, ``community.general`` and ``ansible.utils``
+    dependencies, ``build_ignore`` instead of ``manifest``, controller-side
+    ``requirements.txt`` (``netaddr``) and ``meta/execution-environment.yml``.
+  - Added a protected release workflow that builds, imports and publishes the
+    collection from the ``vX.Y.Z`` GitHub release tag matching ``galaxy.yml``.
