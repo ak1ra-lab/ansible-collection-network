@@ -3,7 +3,7 @@
 #
 # Engine-agnostic TPROXY transparent proxy plumbing: nftables marking, policy
 # routing, sysctl.  Any proxy engine listening on a TPROXY inbound plugs in
-# through these variables (see README.md for the contract table).
+# through these variables; the canonical reference is meta/argument_specs.yml.
 
 # Deployment shape:
 #   gateway - proxy forwarded (LAN) and local traffic; enables ip_forward
