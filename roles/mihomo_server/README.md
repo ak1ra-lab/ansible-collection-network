@@ -12,20 +12,22 @@ server and produces the client artifacts consumed by
   hysteria2, vless, tuic and anytls, plus a raw `mihomo_server_extra_listeners`
   escape hatch;
 - auto-generated credentials (user pool, cipher-aware base64 secrets, RFC
-  4122 UUIDs) persisted to `playbooks/host_vars/<host>/mihomo_server.yaml`
-  (mode 0600), where Ansible auto-loads them on later runs; only variables
-  still left empty are generated (with the `ak1ra_lab.network.random_*`
-  lookup plugins, control-node CSPRNG), and explicit non-empty variables
-  always win;
+  4122 UUIDs) persisted to `inventory/host_vars/<host>/mihomo_server.yaml`
+  (or the configured `mihomo_server_host_vars_file`; mode 0600), where Ansible
+  auto-loads them on later runs when the path is inventory- or
+  playbook-adjacent; only variables still left empty are generated (with the
+  `ak1ra_lab.general.random_*` lookup plugins, control-node CSPRNG), and
+  explicit non-empty variables always win;
 - clash-format client nodes written to
   `config/client_outbounds/<host>.proxies.yaml`, ready to feed the client's
   `providers/selfhost.yaml` through `mihomo_client_selfhost_files`.
 
 The role owns the service identity (`mihomo` user/group), the listeners
 configuration, the systemd unit and the service.  The binary is deployed by
-`ak1ra_lab.network.mihomo_install`, which `playbooks/mihomo_server.yaml`
-applies before this role (the `mihomo_install_*` contract: version policy
-`present` / `latest` / pinned, amd64 microarchitecture-aware).
+`ak1ra_lab.network.mihomo_install`, which the consumer composition in
+`ansible-playbooks-services` applies before this role (the
+`mihomo_install_*` contract: version policy `present` / `latest` / pinned,
+amd64 microarchitecture-aware).
 
 mihomo schema facts the contract is built on:
 
@@ -70,14 +72,14 @@ enabled ports (`mihomo_server_*_port`) yourself.
 
 | Artifact | Purpose |
 | --- | --- |
-| `/usr/local/bin/mihomo` | mihomo binary, deployed by `mihomo_install` (playbook) |
+| `/usr/local/bin/mihomo` | mihomo binary, deployed by `mihomo_install` (consumer playbook) |
 | `/etc/mihomo/config.yaml` | server configuration (`listeners` + `rules: [MATCH,DIRECT]`) |
 | `/etc/systemd/system/mihomo.service` | service unit (`ExecStartPre` config test) |
 | `/etc/mihomo/tls/{fullchain,privkey}.pem` | role-managed copies when a source pair is configured (`0640 root:mihomo`) |
 | `/etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh` | optional TLS renewal deploy hook (role-managed) |
 | `<repo>/config/client_outbounds/<host>.proxies.yaml` | clash-format client nodes for `mihomo_client` |
 | `<repo>/config/client_outbounds/<host>.config.yaml` | exact copy of the deployed server config |
-| `<playbook>/host_vars/<host>/mihomo_server.yaml` | generated credentials (0600) |
+| `inventory/host_vars/<host>/mihomo_server.yaml` (or the configured `mihomo_server_host_vars_file`) | generated credentials (0600) |
 
 The two `config/client_outbounds/` files and the `host_vars` file are
 written on the controller; commit them only on a private branch (they carry
@@ -179,8 +181,8 @@ node names).
 | `mihomo_server_tls_renewal_hook_path` | `/etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh` | Renewal hook path |
 | `mihomo_server_alpn` | `[h3]` | ALPN for hysteria2/tuic listeners (and their generated client nodes) |
 | `mihomo_server_client_node_prefix` | `selfhost` | Prefix of the generated client node names |
-| `mihomo_server_local_artifacts_dir` | `<playbook>/../config/client_outbounds` | Controller-local artifacts directory |
-| `mihomo_server_host_vars_file` | `<playbook>/host_vars/<host>/mihomo_server.yaml` | Generated credentials file |
+| `mihomo_server_local_artifacts_dir` | `<playbook_dir>/../config/client_outbounds` | Controller-local artifacts directory |
+| `mihomo_server_host_vars_file` | `<playbook_dir>/host_vars/<host>/mihomo_server.yaml` (for example `inventory/host_vars/<host>/mihomo_server.yaml`) | Generated credentials file |
 
 Internal derived values (enumeration lists) live in `vars/main.yaml` and are
 not meant to be overridden.  The service identity and paths
@@ -301,14 +303,24 @@ rendering because `mihomo -t` does not check listener runtime parameters.
 Custom padding changes packet shape only; it does not hide SNI or fix the
 TLS-in-TLS/timing weaknesses described by the AnyTLS FAQ.
 
+## Certificate composition
+
+This collection ships the `mihomo_server` role only; it does not issue
+certificates and remains independent of any certificate collection. The
+composition that pairs this role with certificate issuance lives in
+`ansible-playbooks-services` as `mihomo_server_certbot.yaml`:
+`https://github.com/ak1ra-lab/ansible-playbooks-services`.
+
+Use that playbook when the server certificate should be issued and renewed by
+certbot. The role itself continues to accept operator-managed TLS material or
+an external certificate pair as described above.
+
 ## Example playbook
 
-The supported entry point is the collection playbook, which installs the
-binary first and then applies this role:
-
-```shell
-ansible-playbook ak1ra_lab.network.mihomo_server -e mihomo_install_version=latest
-```
+The operational composition lives in `ansible-playbooks-services`
+(`mihomo_server.yaml`), which installs the binary first and then applies this
+role:
+`https://github.com/ak1ra-lab/ansible-playbooks-services`.
 
 Applying the roles directly:
 
@@ -351,8 +363,8 @@ needed.
 
 ## Companion roles
 
-- `ak1ra_lab.network.mihomo_install` deploys the binary (applied by
-  `playbooks/mihomo_server.yaml`);
+- `ak1ra_lab.network.mihomo_install` deploys the binary (applied first by the
+  consumer composition in `ansible-playbooks-services`);
 - `ak1ra_lab.network.mihomo_client` consumes the generated client nodes
   through `mihomo_client_selfhost_files` (validated against the naming
   contract before the play writes `providers/selfhost.yaml`).

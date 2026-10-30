@@ -108,7 +108,7 @@ jobs:
           for required in meta/runtime.yml meta/execution-environment.yml README.md LICENSE CODE_OF_CONDUCT.md CHANGELOG.rst; do
             tar -tzf "$tarball" | grep -qx "$required"
           done
-          if tar -tzf "$tarball" | grep -Eq '^(\.agents|\.ansible|\.venv|site|tests/output|playbooks/(host|group)_vars|config)(/|$)'; then
+          if tar -tzf "$tarball" | grep -Eq '^(\.agents|\.ansible|\.venv|site|tests/output|playbooks|scripts|config)(/|$)'; then
             echo "local/test-only content leaked into the tarball" >&2
             exit 1
           fi

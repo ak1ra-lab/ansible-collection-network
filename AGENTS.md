@@ -1,9 +1,10 @@
 # AGENTS.md
 
 This repository is the `ak1ra_lab.network` Ansible collection (`galaxy.yml`
-namespace/name), not a consumer. It ships reusable roles under `roles/`,
-custom filter plugins under `plugins/`, and collection playbook entry points
-under `playbooks/`. Role contracts belong in
+namespace/name), not a consumer. It ships reusable roles under `roles/` and
+custom filter plugins under `plugins/`. Operational playbooks that compose
+these roles live in the separate `ansible-playbooks-services` repository, not
+in this collection. Role contracts belong in
 `roles/<role>/meta/argument_specs.yml`; role READMEs keep narrative and
 deployed-artifact details. Plugin docs belong in the `DOCUMENTATION`,
 `EXAMPLES`, and `RETURN` constants in the plugin source. `README.md` is the
@@ -44,8 +45,8 @@ duplicate role or plugin docs.
 
 `ansible.cfg` pins `roles_path=./roles` and
 `collections_path=./.ansible/collections`; user-level paths are not used.
-Playbooks and templates reference FQCNs, so install the collection into
-itself before running playbooks or ansible-lint:
+Consumer playbooks and role templates reference FQCNs, so install the
+collection into itself before ansible-lint or a local consumer run:
 
 ```shell
 just ansible-collection-install
@@ -67,11 +68,12 @@ Role variables use the `<role>_*` prefix. Do not add a `kinds:` mapping to
 - Ansible changes MUST pass `just ansible-lint` and the relevant Molecule
   scenario; report the scenario you ran.
 - Do not edit generated artifacts or installed copies: `.ansible/`, `config/`,
-  `playbooks/host_vars/`, `playbooks/group_vars/`, and `site/` are ignored
-  generated data.
-- When adding a role, plugin, or playbook, update the relevant role README,
-  the docs index, and add a `changelogs/fragments/*.yml` entry in the same
-  change.
+  and `site/` are ignored generated data.
+- Operational playbooks and their inventories live in the separate
+  `ansible-playbooks-services` repository; do not add playbooks under this
+  collection.
+- When adding a role or plugin, update the relevant role README, the docs
+  index, and add a `changelogs/fragments/*.yml` entry in the same change.
 - Role documentation: edit `roles/<role>/meta/argument_specs.yml` and the role
   README; do not copy either into `docs/`. The generated role pages come from
   the argument specs.

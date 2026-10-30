@@ -52,6 +52,10 @@ releases:
         that carries the static default route. The new ``netplan_static_default_routes``
         filter reads the kernel main table (``/proc/net/route``), and ``netplan_static_gateway``
         defaults to ``auto`` so the gateway is captured from that interface.
+      - The operational playbooks moved to the separate ``ansible-playbooks-services``
+        repository; the collection is now the network role and plugin library only.
+        The mihomo certbot composition (``mihomo_server_certbot.yaml``) lives in
+        that repository, not in the collection.
       release_summary: 'First Galaxy release of the reorganized network collection.
         The collection
 

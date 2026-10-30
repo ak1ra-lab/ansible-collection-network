@@ -19,9 +19,10 @@
 # these knobs, copy the template, edit the copy and point the variable at it.
 #
 # The role owns the service identity, the profile, the systemd unit and the
-# service, but not the binary: playbooks/mihomo_client.yaml applies
-# ak1ra_lab.network.mihomo_install (the mihomo_install_* contract) first; the
-# role only asserts that the binary exists.
+# service, but not the binary: the consumer composition in
+# `ansible-playbooks-services` applies `ak1ra_lab.network.mihomo_install` (the
+# `mihomo_install_*` contract) first; the role only asserts that the binary
+# exists.
 
 # ── Lifecycle ────────────────────────────────────────────────────────────────
 

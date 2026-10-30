@@ -4,8 +4,10 @@ Architecture
 ============
 
 The collection is a set of independent roles with explicit, narrow contracts.
-Playbooks orchestrate the roles; roles do not call each other, with the
-exception of the collection playbooks documented in :doc:`playbooks`.
+Roles do not call each other; consumer playbooks compose them. Those
+operational playbooks live in the external
+`ansible-playbooks-services <https://github.com/ak1ra-lab/ansible-playbooks-services>`_
+repository, not in this collection.
 
 The roles fall into four groups:
 
@@ -36,14 +38,16 @@ mihomo client and server
 
 ``mihomo_install`` owns only the static binary. It has no service identity, no
 configuration, and no unit. The service roles own their own ``mihomo`` user,
-unit, and configuration, and the collection playbooks apply the installer
-first and wire its restart hook to the service role's handler.
+unit, and configuration; the consumer composition applies the installer first
+and wires its restart hook to the service role's handler.
 
 ``mihomo_server`` generates the VPS-side listeners and two controller-local
 artifacts:
 
-- ``playbooks/host_vars/<host>/mihomo_server.yaml`` - generated credentials,
-  mode ``0600``, auto-loaded by Ansible on later runs.
+- ``inventory/host_vars/<host>/mihomo_server.yaml`` (or the configured
+  ``mihomo_server_host_vars_file``) - generated credentials, mode ``0600``,
+  auto-loaded by Ansible on later runs when it lives in an inventory or
+  playbook-adjacent ``host_vars`` location.
 - ``config/client_outbounds/<host>.proxies.yaml`` - clash-format client nodes
   ready for the client's ``providers/selfhost.yaml`` through
   ``mihomo_client_selfhost_files``.
@@ -57,9 +61,9 @@ Bridges and namespaces
 
 ``systemd_bridge`` owns shared host-level bridges. They are stable
 infrastructure with one owner: bridges are declared once, and other roles or
-playbooks attach ports (namespace veth legs, VM taps, further physical ports)
-at run time. A bridge may have no uplink at all; it is then a pure L2 segment
-island.
+consumer playbooks attach ports (namespace veth legs, VM taps, further
+physical ports) at run time. A bridge may have no uplink at all; it is then a
+pure L2 segment island.
 
 ``systemd_netns`` consumes those bridges for per-service egress isolation. It
 creates a network namespace with veth legs on one or more bridges, configures

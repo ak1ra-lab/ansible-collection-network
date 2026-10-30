@@ -29,6 +29,12 @@ Galaxy resolves ``ak1ra_lab.general >= 0.4.0``, ``ansible.posix``,
 ``community.general``, and ``ansible.utils`` from ``galaxy.yml``
 automatically. The ``0.4.0`` release is the first Galaxy release.
 
+This collection ships roles and filter plugins only. Operational playbooks
+that compose the roles live in
+`ansible-playbooks-services <https://github.com/ak1ra-lab/ansible-playbooks-services>`_;
+install that repository separately when you need ready-made deployment entry
+points.
+
 For development in this repository, ``just ansible-collection-install``
 installs the collection under test and its Galaxy dependencies into
 ``.ansible/collections`` for lint, mypy, and docs.
@@ -83,6 +89,6 @@ Next steps
 ----------
 
 - :doc:`architecture` for how the role families fit together.
-- :doc:`playbooks` for collection entry points and host defaults.
+- :doc:`playbooks` for where the operational playbooks live.
 - :doc:`filters` for the generated filter reference.
 - :doc:`collection_index` for the generated role reference.

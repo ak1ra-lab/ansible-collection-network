@@ -1,8 +1,8 @@
 ---
 # systemd_bridge scenario - apply the bridges a real user declares.
 #
-# Mirrors playbooks/systemd_bridge.yaml: the two shapes the role supports are
-# exercised in one run -
+# Mirrors the systemd_bridge consumer composition: the two shapes the role
+# supports are exercised in one run -
 #   br-uplink  an uplink bridge over the enslaved veth member, carrying the
 #              segment address and staying required for online
 #   br-svc     an interface-less segment bridge, configured without carrier

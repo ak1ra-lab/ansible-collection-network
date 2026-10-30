@@ -113,31 +113,11 @@ Release order for the `ak1ra_lab` collections:
 
 ## Playbooks
 
-| Playbook | Description |
-| --- | --- |
-| [`systemd_bridge`](playbooks/systemd_bridge.yaml) | Thin wrapper around the `systemd_bridge` role. |
-| [`systemd_netns`](playbooks/systemd_netns.yaml) | Applies declared bridges first, then the namespace role. |
-| [`cloud_init`](playbooks/cloud_init.yaml) | Thin wrapper around the `cloud_init` role. |
-| [`netplan_static`](playbooks/netplan_static.yaml) | Thin wrapper around the `netplan_static` role; keep console access for the first run. |
-| [`systemd_resolved`](playbooks/systemd_resolved.yaml) | Thin wrapper around the `systemd_resolved` role. |
-| [`mihomo_install`](playbooks/mihomo_install.yaml) | Installs or upgrades the mihomo binary only. |
-| [`mihomo_client`](playbooks/mihomo_client.yaml) | Applies `mihomo_install`, then the client role. |
-| [`mihomo_server`](playbooks/mihomo_server.yaml) | Applies `mihomo_install`, then the server role; TLS material is supplied externally. |
-
-Quick examples:
-
-```shell
-ansible-playbook ak1ra_lab.network.systemd_bridge -e systemd_bridge_bridges='[{"name": "br_wan", "interface": "enp36s0"}]'
-ansible-playbook ak1ra_lab.network.systemd_netns -e systemd_netns_name=qbittorrent
-ansible-playbook ak1ra_lab.network.cloud_init -e playbook_hosts=cloud-image-vms
-ansible-playbook ak1ra_lab.network.netplan_static -e playbook_hosts=cloud-image-vms
-ansible-playbook ak1ra_lab.network.systemd_resolved -e playbook_hosts=cloud-image-vms
-ansible-playbook ak1ra_lab.network.mihomo_client -e mihomo_install_version=latest
-ansible-playbook ak1ra_lab.network.mihomo_server -e mihomo_install_version=latest
-```
-
-See [Playbooks](docs/docsite/rst/playbooks.rst) for the host defaults and
-orchestration details.
+This collection ships roles and filter plugins only. The operational
+playbooks that compose them live in the separate
+[`ansible-playbooks-services`](https://github.com/ak1ra-lab/ansible-playbooks-services)
+repository, together with their inventories and playbook-level variables.
+See [Playbooks](docs/docsite/rst/playbooks.rst) for details.
 
 ## Communication
 

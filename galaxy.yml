@@ -26,9 +26,9 @@ documentation: https://ak1ra-lab.github.io/ansible-collection-network/
 homepage: https://github.com/ak1ra-lab/ansible-collection-network
 issues: https://github.com/ak1ra-lab/ansible-collection-network/issues
 
-# Keep local development state, generated artifacts, and consumer inventory
-# out of the Galaxy artifact. `ansible-galaxy collection build` always excludes
-# galaxy.yml, .git and Python cache files.
+# Keep local development state and generated artifacts out of the Galaxy
+# artifact. `ansible-galaxy collection build` always excludes galaxy.yml, .git
+# and Python cache files.
 build_ignore:
   - .agents
   - .ansible
@@ -47,8 +47,6 @@ build_ignore:
   - config
   - importer_result.json
   - justfile
-  - playbooks/group_vars
-  - playbooks/host_vars
   - pyproject.toml
   - ruff.toml
   - site

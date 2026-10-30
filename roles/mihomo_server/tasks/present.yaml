@@ -2,8 +2,8 @@
 # tasks/present.yaml - apply the mihomo server (mihomo_server_state:
 # present): service identity, generated credentials/client artifacts, the
 # listeners configuration and the service.  The binary itself is deployed by
-# ak1ra_lab.network.mihomo_install, which the playbook entry point
-# (playbooks/mihomo_server.yaml) applies before this role.
+# ak1ra_lab.network.mihomo_install, which the consumer composition in
+# ansible-playbooks-services applies before this role.
 
 - name: ensure the mihomo system group exists
   ansible.builtin.group:
@@ -29,8 +29,8 @@
       - _mihomo_server_binary.stat.exists
     fail_msg: >-
       mihomo binary not found at {{ mihomo_server_binary }}; apply
-      ak1ra_lab.network.mihomo_install first (playbooks/mihomo_server.yaml
-      does) or install it on the host out of band
+      ak1ra_lab.network.mihomo_install first (the ansible-playbooks-services
+      composition does) or install it on the host out of band
     quiet: true
 
 - name: ensure the mihomo configuration directory exists

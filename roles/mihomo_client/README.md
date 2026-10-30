@@ -29,8 +29,9 @@ transparent-proxy client, based on the hand-written
   restart the service; only `config.yaml` changes do.
 
 The role owns the service identity (`mihomo` user/group), the profile, the
-systemd unit and the service.  It does **not** install the binary:
-`playbooks/mihomo_client.yaml` applies `ak1ra_lab.network.mihomo_install`
+systemd unit and the service.  It does **not** install the binary: the
+consumer composition in `ansible-playbooks-services` applies
+`ak1ra_lab.network.mihomo_install`
 (the `mihomo_install_*` contract: version policy `present` / `latest` /
 pinned version, optional GitHub proxy, amd64 microarchitecture-aware asset
 selection) before this role.  The role only asserts that the binary exists.
@@ -67,7 +68,7 @@ group_vars).
 
 | Artifact | Purpose |
 | --- | --- |
-| `/usr/local/bin/mihomo` | mihomo binary, deployed by `mihomo_install` (playbook) |
+| `/usr/local/bin/mihomo` | mihomo binary, deployed by `mihomo_install` (consumer playbook) |
 | `/etc/mihomo/config.yaml` | the rendered profile (`mihomo_client_config_template`) |
 | `/etc/mihomo/providers/selfhost.yaml` | self-hosted nodes (inline + `mihomo_server` artifacts), mode 0640 |
 | `/etc/mihomo/providers/` | airport subscription caches (role-created directory, contents user-managed) |
@@ -77,7 +78,7 @@ group_vars).
 | `/etc/modules-load.d/ansible-mihomo-client.conf` | `tun` module at boot |
 | `/etc/sysctl.d/90-ansible-mihomo-client-gateway.conf` | `ip_forward` / `rp_filter` (gateway mode only) |
 | `<local artifacts dir>/<host>.config.yaml` | optional controller-local profile mirror (`mihomo_client_local_artifacts_dir`) |
-| `<playbook>/host_vars/<host>/mihomo_client.yaml` | generated Clash API secret (0600, auto-loaded on later runs) |
+| `inventory/host_vars/<host>/mihomo_client.yaml` (or the configured `mihomo_client_host_vars_file`) | generated Clash API secret (0600, auto-loaded on later runs) |
 
 ## How it works
 
@@ -321,7 +322,7 @@ black-holing.
 | `mihomo_client_bundle_asset` | `BundleMRS.7z` | Release asset name |
 | `mihomo_client_bundle_force` | `false` | Re-download the bundle on every run |
 | `mihomo_client_local_artifacts_dir` | `""` | When set, also render `<dir>/<host>.config.yaml` on the controller (backup/diff); empty disables |
-| `mihomo_client_host_vars_file` | `<playbook>/host_vars/<host>/mihomo_client.yaml` | Controller-local generated-credentials file (0600; auto-loaded on later runs when playbook-adjacent) |
+| `mihomo_client_host_vars_file` | `<playbook_dir>/host_vars/<host>/mihomo_client.yaml` (for example `inventory/host_vars/<host>/mihomo_client.yaml`) | Controller-local generated-credentials file (0600; auto-loaded on later runs when playbook-adjacent) |
 | `mihomo_client_sysctl_ip_forward` / `_rp_filter` | `true` / `false` | Gateway-mode sysctl values (booleans map to 1/0; `rp_filter` is off by default because strict reverse-path filtering drops the asymmetric proxy path) |
 
 At least one of `mihomo_client_proxy_providers`,
@@ -338,14 +339,12 @@ variable - export `GITHUB_TOKEN` for the playbook run.
 
 ## Example playbook
 
-The supported entry point is the collection playbook, which installs the
-binary first and then applies this role:
+The operational composition lives in `ansible-playbooks-services`
+(`mihomo_client.yaml`), which installs the binary first and then applies this
+role:
+`https://github.com/ak1ra-lab/ansible-playbooks-services`.
 
-```shell
-ansible-playbook ak1ra_lab.network.mihomo_client -e mihomo_install_version=latest
-```
-
-Applying the roles directly (install first, as the playbook does):
+Applying the roles directly (install first, as that composition does):
 
 ```yaml
 - name: mihomo TUN transparent gateway
@@ -408,8 +407,8 @@ is no longer needed.
 
 ## Companion roles
 
-- `ak1ra_lab.network.mihomo_install` deploys the binary (applied by
-  `playbooks/mihomo_client.yaml`);
+- `ak1ra_lab.network.mihomo_install` deploys the binary (applied first by the
+  consumer composition in `ansible-playbooks-services`);
 - `ak1ra_lab.network.mihomo_server` generates the VPS-side listeners and the
   clash-format client nodes consumed through `mihomo_client_selfhost_files`;
 - `ak1ra_lab.network.tproxy` is the TPROXY plumbing for engines that need it

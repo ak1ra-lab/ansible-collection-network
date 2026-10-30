@@ -1,8 +1,8 @@
 ---
 # systemd_netns scenario - apply the namespace infrastructure.
 #
-# Mirrors playbooks/systemd_netns.yaml: the bridge is applied first (as a
-# real user declares it alongside the namespace), the systemd_bridge
+# Mirrors the systemd_netns consumer composition: the bridge is applied first
+# (as a real user declares it alongside the namespace), the systemd_bridge
 # handlers are flushed, the bridge is given a bounded moment to come up,
 # and only then is the namespace applied - its validation reads the live
 # bridge.  Egress verification is disabled: it pings an external exit-IP

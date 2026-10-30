@@ -25,7 +25,7 @@ manager bookkeeping, no `/etc` conffiles.  RPM-based families report the same
 The role deliberately does **not** manage the service identity, the
 configuration, the systemd unit or service restarts: the service roles
 (`ak1ra_lab.network.mihomo_client` / `mihomo_server`) own the `mihomo` user
-and their own unit.  Calling playbooks pass
+and their own unit.  Consumer playbooks pass
 `mihomo_install_restart_handler: systemctl restart mihomo.service` to have the
 service role's handler notified after an install/upgrade.
 
@@ -104,13 +104,9 @@ Architectures whose archives carry an extra flavour token (`loong64`
 
 ## Example playbook
 
-The collection playbooks apply this role before the service roles; the client
-and server playbooks are the supported entry points:
-
-```shell
-ansible-playbook ak1ra_lab.network.mihomo_client -e mihomo_install_version=latest
-ansible-playbook ak1ra_lab.network.mihomo_server -e mihomo_install_version=latest
-```
+The consumer playbooks in `ansible-playbooks-services` apply this role before
+the `mihomo_client` and `mihomo_server` service roles:
+`https://github.com/ak1ra-lab/ansible-playbooks-services`.
 
 Standalone (binary only, no service):
 
@@ -138,7 +134,6 @@ Standalone (binary only, no service):
 ## Companion roles
 
 - `ak1ra_lab.network.mihomo_client` and
-  `ak1ra_lab.network.mihomo_server` consume the binary through the
-  `playbooks/mihomo_client.yaml` / `playbooks/mihomo_server.yaml` entry
-  points, which apply this role first; the service roles never install it
-  themselves.
+  `ak1ra_lab.network.mihomo_server` consume the binary; the consumer
+  compositions in `ansible-playbooks-services` apply this role first. The
+  service roles never install it themselves.

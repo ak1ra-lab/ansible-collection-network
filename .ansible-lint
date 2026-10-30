@@ -20,10 +20,6 @@ exclude_paths:
   # mirrors): not Ansible source.  The directory is gitignored (config/*),
   # but ansible-lint does not read .gitignore.
   - config/
-  # Local, gitignored inventory data (generated credentials, host overrides);
-  # same reason as config/ - not collection source.
-  - playbooks/host_vars/
-  - playbooks/group_vars/
   # An ansible-galaxy role requirements file, not a playbook.  Molecule's
   # dependency action reads it; the scenarios have no standalone role deps.
   - extensions/molecule/shared/roles-requirements.yml

@@ -31,6 +31,7 @@ Minor Changes
 - Prepared the collection for Galaxy with GPL-3.0-or-later licensing, an ansible-core 2.19.0 minimum, the ``ak1ra_lab.general >= 0.4.0``, ``ansible.posix``, ``community.general`` and ``ansible.utils`` dependencies, ``build_ignore`` instead of ``manifest``, controller-side ``requirements.txt`` (``netaddr``) and ``meta/execution-environment.yml``.
 - The ``tproxy`` role is marked **experimental**. The role name is unchanged, but its variable contract and deployed artifacts may still change without a deprecation cycle until the role is promoted.
 - The new ``netplan_static_default_interface`` option selects the physical interface that carries the static default route. The new ``netplan_static_default_routes`` filter reads the kernel main table (``/proc/net/route``), and ``netplan_static_gateway`` defaults to ``auto`` so the gateway is captured from that interface.
+- The operational playbooks moved to the separate ``ansible-playbooks-services`` repository; the collection is now the network role and plugin library only. The mihomo certbot composition (``mihomo_server_certbot.yaml``) lives in that repository, not in the collection.
 
 Breaking Changes / Porting Guide
 --------------------------------

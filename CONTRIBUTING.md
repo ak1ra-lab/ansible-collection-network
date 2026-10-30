@@ -166,14 +166,15 @@ The docs workflow publishes `docs/docsite/_build/html` to GitHub Pages from
 ## Repository layout
 
 - `roles/` - role implementations and their canonical READMEs.
-- `playbooks/` - collection playbook entry points; they orchestrate roles but
-  keep role contracts in the roles.
 - `plugins/filter/` - Python filter plugins and their docs.
 - `extensions/molecule/` - Molecule scenarios.
 - `tests/unit/` - pytest tests for plugins and the client profile template.
 - `docs/docsite/` - Sphinx documentation source and configuration.
 - `justfile` - the canonical task runner; use its recipes instead of
   reproducing the underlying commands.
+
+Operational playbooks that compose these roles live in the separate
+`ansible-playbooks-services` repository, not in this collection.
 
 ## Releases
 

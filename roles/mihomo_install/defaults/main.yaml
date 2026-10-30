@@ -7,8 +7,8 @@
 # is distribution-neutral on systemd-based Linux hosts and touches neither the
 # package manager nor a service identity: the service roles
 # (ak1ra_lab.network.mihomo_client / mihomo_server) own the `mihomo` user/group
-# and their own systemd unit, and the playbooks orchestrate this role before
-# them.
+# and their own systemd unit, and consumer playbooks orchestrate this role
+# before them.
 #
 # Version policy (`mihomo_install_version`):
 #   present         install the latest release when the binary is missing,
@@ -17,9 +17,10 @@
 #   X.Y.Z / vX.Y.Z  converge to that release.
 #
 # The role deliberately does NOT manage the configuration, the systemd unit,
-# the service identity or service restarts: the calling playbook passes
-# `mihomo_install_restart_handler` (e.g. `systemctl restart mihomo.service`)
-# to have the service role's handler notified after an install/upgrade.
+# the service identity or service restarts: the calling consumer playbook
+# passes `mihomo_install_restart_handler` (e.g. `systemctl restart
+# mihomo.service`) to have the service role's handler notified after an
+# install/upgrade.
 
 # ── Behavior ─────────────────────────────────────────────────────────────────
 

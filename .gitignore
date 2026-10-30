@@ -351,15 +351,11 @@ importer_result.json
 **/group_vars/**/*.yml
 **/group_vars/**/*.yaml
 
-# Local inventory and playbook variables
+# Local inventory variables
 inventory/*.yml
 inventory/*.yaml
 !inventory/hosts.example.yml
 !inventory/hosts.example.yaml
-playbooks/host_vars/
-playbooks/group_vars/
-playbooks/scripts/
-playbooks/templates/
 extensions/molecule/**/host_vars/
 
 # Local configuration, credentials, and examples

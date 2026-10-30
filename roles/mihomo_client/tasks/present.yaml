@@ -2,8 +2,8 @@
 # tasks/present.yaml - apply the mihomo client (mihomo_client_state: present):
 # service identity, data files, profile, tun persistence, gateway sysctl and
 # the service.  The binary itself is deployed by
-# ak1ra_lab.network.mihomo_install, which the playbook entry point
-# (playbooks/mihomo_client.yaml) applies before this role.  Changing
+# ak1ra_lab.network.mihomo_install, which the consumer composition in
+# ansible-playbooks-services applies before this role.  Changing
 # providers/selfhost.yaml alone is hot-reloaded by mihomo (fswatch);
 # config.yaml changes restart the service via handlers.
 
@@ -44,8 +44,8 @@
       - _mihomo_client_binary.stat.exists
     fail_msg: >-
       mihomo binary not found at {{ mihomo_client_binary }}; apply
-      ak1ra_lab.network.mihomo_install first (playbooks/mihomo_client.yaml
-      does) or install it on the host out of band
+      ak1ra_lab.network.mihomo_install first (the ansible-playbooks-services
+      composition does) or install it on the host out of band
     quiet: true
 
 - name: fetch the profile data files (BundleMRS.7z)

@@ -201,9 +201,10 @@ mihomo_server_client_node_prefix: selfhost
 
 # Controller-local output locations.  The artifacts dir mirrors the
 # sing-box-tproxy flow (`<repo>/config/client_outbounds/`); host_vars must
-# live next to the playbook (the default does) so Ansible auto-loads the
-# generated credentials on later runs - a file outside the auto-load
-# locations is treated as absent and regenerated every run.
+# live in a playbook-adjacent or inventory host_vars location (the default
+# does) so Ansible auto-loads the generated credentials on later runs - a file
+# outside the auto-load locations is treated as absent and regenerated every
+# run.
 mihomo_server_local_artifacts_dir: >-
   {{ playbook_dir | ansible.builtin.dirname }}/config/client_outbounds
 mihomo_server_host_vars_file: >-
