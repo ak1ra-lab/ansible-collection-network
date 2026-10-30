@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _role_defaults(role: str) -> dict[str, Any]:
-    path = REPO_ROOT / "roles" / role / "defaults" / "main.yaml"
+    path = REPO_ROOT / "roles" / role / "defaults" / "main.yml"
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 

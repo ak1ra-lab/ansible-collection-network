@@ -45,11 +45,11 @@ ansible-lint:
 changelog-lint:
     uv run --group lint antsibull-changelog lint
 
-# Add a release to changelogs/changelog.yaml, consuming the fragments
+# Add a release to changelogs/changelog.yml, consuming the fragments
 changelog-release version:
     uv run --group lint antsibull-changelog release --version {{version}}
 
-# Regenerate CHANGELOG.rst from changelogs/changelog.yaml
+# Regenerate CHANGELOG.rst from changelogs/changelog.yml
 changelog-generate:
     uv run --group lint antsibull-changelog generate
 

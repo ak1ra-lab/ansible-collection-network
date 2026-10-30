@@ -138,7 +138,7 @@ nftables config (the include glob) that a real host gets from
   `release_summary` only for release-level prose.
 - Run `just changelog-lint` before committing.
 - At release time, run `just changelog-release X.Y.Z`, then
-  `just changelog-generate`, and commit `changelogs/changelog.yaml`,
+  `just changelog-generate`, and commit `changelogs/changelog.yml`,
   `CHANGELOG.rst`, and the retained fragments. `keep_fragments` is enabled, so
   the released fragments stay in the tree for audit; antsibull-changelog
   records them and does not reuse them for the next release.

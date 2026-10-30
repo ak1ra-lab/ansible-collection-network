@@ -84,7 +84,7 @@ _raw:
 """
 
 # Fixed listener order and the per-protocol facts the generation branches on.
-# The fallback defaults below mirror roles/mihomo_server/defaults/main.yaml;
+# The fallback defaults below mirror roles/mihomo_server/defaults/main.yml;
 # the role passes its full spec, so they only cover direct filter calls.
 PROTOCOLS = ("shadowsocks", "trojan", "hysteria2", "vless", "tuic", "anytls")
 TLS_PROTOCOLS = ("trojan", "hysteria2", "vless", "tuic", "anytls")

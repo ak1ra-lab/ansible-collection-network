@@ -1,0 +1,14 @@
+---
+# tasks file for ak1ra_lab.network.tproxy
+# Dispatcher: validation first, then branch on tproxy_state.
+
+- name: validate contract variables
+  ansible.builtin.import_tasks: validation.yml
+
+- name: "tear down managed artifacts (tproxy_state: absent)"
+  when: tproxy_state == 'absent'
+  ansible.builtin.import_tasks: reset.yml
+
+- name: "apply TPROXY plumbing (tproxy_state: present)"
+  when: tproxy_state == 'present'
+  ansible.builtin.import_tasks: present.yml

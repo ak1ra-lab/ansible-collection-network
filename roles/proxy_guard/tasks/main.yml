@@ -1,0 +1,20 @@
+---
+# tasks file for ak1ra_lab.network.proxy_guard
+# Dispatcher: branch on proxy_guard_state.
+
+- name: validate proxy_guard_state
+  ansible.builtin.assert:
+    that:
+      - proxy_guard_state in proxy_guard_state_available
+    fail_msg: |
+      proxy_guard_state must be one of: {{ proxy_guard_state_available }}
+      (got: {{ proxy_guard_state }})
+    quiet: true
+
+- name: "remove managed artifacts (proxy_guard_state: absent)"
+  when: proxy_guard_state == 'absent'
+  ansible.builtin.import_tasks: reset.yml
+
+- name: "apply proxy guard table (proxy_guard_state: present)"
+  when: proxy_guard_state == 'present'
+  ansible.builtin.import_tasks: present.yml

@@ -184,7 +184,7 @@ node names).
 | `mihomo_server_local_artifacts_dir` | `<playbook_dir>/../config/client_outbounds` | Controller-local artifacts directory |
 | `mihomo_server_host_vars_file` | `<playbook_dir>/host_vars/<host>/mihomo_server.yaml` (for example `inventory/host_vars/<host>/mihomo_server.yaml`) | Generated credentials file |
 
-Internal derived values (enumeration lists) live in `vars/main.yaml` and are
+Internal derived values (enumeration lists) live in `vars/main.yml` and are
 not meant to be overridden.  The service identity and paths
 (`mihomo_server_user` / `_group` / `_etc_dir` / `_binary`, the same names on
 `mihomo_client`) live there as role conventions - override them with role

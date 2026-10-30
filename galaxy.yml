@@ -53,5 +53,5 @@ build_ignore:
   - docs/docsite/_build
   - tests/output
   - uv.lock
-  - yamlfmt.yaml
+  - yamlfmt.yml
   - "*.tar.gz"

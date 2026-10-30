@@ -82,7 +82,7 @@ group_vars).
 
 ## How it works
 
-`tasks/present.yaml` ensures the service identity, asserts the binary
+`tasks/present.yml` ensures the service identity, asserts the binary
 deployed by `mihomo_install`, fetches the data file, generates the Clash
 API secret (persisted to host_vars) when it was not provided, renders the
 profile and the selfhost provider, frees the resolver port
@@ -331,7 +331,7 @@ non-empty when `state=present`.
 
 The service identity and paths (`mihomo_client_user` / `_group` / `_etc_dir`
 / `_binary`, the same names on `mihomo_server`) and internal derived values
-(role-owned file names, enumeration lists) live in `vars/main.yaml` as role
+(role-owned file names, enumeration lists) live in `vars/main.yml` as role
 conventions - override them with role params or `-e` if they really must
 differ.  The release lookups authenticate with the controller's
 `GITHUB_TOKEN` environment variable when present (rate limits); there is no

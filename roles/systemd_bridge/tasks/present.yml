@@ -1,0 +1,106 @@
+---
+# tasks/present.yml - apply the bridge configuration
+# (systemd_bridge_state: present)
+#
+# Sequencing matters: on hosts with NetworkManager the enslaved interface must
+# be declared unmanaged BEFORE systemd-networkd (re)applies the bridge config,
+# or the two stacks fight over the interface.
+#
+# File naming (numeric prefixes encode the load order systemd-networkd needs):
+#   10-<name>.network[dev]  the bridge .netdev definition itself
+#   15-<interface>.network  enslaves the dedicated physical interface
+#   20-<name>.network       configures the bridge link (always rendered; with
+#                           `address`/`gateway`/`dns` when declared)
+#
+# The networkd conflict preflight runs FIRST, before anything is written or
+# restarted: it inspects configuration files only (never live state), and a
+# failing check leaves the host untouched instead of aborting mid-run with
+# new files on disk but no networkd restart applied.
+
+- name: preflight networkd conflicts (fails before anything is touched)
+  when: systemd_bridge_bridges | length > 0
+  ansible.builtin.include_tasks: preflight.yml
+
+- name: ensure iproute2 is installed (bridge teardown fallback)
+  ansible.builtin.package:
+    name:
+      - iproute2
+    state: present
+
+- name: probe NetworkManager installation (coexistence gates)
+  when: systemd_bridge_bridges | length > 0
+  ansible.builtin.include_tasks: nm_probe.yml
+
+- name: ensure systemd-networkd is enabled and running (bridge persistence)
+  ansible.builtin.systemd_service:
+    name: systemd-networkd.service
+    enabled: true
+    state: started
+
+- name: ensure systemd-networkd configuration directory exists
+  ansible.builtin.file:
+    path: "{{ _systemd_bridge_network_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: ensure NetworkManager conf.d directory exists (when NetworkManager is present)
+  when: >-
+    systemd_bridge_bridges | length > 0
+    and _systemd_bridge_nm_installed | ansible.builtin.bool
+  ansible.builtin.file:
+    path: "{{ _systemd_bridge_nm_conf_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: template NetworkManager unmanaged-devices drop-ins on remote
+  when: >-
+    systemd_bridge_bridges | length > 0
+    and _systemd_bridge_nm_installed | ansible.builtin.bool
+    and bridge.interface is defined
+  ansible.builtin.template:
+    src: etc/NetworkManager/conf.d/ansible-bridge.conf.j2
+    dest: "{{ _systemd_bridge_nm_conf_dir }}/10-{{ bridge.name }}.conf"
+    mode: "0644"
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.interface | default('<no interface>') }}"
+  notify:
+    - reload NetworkManager
+
+- name: template bridge netdev files on remote
+  ansible.builtin.template:
+    src: etc/systemd/network/ansible-bridge.netdev.j2
+    dest: "{{ _systemd_bridge_network_dir }}/10-{{ bridge.name }}.netdev"
+    mode: "0644"
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.name }}"
+  notify:
+    - restart systemd-networkd.service
+
+- name: template physical interface enslave files on remote
+  ansible.builtin.template:
+    src: etc/systemd/network/ansible-bridge-enslave.network.j2
+    dest: "{{ _systemd_bridge_network_dir }}/15-{{ bridge.interface }}.network"
+    mode: "0644"
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.interface | default('<no interface>') }}"
+  notify:
+    - restart systemd-networkd.service
+  when: bridge.interface is defined
+
+- name: template bridge configuration files on remote
+  ansible.builtin.template:
+    src: etc/systemd/network/ansible-bridge.network.j2
+    dest: "{{ _systemd_bridge_network_dir }}/20-{{ bridge.name }}.network"
+    mode: "0644"
+  loop: "{{ systemd_bridge_bridges }}"
+  loop_control:
+    loop_var: bridge
+    label: "{{ bridge.address | default('<no address>') }}"
+  notify:
+    - restart systemd-networkd.service
