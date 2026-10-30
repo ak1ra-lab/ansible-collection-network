@@ -326,6 +326,17 @@ argument_specs:
         type: str
         default: ''
         required: false
+      mihomo_server_tls_renewal_hook_enabled:
+        description: Install a deploy hook that re-copies the source pair and reloads mihomo after an external certificate
+          renewal.
+        type: bool
+        default: false
+        required: false
+      mihomo_server_tls_renewal_hook_path:
+        description: Absolute path of the optional TLS renewal deploy hook.
+        type: str
+        default: /etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh
+        required: false
       mihomo_server_alpn:
         description: ALPN list for hysteria2/tuic listeners and their generated client nodes.
         type: list

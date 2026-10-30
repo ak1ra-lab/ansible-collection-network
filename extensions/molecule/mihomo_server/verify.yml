@@ -54,7 +54,7 @@
           {{ _mihomo_server_tls_files.results | map(attribute='stat') | list }}
         quiet: true
 
-    - name: read the certbot renewal hook
+    - name: read the TLS renewal hook
       ansible.builtin.slurp:
         src: /tmp/molecule-mihomo-server-hook/mihomo-server.sh
       register: _mihomo_server_hook

@@ -4,7 +4,7 @@
 # The shared preparation brings up udev and refreshes apt; this scenario adds
 # the tooling the verify playbook needs and provisions a throwaway
 # self-signed certificate in a source directory.  mihomo_server copies it into
-# /etc/mihomo/tls, exercising the same path a certbot-managed pair takes.
+# /etc/mihomo/tls, exercising the same path an externally managed pair takes.
 
 - name: run the shared container preparation
   import_playbook: ../shared/prepare.yml

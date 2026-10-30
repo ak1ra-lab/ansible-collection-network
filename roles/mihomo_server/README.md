@@ -39,8 +39,8 @@ mihomo schema facts the contract is built on:
   with JLS uses `jls-config`.  mihomo has **no built-in ACME**: certificates
   are provisioned out of band.  The role can either reference an
   operator-managed pair in place (manual mode) or copy an external source
-  pair into a service-readable location and install an optional certbot
-  renewal hook (see [TLS material](#tls-material)).
+  pair into a service-readable location and install an optional TLS renewal
+  hook (see [TLS material](#tls-material)).
 
 The role does not manage a firewall or cloud security groups: open the
 enabled ports (`mihomo_server_*_port`) yourself.
@@ -52,8 +52,8 @@ enabled ports (`mihomo_server_*_port`) yourself.
 - A TLS certificate/key pair for every certificate-using protocol
   (trojan/hysteria2/tuic/anytls, and vless when REALITY is disabled) - see
   `mihomo_server_tls_certificate_path` / `_key_path`.  The role can copy an
-  external source pair into a service-readable location, which is required
-  for certbot's root-only `live/` paths.  The default vless REALITY listener
+  external source pair into a service-readable location, which is useful when
+  the source lives in a root-only directory.  The default vless REALITY listener
   does not need its own certificate, and AnyTLS with
   `mihomo_server_anytls_security_mode: jls` replaces its certificate with the
   JLS layer.
@@ -74,7 +74,7 @@ enabled ports (`mihomo_server_*_port`) yourself.
 | `/etc/mihomo/config.yaml` | server configuration (`listeners` + `rules: [MATCH,DIRECT]`) |
 | `/etc/systemd/system/mihomo.service` | service unit (`ExecStartPre` config test) |
 | `/etc/mihomo/tls/{fullchain,privkey}.pem` | role-managed copies when a source pair is configured (`0640 root:mihomo`) |
-| `/etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh` | optional certbot renewal hook (role-managed, independent of the certbot role's dispatcher) |
+| `/etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh` | optional TLS renewal deploy hook (role-managed) |
 | `<repo>/config/client_outbounds/<host>.proxies.yaml` | clash-format client nodes for `mihomo_client` |
 | `<repo>/config/client_outbounds/<host>.config.yaml` | exact copy of the deployed server config |
 | `<playbook>/host_vars/<host>/mihomo_server.yaml` | generated credentials (0600) |
@@ -175,8 +175,7 @@ node names).
 | `mihomo_server_tls_dir` | `/etc/mihomo/tls` | Destination directory for role-managed copies |
 | `mihomo_server_tls_certificate_path` / `_key_path` | derived from `_tls_dir` when a source pair is set, otherwise `""` | Listener paths; manual mode points at an existing pair readable by the mihomo user |
 | `mihomo_server_tls_source_certificate_path` / `_key_path` | `""` | Optional source pair; set both to let the role copy it into the destination paths |
-| `mihomo_server_tls_certbot_enabled` | `false` | Collection-playbook switch: apply certbot first and derive the source pair |
-| `mihomo_server_tls_renewal_hook_enabled` | `mihomo_server_tls_certbot_enabled` | Install a certbot deploy hook that re-copies the source pair and reloads mihomo |
+| `mihomo_server_tls_renewal_hook_enabled` | `false` | Install a TLS renewal deploy hook that re-copies the source pair and reloads mihomo |
 | `mihomo_server_tls_renewal_hook_path` | `/etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh` | Renewal hook path |
 | `mihomo_server_alpn` | `[h3]` | ALPN for hysteria2/tuic listeners (and their generated client nodes) |
 | `mihomo_server_client_node_prefix` | `selfhost` | Prefix of the generated client node names |
@@ -202,38 +201,24 @@ and `mihomo_server_tls_source_key_path`.  The role then:
 - copies the pair to `mihomo_server_tls_certificate_path` /
   `mihomo_server_tls_key_path` (`0640 root:mihomo`) on every apply,
   restarting mihomo only when the content changes;
-- optionally installs a certbot deploy hook via
+- optionally installs a TLS renewal deploy hook via
   `mihomo_server_tls_renewal_hook_enabled`.
 
-This is the certbot integration point: `/etc/letsencrypt/live/` is
-`0700 root:root`, so the service cannot read it in place.  Point the source
-paths at the lineage and enable the hook:
+The source pair may live in a directory the mihomo service cannot read (for
+example a root-only ACME lineage).  Point the source paths at the externally
+managed pair and enable the hook:
 
 ```yaml
-mihomo_server_tls_source_certificate_path: /etc/letsencrypt/live/node01.example.com/fullchain.pem
-mihomo_server_tls_source_key_path: /etc/letsencrypt/live/node01.example.com/privkey.pem
+mihomo_server_tls_source_certificate_path: /etc/ssl/private/node01.example.com/fullchain.pem
+mihomo_server_tls_source_key_path: /etc/ssl/private/node01.example.com/privkey.pem
 mihomo_server_tls_renewal_hook_enabled: true
 ```
 
-The hook is `/etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh`; certbot
-runs every executable in that directory, so it coexists with the certbot
-role's own `certbot-deploy-hooks.sh`.  Do not configure
-`certbot_deploy_hooks` for mihomo.  The hook only covers `certbot renew`; the
-role's copy task remains responsible for the initial issuance and for any
-manual re-run, so the destination files always exist before the service
-starts or restarts.
-
-The collection playbook can perform the certbot invocation: set
-`mihomo_server_tls_certbot_enabled: true` and provide the normal `certbot_*`
-contract (`certbot_email`, `certbot_certificates`, challenge/provider).  The
-playbook applies `ak1ra_lab.general.certbot` before this role and derives the
-source paths and hook path from `mihomo_server_tls_certbot_config_dir` /
-`_lineage`; it does not override `certbot_certificates`, so other certificates
-on the same host keep their own hooks.  The lineage defaults to
-`mihomo_server_hostname` (or the gathered fqdn); set
-`mihomo_server_tls_certbot_lineage` for a custom cert name (for example a
-wildcard lineage).  An explicit `mihomo_server_tls_source_*` pair always wins
-over the derived `live/` paths.
+The hook is installed at `mihomo_server_tls_renewal_hook_path`; the external
+certificate renewal tool runs every executable in its deploy-hook directory
+after a successful renewal.  The role does not issue certificates.  The copy
+task remains responsible for the initial material and for any manual re-run,
+so the destination files always exist before the service starts or restarts.
 
 ### VLESS REALITY
 
@@ -355,12 +340,12 @@ mihomo_client_selfhost_files:
 
 ## Declarative teardown: `mihomo_server_state: absent`
 
-Removed: `/etc/mihomo/config.yaml`, the unit and the optional certbot renewal
+Removed: `/etc/mihomo/config.yaml`, the unit and the optional TLS renewal
 hook (the service is stopped and disabled first).
 
 Deliberately left in place: the binary, the TLS source pair and the
-role-managed copies, the certbot lineage (`/etc/letsencrypt`), the subscribed
-data (none), and the controller-local artifacts (`config/client_outbounds/`,
+role-managed copies, the external certificate lineage, the subscribed data
+(none), and the controller-local artifacts (`config/client_outbounds/`,
 `host_vars`) - remove those manually when the credentials are no longer
 needed.
 

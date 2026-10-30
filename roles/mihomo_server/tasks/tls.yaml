@@ -1,11 +1,11 @@
 ---
 # tasks/tls.yaml - deploy an externally managed certificate/key pair into a
-# location the mihomo service user can read, and optionally install a certbot
-# renewal hook.
+# location the mihomo service user can read, and optionally install a renewal
+# deploy hook.
 #
-# The source pair is never consumed in place: certbot's /etc/letsencrypt/live/
-# is root-only, while mihomo runs as an unprivileged service user.  The copy
-# runs on every apply; the hook covers renewals between Ansible runs.
+# The source pair is never consumed in place: it may live in a root-only
+# directory, while mihomo runs as an unprivileged service user.  The copy runs
+# on every apply; the hook covers renewals between Ansible runs.
 #
 # Both source variables are empty in manual mode, so every task here is
 # skipped and the listener paths keep pointing at the operator-managed files.
@@ -65,7 +65,7 @@
   notify:
     - systemctl restart mihomo.service
 
-- name: ensure the certbot renewal hook directory exists
+- name: ensure the renewal hook directory exists
   when: mihomo_server_tls_renewal_hook_enabled | ansible.builtin.bool
   ansible.builtin.file:
     path: "{{ mihomo_server_tls_renewal_hook_path | ansible.builtin.dirname }}"
@@ -74,7 +74,7 @@
     group: root
     mode: "0755"
 
-- name: install the certbot renewal hook
+- name: install the renewal hook
   when: mihomo_server_tls_renewal_hook_enabled | ansible.builtin.bool
   ansible.builtin.template:
     src: etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh.j2

@@ -5,42 +5,23 @@
 #   - ak1ra_lab.network.mihomo_install deploys the static binary (the
 #     mihomo_install_* contract: version policy, GitHub-proxy prefix, amd64
 #     microarchitecture selection);
-#   - ak1ra_lab.general.certbot (optional) issues the TLS lineage when
-#     mihomo_server_tls_certbot_enabled is true; the certbot_* contract
-#     (email, certificates, challenge/provider) stays in group_vars/host_vars;
 #   - ak1ra_lab.network.mihomo_server owns the service identity, the
 #     listeners configuration, the systemd unit, the generated credentials
 #     and the controller-local client artifacts (the mihomo_server_* contract).
 # The install role's restart hook points at the server role's handler, so a
 # binary install/upgrade restarts mihomo.service at the end of the play.
 #
-# TLS modes:
-#   - manual (default): set mihomo_server_tls_certificate_path/_key_path to a
-#     pair readable by the mihomo service user;
-#   - certbot: set mihomo_server_tls_certbot_enabled=true.  The playbook
-#     applies ak1ra_lab.general.certbot first, derives the source paths from
-#     certbot's live/<lineage> and enables the role's independent renewal
-#     hook.  Do not configure certbot_deploy_hooks for mihomo.  The lineage
-#     defaults to mihomo_server_hostname (or the gathered fqdn); override
-#     mihomo_server_tls_certbot_lineage for a custom cert name (for example a
-#     wildcard lineage).  The certificate must be present in
-#     certbot_certificates.
-#
-# Example certbot host_vars:
-#   certbot_email: admin@example.com
-#   certbot_challenge: http-01
-#   certbot_http01_method: standalone
-#   certbot_certificates:
-#     - name: node01.example.com
-#       domains: [node01.example.com]
-#
-# Then:
-#   ansible-playbook ak1ra_lab.network.mihomo_server \
-#     -e mihomo_server_tls_certbot_enabled=true
+# TLS material is supplied externally:
+#   - manual mode (default): set mihomo_server_tls_certificate_path and
+#     mihomo_server_tls_key_path to a pair readable by the mihomo service user;
+#   - copied pair: set both mihomo_server_tls_source_certificate_path and
+#     mihomo_server_tls_source_key_path to let the role copy an externally
+#     managed pair into mihomo_server_tls_dir.  Enable
+#     mihomo_server_tls_renewal_hook_enabled to install the renewal deploy hook
+#     used by the external certificate renewal tool.
 #
 # Override the contracts via group_vars/host_vars or extra-vars - role
-# defaults apply otherwise.  Set mihomo_install_enabled=false when the binary
-# is managed out of band:
+# defaults apply otherwise:
 #
 #   ansible-playbook ak1ra_lab.network.mihomo_server -e mihomo_install_version=latest
 
@@ -48,52 +29,8 @@
   hosts: "{{ playbook_hosts | default('mihomo-server') }}"
   become: true
   gather_facts: true
-  pre_tasks:
-    # Resolve the optional certbot inputs before the role call.  Keeping the
-    # resolved values in facts also avoids a variable cycle when the certbot
-    # role receives certbot_config_dir as a role parameter.
-    - name: resolve the certbot TLS directory and lineage
-      ansible.builtin.set_fact:
-        _mihomo_server_tls_certbot_config_dir_resolved: >-
-          {{ mihomo_server_tls_certbot_config_dir
-             | default(certbot_config_dir | default('/etc/letsencrypt')) }}
-        _mihomo_server_tls_certbot_lineage_resolved: >-
-          {{ mihomo_server_tls_certbot_lineage
-             | default(mihomo_server_hostname | default(ansible_facts['fqdn'])) }}
-
-    - name: resolve the certbot TLS source paths and renewal hook
-      ansible.builtin.set_fact:
-        _mihomo_server_tls_source_certificate_path_resolved: >-
-          {{ mihomo_server_tls_source_certificate_path
-             | default(((_mihomo_server_tls_certbot_config_dir_resolved ~ '/live/'
-                         ~ _mihomo_server_tls_certbot_lineage_resolved ~ '/fullchain.pem')
-                        if mihomo_server_tls_certbot_enabled | default(false) | ansible.builtin.bool
-                        else ''), true) }}
-        _mihomo_server_tls_source_key_path_resolved: >-
-          {{ mihomo_server_tls_source_key_path
-             | default(((_mihomo_server_tls_certbot_config_dir_resolved ~ '/live/'
-                         ~ _mihomo_server_tls_certbot_lineage_resolved ~ '/privkey.pem')
-                        if mihomo_server_tls_certbot_enabled | default(false) | ansible.builtin.bool
-                        else ''), true) }}
-        _mihomo_server_tls_renewal_hook_path_resolved: >-
-          {{ mihomo_server_tls_renewal_hook_path
-             | default(_mihomo_server_tls_certbot_config_dir_resolved
-                       ~ '/renewal-hooks/deploy/mihomo-server.sh') }}
-
-    - name: obtain the mihomo TLS certificate (certbot)
-      when:
-        - mihomo_server_tls_certbot_enabled | default(false) | ansible.builtin.bool
-        - mihomo_server_state | default('present') == 'present'
-      ansible.builtin.include_role:
-        name: ak1ra_lab.general.certbot
-      vars:
-        certbot_config_dir: "{{ _mihomo_server_tls_certbot_config_dir_resolved }}"
   roles:
     - role: ak1ra_lab.network.mihomo_install
       vars:
         mihomo_install_restart_handler: systemctl restart mihomo.service
     - role: ak1ra_lab.network.mihomo_server
-      vars:
-        mihomo_server_tls_source_certificate_path: "{{ _mihomo_server_tls_source_certificate_path_resolved }}"
-        mihomo_server_tls_source_key_path: "{{ _mihomo_server_tls_source_key_path_resolved }}"
-        mihomo_server_tls_renewal_hook_path: "{{ _mihomo_server_tls_renewal_hook_path_resolved }}"

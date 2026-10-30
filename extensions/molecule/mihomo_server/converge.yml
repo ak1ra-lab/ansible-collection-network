@@ -6,7 +6,7 @@
 # the role's default profile (ss + vless REALITY + hysteria2 + anytls).  Two
 # users exercise the credential generation.  The certificate is taken from
 # the scenario's source directory
-# and copied by the role, exercising the certbot-compatible source path; the
+# and copied by the role, exercising the external source-pair path; the
 # config/client copies are redirected into /tmp so the run does not touch the
 # repository tree; the credentials go to the default playbook-adjacent
 # host_vars path, which Ansible auto-loads on the idempotence re-run
