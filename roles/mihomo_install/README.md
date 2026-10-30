@@ -1,8 +1,10 @@
 # ak1ra_lab.network.mihomo_install
 
-> The canonical variable reference for this role is
-> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
-> narrative and deployed-artifact details; update both when the contract changes.
+> The canonical variable reference is generated from
+> [`meta/argument_specs.yml`](meta/argument_specs.yml) in the
+> [collection documentation](https://ak1ra-lab.github.io/ansible-collection-network/collection_index.html).
+> This README keeps purpose, requirements, version policy,
+> examples, and operational notes.
 
 Installs the static [mihomo](https://github.com/MetaCubeX/mihomo) binary from
 the `MetaCubeX/mihomo` GitHub releases:
@@ -36,7 +38,6 @@ service role's handler notified after an install/upgrade.
 - `ak1ra_lab.general` (>= 0.4.0) installed on the control node for
   `github_releases_info` and `cpu_info`; Galaxy resolves it from the
   collection dependencies.
-
 - The release metadata query goes directly to `api.github.com` and
   authenticates with the controller's `GITHUB_TOKEN` environment variable
   when present (rate limits); there is no variable - export `GITHUB_TOKEN`
@@ -45,6 +46,10 @@ service role's handler notified after an install/upgrade.
   `.gz` file or a mirror URL instead.
 
 ## Version policy
+
+The generated role reference lists every option; the tables below describe the
+version and microarchitecture policies that need more than a one-line option
+description.
 
 | `mihomo_install_version` | Behavior |
 | --- | --- |
@@ -87,20 +92,6 @@ ansible-playbook ... -e mihomo_install_force=true
 Architectures whose archives carry an extra flavour token (`loong64`
 `abi1`/`abi2`, `mips` `hardfloat`/`softfloat`) are not auto-selected; pass
 `mihomo_install_package_src` for those.
-
-## Variable contract
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `mihomo_install_enabled` | `true` | Install/upgrade the binary; `false` makes the role a no-op (the caller manages the binary) |
-| `mihomo_install_version` | `present` | Version policy (table above) |
-| `mihomo_install_package_src` | `""` | Explicit `.gz` archive override: controller-local path (copy) or `http(s)`/`ftp` URL (get_url) |
-| `mihomo_install_force` | `false` | Reinstall the resolved release even when the installed version matches |
-| `mihomo_install_microarch` | `auto` | amd64 microarchitecture build preference (`auto` / `none` / `v3` / `x86-64-v3` / ...) |
-| `mihomo_install_repo` | `MetaCubeX/mihomo` | Release repository (override for forks) |
-| `mihomo_install_restart_handler` | `""` | Handler notified after an install/upgrade (empty = none) |
-| `mihomo_install_binary` | `/usr/local/bin/mihomo` | Installed binary path |
-| `mihomo_install_tmp_dir` | `/var/tmp` | Parent of the role-owned `mkdtemp` download directory (mode 0700, removed after every run) |
 
 ## Example playbook
 

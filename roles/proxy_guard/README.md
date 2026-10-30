@@ -1,8 +1,10 @@
 # ak1ra_lab.network.proxy_guard
 
-> The canonical variable reference for this role is
-> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
-> narrative and deployed-artifact details; update both when the contract changes.
+> The canonical variable reference is generated from
+> [`meta/argument_specs.yml`](meta/argument_specs.yml) in the
+> [collection documentation](https://ak1ra-lab.github.io/ansible-collection-network/collection_index.html).
+> This README keeps purpose, deployed artifacts, and
+> operational notes.
 
 Per-client TCP abuse protection for transparent-proxy gateways, implemented as
 a standalone nftables table. Independent opt-in role: does not depend on
@@ -47,16 +49,13 @@ drops), so persistent abuse can escalate from throttle to full auto-ban
 automatically. Ban/throttle set entries use add-once timeout semantics — the
 timer is written exactly once and cannot be extended by further packets.
 
-## Variables
+## Enabling
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `proxy_guard_state` | `present` | `present` applies the table; `absent` removes the table file this role created. |
-| `proxy_guard_enabled` | `false` | Master switch: when disabled the role removes the drop-in it created (and otherwise touches nothing); review all parameters before enabling. |
-| `proxy_guard_lan4_subnets` | RFC 1918 trio | LAN prefixes subject to protection. |
-| `proxy_guard_lan6_subnets` | `[]` | IPv6 LAN prefixes (empty = IPv6 protection disabled). |
-| `proxy_guard_throttle_enabled` / `_rate` / `_burst` / `_timeout` | `false` / `600` / `150` / `2m` | Soft protection: drops only NEW TCP from throttled IPs. |
-| `proxy_guard_auto_ban_enabled` / `_rate` / `_burst` / `_timeout` | `false` / `1200` / `300` / `5m` | Hard protection: drops ALL TCP from banned IPs. |
+The role is disabled until explicitly enabled. Review the LAN prefixes and the
+throttle/auto-ban thresholds for the deployment before switching it on: the
+defaults target a typical RFC 1918 LAN, and IPv6 protection stays off until
+IPv6 prefixes are supplied. The base nftables configuration must include
+`/etc/nftables.d/*.nft`; the role itself only owns its table file.
 
 ## Deployed artifact
 

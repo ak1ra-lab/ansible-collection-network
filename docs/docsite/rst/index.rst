@@ -20,8 +20,9 @@ The generated role and plugin reference is available at
 :doc:`collection_index`.
 
 Role documentation is generated from each role's
-``meta/argument_specs.yml``. The role READMEs keep the narrative, deployed
-artifacts, and design notes.
+``meta/argument_specs.yml``, which is the canonical variable reference. Role
+READMEs are narrative companions: purpose, requirements, deployed artifacts,
+examples, and operational notes.
 
 .. note::
 

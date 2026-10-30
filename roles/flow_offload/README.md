@@ -1,8 +1,10 @@
 # ak1ra_lab.network.flow_offload
 
-> The canonical variable reference for this role is
-> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
-> narrative and deployed-artifact details; update both when the contract changes.
+> The canonical variable reference is generated from
+> [`meta/argument_specs.yml`](meta/argument_specs.yml) in the
+> [collection documentation](https://ak1ra-lab.github.io/ansible-collection-network/collection_index.html).
+> This README keeps purpose, deployed artifacts, and
+> operational notes.
 
 nftables flowtable offloading for forwarded traffic. Independent opt-in role:
 owns its own table (`table inet ansible_flow_offload`, forward hook) and does
@@ -12,16 +14,13 @@ Processed on the forward hook — TPROXY'd traffic is diverted in prerouting and
 never reaches this hook, so every forwarded packet here has already been
 classified as bypass-proxy traffic.
 
-## Variables
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `flow_offload_state` | `present` | `present` applies the table; `absent` removes the table file this role created. |
-| `flow_offload_enabled` | `false` | Master switch: when disabled the role removes the drop-in it created (and otherwise touches nothing). |
-| `flow_offload_interfaces` | fact-detected | Interfaces bound to the flowtable (`eth*`, `enp*`, `ens*`, `enx*`, `br*`). |
-
 ## Deployed artifact
 
-`/etc/nftables.d/ansible_flow_offload.nft` — picked up by the `include
-"/etc/nftables.d/*.nft"` glob in the base `nftables.conf` deployed by
+`/etc/nftables.d/ansible_flow_offload.nft` — picked up by the
+`include "/etc/nftables.d/*.nft"` glob in the base `nftables.conf` deployed by
 `ak1ra_lab.network.tproxy` (or any equivalent base config).
+
+The role is opt-in: the enable switch defaults off, and disabling it removes
+the role's drop-in without touching any other nftables rule. The flowtable
+interfaces default to fact-detected Ethernet and bridge devices, so the role
+also works on hosts that do not use `tproxy` for their base configuration.

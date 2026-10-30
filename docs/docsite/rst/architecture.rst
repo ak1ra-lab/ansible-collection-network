@@ -89,6 +89,7 @@ Documentation contract
 ----------------------
 
 Role argument specs in ``roles/<role>/meta/argument_specs.yml`` are the
-canonical variable reference. Role READMEs keep narrative and deployed-artifact
-details. Filter pages are generated from the plugins' ``DOCUMENTATION``
-blocks.
+canonical variable reference and are rendered as the generated role pages.
+Role READMEs are not a variable reference; they keep purpose, requirements,
+deployed artifacts, examples, and operational notes. Filter pages are
+generated from the plugins' ``DOCUMENTATION`` blocks.

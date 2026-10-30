@@ -1,8 +1,10 @@
 # ak1ra_lab.network.cloud_init
 
-> The canonical variable reference for this role is
-> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
-> narrative and deployed-artifact details; update both when the contract changes.
+> The canonical variable reference is generated from
+> [`meta/argument_specs.yml`](meta/argument_specs.yml) in the
+> [collection documentation](https://ak1ra-lab.github.io/ansible-collection-network/collection_index.html).
+> This README keeps purpose, requirements, deployed artifacts,
+> examples, and operational notes.
 
 Manages cloud-init drop-ins under `/etc/cloud/cloud.cfg.d`. The role is
 deliberately narrow: it changes cloud-init's own behavior (network ownership,
@@ -36,19 +38,6 @@ cloud_init_ssh_deletekeys: false
 
 All files are `0600 root:root`. cloud-init reads every `*.cfg` in lexical
 order, so the `99-` prefix wins over the distribution defaults.
-
-## Variable contract
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `cloud_init_state` | `present` | `present` applies the configured drop-ins; `absent` removes every drop-in this role manages. |
-| `cloud_init_network` | `managed` | `disabled` writes `network: {config: disabled}`; `managed` removes the role drop-in and leaves cloud-init in charge. |
-| `cloud_init_network_activation` | `enabled` | `disabled` writes `disable_network_activation: true`, preventing cloud-init from bringing up datasource-described interfaces. |
-| `cloud_init_ssh_deletekeys` | `true` | cloud-init's upstream default; set `false` to keep `/etc/ssh/ssh_host_*` stable across cloud-init drive changes. |
-| `cloud_init_manage_etc_hosts` | `true` | Set `false` to stop cloud-init from rewriting `/etc/hosts`. |
-| `cloud_init_preserve_hostname` | `false` | Set `true` to stop cloud-init from changing the hostname from datasource metadata. |
-| `cloud_init_extra_config` | `{}` | Extra cloud-init configuration rendered to `99-ansible-extra.cfg`; keep secrets in Vault. |
-| `cloud_init_require_installed` | `true` | Fail when `/etc/cloud/cloud.cfg` is missing; set `false` only for controlled fixtures. |
 
 ## Example playbook
 

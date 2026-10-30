@@ -149,8 +149,10 @@ nftables config (the include glob) that a real host gets from
 
 The docs site is built with Sphinx and antsibull-docs. Configuration lives in
 `docs/docsite/conf.py`; hand-written guides live in `docs/docsite/rst/`. Role
-pages are generated from `roles/<role>/meta/argument_specs.yml`. Plugin pages
-are generated from the plugin's `DOCUMENTATION`, `EXAMPLES`, and `RETURN`
+pages are generated from `roles/<role>/meta/argument_specs.yml`, which is the
+canonical variable reference; role READMEs keep purpose, requirements,
+deployed artifacts, examples, and operational notes. Plugin pages are
+generated from the plugin's `DOCUMENTATION`, `EXAMPLES`, and `RETURN`
 constants, so the collection must be installed in `.ansible/collections`
 before building (the just recipes do that).
 
@@ -165,7 +167,8 @@ The docs workflow publishes `docs/docsite/_build/html` to GitHub Pages from
 
 ## Repository layout
 
-- `roles/` - role implementations and their canonical READMEs.
+- `roles/` - role implementations, `meta/argument_specs.yml` contracts, and
+  narrative READMEs.
 - `plugins/filter/` - Python filter plugins and their docs.
 - `extensions/molecule/` - Molecule scenarios.
 - `tests/unit/` - pytest tests for plugins and the client profile template.

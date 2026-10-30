@@ -45,8 +45,10 @@ description:
   - C(mihomo_server_client_proxies) returns the clash-format client nodes for
     the same server contract, named C(<prefix>-<REGION>-<host>[-<user>]-<proto>)
     so the mihomo client region groups pick them up.
-  - The full input contract, including listener, TLS, REALITY, JLS, and
-    padding options, is documented in C(roles/mihomo_server/README.md).
+  - The canonical input contract, including listener, TLS, REALITY, JLS, and
+    padding options, is defined by the role's argument specs in
+    C(roles/mihomo_server/meta/argument_specs.yml) and rendered in the
+    generated role reference.
 options:
   config:
     description:

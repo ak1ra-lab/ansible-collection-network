@@ -1,8 +1,10 @@
 # ak1ra_lab.network.netplan_static
 
-> The canonical variable reference for this role is
-> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
-> narrative and deployed-artifact details; update both when the contract changes.
+> The canonical variable reference is generated from
+> [`meta/argument_specs.yml`](meta/argument_specs.yml) in the
+> [collection documentation](https://ak1ra-lab.github.io/ansible-collection-network/collection_index.html).
+> This README keeps purpose, requirements, deployed artifacts,
+> merge/teardown behavior, and caveats.
 
 Captures the live IPv4 state of the physical ethernet interfaces into a
 static netplan file, optionally takes the interface configuration away from
@@ -49,27 +51,7 @@ other advanced netplan features belong in a copied template
 The role also runs `netplan generate` after every change and `netplan apply`
 unless `netplan_static_apply: false`.
 
-## Variable contract
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `netplan_static_state` | `present` | `present` renders/applies; `absent` restores the cloud-init backup (when present) and removes the role file. |
-| `netplan_static_config_file` | `/etc/netplan/90-ansible-static.yaml` | Role-owned netplan file; must be a distinct `/etc/netplan/*.yaml` path. |
-| `netplan_static_config_template` | `""` | Optional custom template. Empty uses the shipped capture template; the template receives `_netplan_static_interfaces`. |
-| `netplan_static_takeover_cloud_init` | `true` | Back up and remove `50-cloud-init.yaml`; requires the cloud-init network drop-in by default. |
-| `netplan_static_cloud_init_file` | `/etc/netplan/50-cloud-init.yaml` | cloud-init's generated netplan file. |
-| `netplan_static_backup_dir` | `/var/lib/ansible/ak1ra_lab/network/netplan_static` | Backup root; the absolute source path is mirrored below it. The first backup wins. |
-| `netplan_static_allow_absent_without_backup` | `false` | Allow `state: absent` to remove the role file without a restoreable backup. |
-| `netplan_static_apply` | `true` | Run `netplan apply`; `false` only runs `netplan generate` (container tests). |
-| `netplan_static_conflict_check` | `overlap` | Merge-aware conflict policy: `strict`, `overlap` or `none` (see below). |
-| `netplan_static_default_interface` | `""` | Physical interface that carries the default route; empty auto-selects from the kernel main table. |
-| `netplan_static_gateway` | `auto` | Default route on the selected interface; `auto` captures the main-table gateway, an IPv4 address overrides it, empty renders no default route. |
-| `netplan_static_nameservers` | `[]` | Optional plain IPv4 resolvers rendered on the default interface. |
-| `netplan_static_addresses` | `{}` | Per-interface CIDR overrides; a listed interface uses exactly this list instead of the captured primary + secondaries. |
-| `netplan_static_allow_ipv6_loss` | `false` | Explicitly accept that the static IPv4 configuration drops existing IPv6 addresses/routes. |
-| `netplan_static_require_cloud_init_disabled` | `true` | Require a `network: {config: disabled}` drop-in before removing cloud-init's netplan file. |
-
-### Address overrides and multiple IPs
+## Address overrides and multiple IPs
 
 Netplan's `addresses` is a CIDR list, and the role captures the primary IPv4
 address plus every `ipv4_secondaries` entry. Use an override when the live
@@ -86,7 +68,7 @@ An override replaces the captured list for that interface exactly. It also
 covers the "the original netmask is wrong" case without a separate scalar
 prefix variable.
 
-### Hosts with a TUN or policy-routed default
+## Hosts with a TUN or policy-routed default
 
 `ansible_facts.default_ipv4` follows the kernel route lookup, not the main
 routing table. A TUN client such as `mihomo_client` (`auto-route`, table
@@ -147,29 +129,21 @@ files:
 | `strict` | Any other file defining a managed interface is a hard conflict. Use when this role must have exclusive ownership of the interface. |
 | `none` | Do not inspect other netplan files. |
 
-The generated file uses current netplan syntax: `dhcp4` / `dhcp6` (not
-deprecated), `addresses`, `routes` with `to: default`, `nameservers.addresses`
-and `accept-ra`. It never writes the deprecated `gateway4` / `gateway6` keys.
+The role owns `match`, `set-name`, `dhcp4`, `dhcp6`, `accept-ra`,
+`addresses`, and - when configured - `routes`, `nameservers.addresses`, plus
+the legacy `gateway4` / `gateway6` keys. Keys such as `mtu`, `optional`,
+`wakeonlan`, `link-local` and `nameservers.search` are complementary. The
+generated file uses current netplan syntax (`dhcp4` / `dhcp6`, `routes` with
+`to: default`, `accept-ra`) and never writes the deprecated `gateway4` /
+`gateway6` keys.
 
-The conflict key paths are `match`, `set-name`, `dhcp4`, `dhcp6`,
-`accept-ra`, `addresses`, and - when configured - `routes`,
-`nameservers.addresses`, plus the legacy `gateway4` / `gateway6` keys. The
-legacy gateway keys are not generated by the role; they are included only
-because a foreign file using them can collide with the role's modern default
-route in `routes`. Keys such as `mtu`, `optional`, `wakeonlan`, `link-local`
-and `nameservers.search` are complementary.
-
-Real conflicts include:
-
-- a later file sets `addresses`, `routes`, `dhcp4`, ... (it overrides the role);
-- a different interface ID matches the same device by `match.name`,
-  `match.macaddress` or `set-name`;
-- a same-named file in `/run/netplan` shadows the role file completely.
-
-An earlier file that sets a managed key is only shadowed by the role file; the
-role warns instead of failing so the operator can clean it up or move it to a
-complementary file. `addresses` and `routes` are lists, so "splitting" those
-across files does not merge them - the later list wins.
+Real conflicts include a later file overriding the role's keys, a different
+interface ID matching the same device, and a same-named `/run/netplan` file
+shadowing the role file. An earlier file that sets a managed key is only
+shadowed by the role file; the role warns instead of failing so the operator
+can clean it up or move it to a complementary file. `addresses` and `routes`
+are lists, so splitting those across files does not merge them - the later
+list wins.
 
 ## Taking over from cloud-init
 

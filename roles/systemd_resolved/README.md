@@ -1,8 +1,10 @@
 # ak1ra_lab.network.systemd_resolved
 
-> The canonical variable reference for this role is
-> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
-> narrative and deployed-artifact details; update both when the contract changes.
+> The canonical variable reference is generated from
+> [`meta/argument_specs.yml`](meta/argument_specs.yml) in the
+> [collection documentation](https://ak1ra-lab.github.io/ansible-collection-network/collection_index.html).
+> This README keeps purpose, requirements, deployed artifacts,
+> examples, and operational notes.
 
 Manages `systemd-resolved` as the host resolver:
 
@@ -40,21 +42,6 @@ with its absolute path mirrored, and the first backup wins. The path is a
 fixed rollback snapshot, not a timestamped history. Symlinks are replaced in
 place and do not need a backup.
 
-## Variable contract
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `systemd_resolved_state` | `present` | `present` configures and starts resolved; `absent` removes the drop-in and restores the distro stub or the pre-role backup. |
-| `systemd_resolved_nameservers` | `[]` | Global DNS servers (`IP` or `IP#server-name`). Empty removes the role drop-in and leaves distro DNS untouched. |
-| `systemd_resolved_fallback_nameservers` | `[]` | Optional `FallbackDNS=` entries; empty omits the key. |
-| `systemd_resolved_domains` | `["~."]` | `Domains=` entries; `~.` makes the global servers the default route for unmatched queries. |
-| `systemd_resolved_dns_over_tls` | `false` | `DNSOverTLS=yes`; strict DoT requires `#server-name` on every nameserver. |
-| `systemd_resolved_resolv_conf_mode` | `stub` | `stub`, `uplink`, `static` or `unmanaged`. |
-| `systemd_resolved_stub_listener` | `true` | `DNSStubListener=` value. |
-| `systemd_resolved_resolv_conf_path` | `/etc/resolv.conf` | Path managed by the role; unusual chroots/tests may point it elsewhere. |
-| `systemd_resolved_backup_dir` | `/var/lib/ansible/ak1ra_lab/network/systemd_resolved` | Backup root; the absolute resolver path is mirrored below it. The first backup wins. |
-| `systemd_resolved_backup_resolv_conf` | `true` | Keep the backup before replacing a regular file. |
-
 ### `resolv.conf` modes
 
 | Mode | Target |
@@ -67,7 +54,8 @@ place and do not need a backup.
 `Domains=~.` marks the global DNS servers as the default route for queries
 that do not match a more specific per-link domain. Without it, a per-link
 `Domains=~.` can take over the default route and the global servers are
-ignored for those queries.
+ignored for those queries. Strict DoT requires `#server-name` on every
+nameserver.
 
 ## Example playbook
 

@@ -22,7 +22,7 @@ systemd-networkd host networking, and cloud-image network takeover:
 
 ## Roles
 
-| Role | Description |
+| Role | Purpose |
 | --- | --- |
 | [`tproxy`](roles/tproxy/README.md) | **Experimental.** Engine-agnostic TPROXY plumbing: nftables marks, policy routing, sysctl. |
 | [`flow_offload`](roles/flow_offload/README.md) | nftables flowtable offloading for forwarded traffic. |
@@ -37,9 +37,9 @@ systemd-networkd host networking, and cloud-image network takeover:
 | [`mihomo_server`](roles/mihomo_server/README.md) | mihomo proxy server with generated client artifacts. |
 
 The role argument specs (`roles/<role>/meta/argument_specs.yml`) are the
-canonical variable contracts; the role READMEs keep narrative and deployed
-artifact details. The docs site renders the argument specs as the role
-reference.
+canonical variable reference and are rendered in the generated role
+reference. The role READMEs keep purpose, requirements, deployed artifacts,
+examples, and operational notes.
 
 ## Requirements
 

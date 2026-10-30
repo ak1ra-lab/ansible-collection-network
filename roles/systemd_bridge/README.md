@@ -1,8 +1,10 @@
 # ak1ra_lab.network.systemd_bridge
 
-> The canonical variable reference for this role is
-> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
-> narrative and deployed-artifact details; update both when the contract changes.
+> The canonical variable reference is generated from
+> [`meta/argument_specs.yml`](meta/argument_specs.yml) in the
+> [collection documentation](https://ak1ra-lab.github.io/ansible-collection-network/collection_index.html).
+> This README keeps purpose, requirements, deployed artifacts,
+> addressing, examples, and teardown behavior.
 
 Declarative host-level Linux bridges, managed entirely by
 `systemd-networkd`.  Each bridge optionally enslaves a dedicated physical
@@ -22,9 +24,8 @@ go.
 
 - Managed host: root privileges, `systemd-networkd` enabled (the role
   enables and starts it), `iproute2` (teardown fallback only).
-- The physical interfaces declared in `systemd_bridge_bridges` (only
-  bridges with an `interface` field) must be **dedicated** to the role:
-  they must not be configured by netplan / ifupdown / another
+- The physical interfaces declared for the bridges must be **dedicated** to
+  the role: they must not be configured by netplan / ifupdown / another
   NetworkManager profile (the role writes an `unmanaged-devices` drop-in
   for them when NetworkManager is running), and they carry no address of
   their own - see [Addressing](#addressing).  The role scans `/etc`,
@@ -34,8 +35,7 @@ go.
 
 ## What it deploys
 
-Per `systemd_bridge_bridges` entry, under `/etc/systemd/network` (unless
-otherwise noted):
+Per bridge, under `/etc/systemd/network` (unless otherwise noted):
 
 | Artifact | Purpose |
 | --- | --- |
@@ -90,29 +90,9 @@ well when it carries a host address, so NetworkManager does not try to claim
 or autoconfigure it (`unmanaged-devices=interface-name:<bridge>` in a
 conf.d file).
 
-## Variable contract
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `systemd_bridge_state` | `present` | `absent` tears down the declared bridges (see below). |
-| `systemd_bridge_bridges` | `[]` | Bridges: `{name, interface?, address?, gateway?, dns?, stp?, forward_delay?, ageing_time?, multicast_snooping?, vlan_filtering?, absent_release_mode?}` per optional dedicated physical interface. |
-| `systemd_bridge_conflict_check` | `true` | Fail when other networkd configuration matches the managed devices; `false` downgrades the check to a warning. |
-
-Per-bridge element:
-
-| Field | Default | Description |
-| --- | --- | --- |
-| `name` | - | Bridge device name (valid interface name, <= 15 chars). |
-| `interface` | unset | Optional physical interface enslaved into the bridge (dedicated, no own address).  Unset for an interface-less bridge: a pure L2 island with no uplink, carrying a private `address` when the host must be reachable on the segment. |
-| `address` | unset | Optional IPv4 CIDR assigned to the bridge itself (host presence on the segment). |
-| `gateway` | unset | Optional IPv4 gateway for the bridge's own default route; requires `address`, at most one per host. |
-| `dns` | unset | Optional list of IPv4 resolvers for the bridge's own `.network` file; requires `address`. |
-| `stp` | `false` | Spanning Tree Protocol. Enable once the bridge carries more than one physical (potentially looping) port; with one uplink plus veth legs no loop can form. |
-| `forward_delay` | `0` | Forward delay in seconds; only meaningful with `stp: true`, give it at least a few seconds then. |
-| `ageing_time` | `300` | FDB entry lifetime in seconds (kernel default). |
-| `multicast_snooping` | `true` | IGMP/MLD snooping (kernel default). |
-| `vlan_filtering` | `false` | 802.1Q VLAN filtering on the bridge. |
-| `absent_release_mode` | `none` | How to keep the freed physical interface reachable on teardown: `none`, `static` (moves `address`/`gateway`/`dns` onto the interface), or `dhcp`.  Requires `interface` (the release file replaces the enslave file on the `15-<interface>.network` path). |
+STP is off by default; enable it once the bridge carries more than one
+physical (potentially looping) port. With one uplink plus veth legs no loop
+can form, so forward delay is only meaningful together with STP.
 
 ## Example playbook
 

@@ -1,8 +1,10 @@
 # ak1ra_lab.network.tproxy
 
-> The canonical variable reference for this role is
-> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
-> narrative and deployed-artifact details; update both when the contract changes.
+> The canonical variable reference is generated from
+> [`meta/argument_specs.yml`](meta/argument_specs.yml) in the
+> [collection documentation](https://ak1ra-lab.github.io/ansible-collection-network/collection_index.html).
+> This README keeps purpose, deployed artifacts, teardown
+> behavior, and operational notes.
 
 !!! warning "Experimental role"
     `tproxy` is marked **experimental**.  The role name is stable, but its
@@ -13,6 +15,8 @@
 Engine-agnostic TPROXY transparent proxy plumbing for Linux gateways:
 nftables marking (fwmark), policy routing (`ip rule` / `ip route`), sysctl
 tuning and kernel module loading. Installs and configures **no proxy engine**.
+`gateway` mode proxies LAN-forwarded and local traffic (and enables
+`ip_forward`); `local` mode proxies local traffic only.
 
 ## What it deploys
 
@@ -25,27 +29,14 @@ tuning and kernel module loading. Installs and configures **no proxy engine**.
 | `/etc/sysctl.d/90-ansible-tproxy-*.conf` | ip_forward (gateway mode), nf_conntrack, tcp_bbr. |
 | `/etc/resolv.conf` | Optional static resolver file (content is advisory only — DNS is intercepted upstream). |
 
-## Variable contract
+## Engine integration
 
-Any proxy engine that listens on a TPROXY inbound plugs in through these
-variables alone; the role never references engine-specific names.
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `tproxy_state` | `present` | `present` applies the plumbing; `absent` atomically tears down everything this role created (see below). |
-| `tproxy_mode` | `gateway` | `gateway` proxies LAN-forwarded + local traffic (enables ip_forward); `local` proxies local traffic only. |
-| `tproxy_listen_port` | `7895` | Engine's TPROXY inbound listen port. **Also the delivery point of DNS transparent interception.** |
-| `tproxy_uid` / `tproxy_gid` | `13` / `13` | Engine runtime identity; its packets get the bypass mark (loop prevention). |
-| `tproxy_route_table` | `224` | Policy routing table number. |
-| `tproxy_fwmark` | `224` | fwmark selecting the policy routing table. |
-| `tproxy_bypass_mark` | `225` | fwmark for engine-originated traffic (bypass). |
-| `tproxy_interface` / `tproxy_interface6` | fact-detected | Exit interfaces. |
-| `tproxy_enable_ipv6` | fact-detected | IPv6 interception support; override to force. |
-| `tproxy_bypass_cidr4` / `tproxy_bypass_cidr6` | `[]` | Kernel-level bypass CIDRs (never enter the proxy path). |
-| `tproxy_reject_cidr4` / `tproxy_reject_cidr6` | `[]` | Kernel-level reject CIDRs. |
-| `tproxy_sysctl_nf_conntrack*` | see defaults | conntrack tuning for the interception path. |
-| `tproxy_etc_resolv_conf` / `tproxy_etc_resolv_conf_servers` | `true` / `1.1.1.1, 1.0.0.1` | Optional static `/etc/resolv.conf`. |
-| `tproxy_tcp_bbr_enabled` | `true` | **Temporary.** BBR sysctl is shipped here until its final home is decided; do not build on it. |
+Any proxy engine that listens on a TPROXY inbound plugs in through the listen
+port and its runtime uid/gid alone; the role never references engine-specific
+names. The listen port is also the delivery point of DNS transparent
+interception. Marks, the policy-routing table, exit interfaces, bypass/reject
+CIDRs and the conntrack/BBR sysctls are host plumbing; the generated role
+reference lists their defaults and accepted values.
 
 ## Declarative teardown: `tproxy_state: absent`
 

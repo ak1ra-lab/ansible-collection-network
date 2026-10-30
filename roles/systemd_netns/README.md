@@ -1,8 +1,10 @@
 # ak1ra_lab.network.systemd_netns
 
-> The canonical variable reference for this role is
-> [`meta/argument_specs.yml`](meta/argument_specs.yml). This README keeps the
-> narrative and deployed-artifact details; update both when the contract changes.
+> The canonical variable reference is generated from
+> [`meta/argument_specs.yml`](meta/argument_specs.yml) in the
+> [collection documentation](https://ak1ra-lab.github.io/ansible-collection-network/collection_index.html).
+> This README keeps purpose, requirements, deployed artifacts,
+> traffic-flow notes, examples, and teardown behavior.
 
 Dedicated-segment egress isolation: systemd services run inside a network
 namespace that attaches veth legs to host-level Linux bridges, and the
@@ -82,19 +84,6 @@ Each veth pair gets random MACs on every namespace recreation by default;
 pin `mac:` on legs that need stable ARP entries or DHCP leases across
 recreations.
 
-## Variable contract
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `systemd_netns_state` | `present` | `absent` tears down the per-namespace artifacts (see below). |
-| `systemd_netns_name` | `dedicated_net` | Namespace identifier; also used in the unit and resolv.conf directory name. |
-| `systemd_netns_links` | `[]` | Namespace veth legs (one per segment): `{bridge, address, gateway?, mac?}`. The `bridge` must already exist on the host. At most one leg may set `gateway`; it owns the namespace's default route. |
-| `systemd_netns_dns_servers` | `223.5.5.5, 119.29.29.29` | Namespace resolvers. |
-| `systemd_netns_hook_services` | `[]` | Systemd units to join to the namespace via a drop-in. The role only writes/removes the drop-in; it never manages the hooked services themselves. |
-| `systemd_netns_disable_ipv6` | `true` | Disable IPv6 inside the namespace (segments are often v4-only; avoids happy-eyeballs stalls). |
-| `systemd_netns_verify` | `false` | After deployment, curl the exit IP from inside the namespace and from the host (informational). |
-| `systemd_netns_verify_url` | `https://ip.sb` | Exit-IP echo service used by the verification check. |
-
 ## Example playbook
 
 With the bridges declared in `systemd_bridge` (see its README):
@@ -151,7 +140,10 @@ Operational notes:
 - Validation runs at play time: `systemd_netns_links[].bridge` must already
   exist on the host (any owner) and carry at least one enslaved member
   interface - a bridge without any uplink is an L2 island with no exit.
-  Apply `systemd_bridge` first on fresh hosts.
+  Apply `systemd_bridge` first on fresh hosts. At most one leg may declare
+  `gateway`; it owns the namespace's default route. IPv6 is disabled inside
+  the namespace by default (`systemd_netns_disable_ipv6`) because the
+  segments are often v4-only and happy-eyeballs would otherwise stall.
 
 ## Declarative teardown: `systemd_netns_state: absent`
 
