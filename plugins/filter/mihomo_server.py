@@ -278,7 +278,7 @@ def _jls_dest(config: dict[str, Any]) -> str:
 
 
 def _jls_sni(config: dict[str, Any]) -> str:
-    dest_host, _ = _split_host_port(_jls_dest(config), "anytls_jls_dest")
+    dest_host = _split_host_port(_jls_dest(config), "anytls_jls_dest")[0]
     sni = config["anytls_jls_sni"]
     if not isinstance(sni, str):
         _fail(f"anytls_jls_sni must be a string, got {type(sni).__name__}")
@@ -789,7 +789,7 @@ def mihomo_server_client_proxies(
     client_node_prefix = str(c["client_node_prefix"]).strip()
     if not client_node_prefix:
         _fail("client_node_prefix must not be empty")
-    server_short = hostname.split(".")[0]
+    server_short = hostname.split(".", maxsplit=1)[0]
     prefix = f"{client_node_prefix}-{region}-{server_short}"
 
     enabled = [name for name in PROTOCOLS if _truthy(c[f"enable_{name}"])]

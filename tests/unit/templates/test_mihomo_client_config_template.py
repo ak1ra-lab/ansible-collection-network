@@ -53,7 +53,7 @@ def render_profile(variables: dict[str, Any], template: str = "plain") -> dict[s
     if text.startswith("#jinja2:"):
         header, text = text.split("\n", 1)
         for part in header.removeprefix("#jinja2:").split(","):
-            key, _, value = part.partition(":")
+            key, _separator, value = part.partition(":")
             options[key.strip()] = value.strip().lower() == "true"
     environment = jinja2.Environment(
         undefined=jinja2.StrictUndefined,

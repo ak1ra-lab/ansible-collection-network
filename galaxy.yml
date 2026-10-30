@@ -43,6 +43,7 @@ build_ignore:
   - .venv
   - ansible.cfg
   - config
+  - importer_result.json
   - justfile
   - mkdocs.yaml
   - playbooks/group_vars
