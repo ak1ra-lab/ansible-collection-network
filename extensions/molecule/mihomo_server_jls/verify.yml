@@ -93,10 +93,10 @@
                 'selfhost-US-molecule-jls-node01-bob-anytls']
           - >-
             _mihomo_server_jls_proxies_data['proxies']
-            | map(attribute='sni') | unique | list == ['jls-dest.test']
+            | map(attribute='sni') | ansible.builtin.unique | list == ['jls-dest.test']
           - >-
             _mihomo_server_jls_proxies_data['proxies']
-            | map(attribute='alpn') | unique | list == [['h2', 'http/1.1']]
+            | map(attribute='alpn') | ansible.builtin.unique | list == [['h2', 'http/1.1']]
           - >-
             _mihomo_server_jls_proxies_data['proxies']
             | selectattr('jls-opts', 'defined') | list | length == 2

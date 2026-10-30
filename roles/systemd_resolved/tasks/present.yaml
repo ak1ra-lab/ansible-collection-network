@@ -53,7 +53,7 @@
         - _systemd_resolved_resolv_conf.stat.exists
         - not _systemd_resolved_resolv_conf.stat.islnk
       ansible.builtin.file:
-        path: "{{ _systemd_resolved_backup_file | dirname }}"
+        path: "{{ _systemd_resolved_backup_file | ansible.builtin.dirname }}"
         owner: root
         group: root
         mode: "0700"

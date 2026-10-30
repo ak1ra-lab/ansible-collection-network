@@ -166,7 +166,7 @@
   ansible.builtin.assert:
     that:
       - >-
-        _netplan_static_interfaces | map(attribute='macaddress') | list | unique | length
+        _netplan_static_interfaces | map(attribute='macaddress') | list | ansible.builtin.unique | length
         == _netplan_static_interfaces | length
     fail_msg: "two captured interfaces share the same MAC address"
     quiet: true
@@ -178,7 +178,7 @@
          | map(attribute='name')
          | map('extract', ansible_facts)
          | map(attribute='ipv6', default=[])
-         | flatten
+         | ansible.builtin.flatten
          | selectattr('scope', 'defined')
          | selectattr('scope', 'equalto', 'global')
          | list }}

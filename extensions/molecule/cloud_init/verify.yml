@@ -23,7 +23,7 @@
         _cloud_init_dropin_text: >-
           {{ dict(_cloud_init_dropins.results
                   | map(attribute='item')
-                  | zip(_cloud_init_dropins.results
+                  | ansible.builtin.zip(_cloud_init_dropins.results
                         | map(attribute='content')
                         | map('ansible.builtin.b64decode'))) }}
 

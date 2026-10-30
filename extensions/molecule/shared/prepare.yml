@@ -66,7 +66,7 @@
              | select('match', '^nameserver\s+')
              | map('regex_replace', '^nameserver\s+(\S+).*$', '\1')
              | reject('in', ['127.0.0.53', '127.0.0.1', '0.0.0.0', '::1', '::'])
-             | unique
+             | ansible.builtin.unique
              | list }}
 
     - name: read the saved upstream DNS servers
@@ -139,7 +139,7 @@
     - name: restart systemd-resolved after changing its upstream DNS
       when:
         - _molecule_resolved_load_state.stdout | trim == 'loaded'
-        - (_molecule_resolved_upstream is changed)
+        - (_molecule_resolved_upstream is ansible.builtin.changed)
           or (_molecule_resolved_active_state.stdout | trim != 'active')
       ansible.builtin.systemd_service:
         name: systemd-resolved.service

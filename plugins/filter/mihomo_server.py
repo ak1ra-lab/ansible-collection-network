@@ -68,7 +68,7 @@ EXAMPLES = r"""
   ansible.builtin.set_fact:
     mihomo_server_client_nodes: >-
       {{ mihomo_server_spec
-         | combine({'hostname': mihomo_server_hostname,
+         | ansible.builtin.combine({'hostname': mihomo_server_hostname,
                     'region': mihomo_server_client_node_region,
                     'client_node_prefix': mihomo_server_client_node_prefix})
          | ak1ra_lab.network.mihomo_server_client_proxies }}

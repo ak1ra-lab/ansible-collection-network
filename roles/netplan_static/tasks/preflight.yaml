@@ -110,7 +110,7 @@
     _netplan_static_conflict_pairs: >-
       {{ _netplan_static_conflict_slurp.results
          | map(attribute='item')
-         | zip(_netplan_static_conflict_slurp.results | map(attribute='content'))
+         | ansible.builtin.zip(_netplan_static_conflict_slurp.results | map(attribute='content'))
          | list }}
 
 - name: define the key paths this role owns
@@ -158,7 +158,7 @@
 - name: ensure the backup directory exists
   when: netplan_static_takeover_cloud_init
   ansible.builtin.file:
-    path: "{{ _netplan_static_backup_file | dirname }}"
+    path: "{{ _netplan_static_backup_file | ansible.builtin.dirname }}"
     owner: root
     group: root
     mode: "0700"

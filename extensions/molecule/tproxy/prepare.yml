@@ -23,7 +23,7 @@
       register: _tproxy_kmod
       # The package download is the last network access in the run; retry a
       # transient resolver failure rather than losing the whole sequence.
-      until: _tproxy_kmod is not failed
+      until: _tproxy_kmod is not ansible.builtin.failed
       retries: 3
       delay: 5
 
