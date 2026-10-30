@@ -25,7 +25,7 @@ mihomo_server_state: present
 # ── Server identity (TLS SNI / region token) ─────────────────────────────────
 
 # TLS SNI and the client node's server address.
-mihomo_server_hostname: "{{ ansible_facts['fqdn'] }}"
+mihomo_server_hostname: "{{ ansible_facts['fqdn'] | default(inventory_hostname) }}"
 
 # Region token embedded in the generated client node names
 # (selfhost-<REGION>-<host>[-<user>]-<proto>).  Must be a token the client's

@@ -16,7 +16,7 @@ argument_specs:
       mihomo_server_hostname:
         description: Server address and TLS SNI.
         type: str
-        default: '{{ ansible_facts[''fqdn''] }}'
+        default: '{{ ansible_facts[''fqdn''] | default(inventory_hostname) }}'
         required: false
       mihomo_server_region:
         description: Region token embedded in generated client node names. Required when state=present.
