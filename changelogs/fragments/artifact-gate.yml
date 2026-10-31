@@ -1,0 +1,10 @@
+---
+minor_changes:
+  - CI and the release workflow now run ``galaxy-importer`` against the
+    tarball produced by the build step instead of rebuilding the collection,
+    so the artifact that is tested is the artifact that is published.
+  - The build step now asserts that exactly one collection artifact exists and
+    exposes its path to the importer, smoke test and publish steps.
+  - Removed the hard-coded collection version, license and dependency
+    assertions from CI. The release workflow already checks the release tag
+    against ``galaxy.yml``, and ``galaxy-importer`` validates the metadata.

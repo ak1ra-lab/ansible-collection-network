@@ -58,28 +58,38 @@ jobs:
             exit 1
           fi
       - name: Build the collection
+        id: build
         run: |
           rm -rf dist
           uv run --no-sync ansible-galaxy collection build --output-path dist
+          shopt -s nullglob
+          tarballs=(dist/*.tar.gz)
+          if (( ${#tarballs[@]} != 1 )); then
+            echo "expected exactly one collection artifact in dist/, found ${#tarballs[@]}" >&2
+            exit 1
+          fi
+          printf 'tarball=%s\n' "${tarballs[0]}" >> "$GITHUB_OUTPUT"
       - name: Verify the tarball metadata
+        env:
+          TARBALL: ${{ steps.build.outputs.tarball }}
         run: |
-          tarball=$(ls dist/*.tar.gz)
-          tar -tzf "$tarball" | grep -qx 'meta/runtime.yml'
-          tar -tzf "$tarball" | grep -qx 'CHANGELOG.rst'
-      - name: Run galaxy-importer
+          tar -tzf "$TARBALL" | grep -qx 'meta/runtime.yml'
+          tar -tzf "$TARBALL" | grep -qx 'CHANGELOG.rst'
+      - name: Run galaxy-importer on the built artifact
+        env:
+          TARBALL: ${{ steps.build.outputs.tarball }}
         run: |
-          rm -rf /tmp/collection-import
           uv run --no-sync python -m galaxy_importer.main \
-            --git-clone-path . \
-            --output-path /tmp/collection-import \
+            "$TARBALL" \
             --print-result
       - name: Publish to Ansible Galaxy
         env:
           ANSIBLE_GALAXY_API_KEY: ${{ secrets.ANSIBLE_GALAXY_API_KEY }}
+          TARBALL: ${{ steps.build.outputs.tarball }}
         run: |
           if [ -z "$ANSIBLE_GALAXY_API_KEY" ]; then
             echo "ANSIBLE_GALAXY_API_KEY is not configured on the release environment" >&2
             exit 1
           fi
           uv run --no-sync ansible-galaxy collection publish \
-            dist/*.tar.gz --api-key "$ANSIBLE_GALAXY_API_KEY"
+            "$TARBALL" --api-key "$ANSIBLE_GALAXY_API_KEY"

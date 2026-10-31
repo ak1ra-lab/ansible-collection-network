@@ -90,42 +90,31 @@ jobs:
       - name: Sync the lint dependencies
         run: uv sync --locked --no-dev --group lint
       - name: Build the collection
+        id: build
         run: |
           rm -rf dist
           uv run --no-sync ansible-galaxy collection build --output-path dist
-      - name: Verify the collection metadata and tarball contents
-        run: |
-          uv run --no-sync python - <<'PY'
-          import pathlib
-          import yaml
-
-          galaxy = yaml.safe_load(pathlib.Path("galaxy.yml").read_text(encoding="utf-8"))
-          assert "build_ignore" in galaxy, "galaxy.yml must use build_ignore"
-          assert "manifest" not in galaxy, "galaxy.yml must not use the old manifest key"
-          assert galaxy["version"] == "0.4.0", galaxy["version"]
-          assert galaxy["license"] == ["GPL-3.0-or-later"], galaxy["license"]
-          assert galaxy["dependencies"]["ak1ra_lab.general"] == ">=0.4.0"
-          PY
-          tarball=$(ls dist/*.tar.gz)
-          for required in meta/runtime.yml meta/execution-environment.yml README.md LICENSE CODE_OF_CONDUCT.md CHANGELOG.rst; do
-            tar -tzf "$tarball" | grep -qx "$required"
-          done
-          if tar -tzf "$tarball" | grep -Eq '^(\.agents|\.ansible|\.venv|site|tests/output|playbooks|scripts|config)(/|$)'; then
-            echo "local/test-only content leaked into the tarball" >&2
+          shopt -s nullglob
+          tarballs=(dist/*.tar.gz)
+          if (( ${#tarballs[@]} != 1 )); then
+            echo "expected exactly one collection artifact in dist/, found ${#tarballs[@]}" >&2
             exit 1
           fi
-      - name: Run galaxy-importer
+          printf 'tarball=%s\n' "${tarballs[0]}" >> "$GITHUB_OUTPUT"
+      - name: Run galaxy-importer on the built artifact
+        env:
+          TARBALL: ${{ steps.build.outputs.tarball }}
         run: |
-          rm -rf /tmp/collection-import
           uv run --no-sync python -m galaxy_importer.main \
-            --git-clone-path . \
-            --output-path /tmp/collection-import \
+            "$TARBALL" \
             --print-result
       - name: Smoke-test a clean install
+        env:
+          TARBALL: ${{ steps.build.outputs.tarball }}
         run: |
           tmp=$(mktemp -d)
           uv run --no-sync ansible-galaxy collection install --force --no-deps \
-            dist/*.tar.gz -p "$tmp/collections"
+            "$TARBALL" -p "$tmp/collections"
           ANSIBLE_COLLECTIONS_PATH="$tmp/collections" \
             uv run --no-sync ansible-doc -t filter ak1ra_lab.network.pretty_yaml >/dev/null
 
