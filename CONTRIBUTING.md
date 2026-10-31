@@ -12,10 +12,22 @@ just ansible-collection-install
 
 `just sync` installs the `dev` dependency group (ruff, mypy, ansible-core,
 ansible-lint, tox-ansible, pytest, Molecule, antsibull-docs, Sphinx).
-`just ansible-collection-install` installs this collection and its Galaxy
-dependencies, including `ak1ra_lab.general`, into `.ansible/collections` for
-lint, mypy, and docs. Test-only collections come from
-`tests/molecule/requirements.yml` and are installed by Molecule/ade.
+`just ansible-collection-install` installs this collection, its Galaxy
+dependencies including `ak1ra_lab.general`, and the shared test-only
+collections from `tests/requirements.yml` into `.ansible/collections` for
+lint, mypy, and docs.
+
+When the sibling `ak1ra_lab.general` checkout is not published yet, overlay it
+for local work with:
+
+```shell
+just collections-install-local
+# or
+GENERAL_COLLECTION=/path/to/ansible-collection-general just collections-install-local
+```
+
+The overlay is local-only. `ansible-lint`, mypy, docs, and Molecule use it;
+tox-ansible and CI resolve the published general from Galaxy.
 
 ## Checks
 
@@ -35,8 +47,11 @@ container runtime.
 Tox-ansible defines the ansible-core 2.19/2.20/2.21 plus weekly
 devel/milestone matrix in `[tool.tox]`/`[tool.tox-ansible]`; run one entry with
 `just tox sanity-py3.13-2.21`. Test-only collections come from
-`tests/molecule/requirements.yml` and are installed by `ade`; do not
-pre-install them into `.ansible/collections` for test runs.
+`tests/requirements.yml` and are installed by `ade`; tox does not use the
+project-local `.ansible/collections`. The tox environments install the
+`galaxy.yml` dependencies, including `ak1ra_lab.general`, from Galaxy. To test
+against an unpublished general change, use the local overlay for lint, mypy,
+docs, and Molecule; tox-ansible and CI require the published general.
 
 ## Testing with Molecule
 
@@ -74,10 +89,12 @@ just molecule-syntax
 just molecule-list
 ```
 
-Molecule's dependency action installs `tests/molecule/requirements.yml`;
+Molecule's dependency action installs `tests/requirements.yml`;
 ansible-compat's prerun installs the collection under test and its `galaxy.yml`
-dependencies, including `ak1ra_lab.general`, from Galaxy. Do not pre-install
-the collection or test collections into `.ansible/collections` for Molecule.
+dependencies. When developing against an unpublished general checkout, run
+`just collections-install-local` first; the `just molecule-*` recipes keep
+Ansible data under the repository's `.ansible/` directory. CI resolves general
+from Galaxy.
 
 ### Container runtime
 
@@ -97,7 +114,7 @@ inventory's `container_volumes`.
 A Docker daemon is supported as an alternative: set
 `MOLECULE_CONTAINER_RUNTIME=docker` for every molecule invocation. The
 containers are then managed through `community.docker` (from
-`tests/molecule/requirements.yml`; the `docker` Python SDK must be available to
+`tests/requirements.yml`; the `docker` Python SDK must be available to
 Ansible) and run privileged, like the Podman path.
 
 Molecule caches scenario state, so a changed `molecule.yml` needs

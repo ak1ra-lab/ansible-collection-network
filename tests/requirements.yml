@@ -1,0 +1,14 @@
+---
+# Test-only collections shared by ansible-lint and the tox-ansible
+# unit/integration/molecule environments. The collection under test and its
+# runtime dependencies, including ak1ra_lab.general, stay in galaxy.yml and
+# are resolved by ansible-compat/ade.
+collections:
+  - name: ansible.utils
+    version: ">=6.0.0"
+  - name: ansible.posix
+    version: ">=1.5.4"
+  - name: community.general
+    version: ">=8.0.0"
+  - name: containers.podman
+  - name: community.docker

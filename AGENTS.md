@@ -70,8 +70,13 @@ must not duplicate variable tables. Plugin docs come from the plugin source
 
 ## Workflow and safety
 
-- Install the collection and its Galaxy dependencies with
-  `just ansible-collection-install` before lint, mypy, or docs.
+- Install the collection, its Galaxy dependencies, and `tests/requirements.yml`
+  with `just ansible-collection-install` before lint, mypy, or docs. Use
+  `just collections-install-local` only for local co-development against an
+  unpublished general checkout.
+- Runtime collection dependencies belong in `galaxy.yml`. The root
+  `requirements.yml` is only the ansible-builder execution-environment list;
+  test-only collections live in `tests/requirements.yml`.
 - Preserve public behavior unless the task explicitly changes it; keep changes
   consistent with the existing layout and naming.
 - Do not add unpublished-dependency workarounds to CI, tests, docs, or release.

@@ -13,9 +13,9 @@
 # a checkout hash, so scenarios and parallel checkouts cannot collide.
 #
 # The collection under test is installed by ansible-compat's prerun, and the
-# test-only collections by the dependency action from
-# tests/molecule/requirements.yml.  No project-local `.ansible/collections`
-# pre-install is required for Molecule.
+# test-only collections by the dependency action from tests/requirements.yml.
+# A project-local `.ansible/collections` overlay is only needed when developing
+# against an unpublished sibling collection, such as a local general checkout.
 
 ansible:
   executor:
@@ -39,7 +39,7 @@ ansible:
 dependency:
   name: galaxy
   options:
-    requirements-file: ${MOLECULE_PROJECT_DIRECTORY}/tests/molecule/requirements.yml
+    requirements-file: ${MOLECULE_PROJECT_DIRECTORY}/tests/requirements.yml
     # There are no scenario role dependencies; point the role dependency
     # action at an empty file so it does not warn about a missing one.
     role-file: ${MOLECULE_PROJECT_DIRECTORY}/extensions/molecule/shared/roles-requirements.yml

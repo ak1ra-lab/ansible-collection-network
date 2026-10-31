@@ -1,8 +1,7 @@
 ---
 # Runtime collection dependencies for an ansible-builder execution
-# environment. Keep in sync with galaxy.yml.
-# Test-only collections live in tests/molecule/requirements.yml (Molecule's
-# dependency action and tox-ansible/ade both install that file).
+# environment. Keep in sync with galaxy.yml. Test-only collections shared by
+# ansible-lint and the test harness live in tests/requirements.yml.
 collections:
   - name: ak1ra_lab.general
     version: ">=0.4.0"

@@ -43,14 +43,16 @@ jobs:
         uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
       - name: Sync the lint and docs dependencies
         run: uv sync --locked --no-dev --group lint --group docs
-      - name: Install the collection and its dependencies
+      - name: Install the collection and test dependencies
         run: |
           mkdir -p .ansible/collections
           uv run --no-sync ansible-galaxy collection install \
             --force --collections-path .ansible/collections .
           uv run --no-sync ansible-galaxy collection install \
-            -r tests/molecule/requirements.yml --collections-path .ansible/collections
+            -r tests/requirements.yml --collections-path .ansible/collections
       - name: Run ansible-lint
+        env:
+          ANSIBLE_HOME: ${{ github.workspace }}/.ansible
         run: uv run --no-sync ansible-lint
       - name: Run ruff and mypy
         run: |
@@ -246,4 +248,5 @@ jobs:
       - name: Run the Molecule scenarios
         run: >-
           sudo env "PATH=${GITHUB_WORKSPACE}/.venv/bin:${PATH}"
+          "ANSIBLE_HOME=${GITHUB_WORKSPACE}/.ansible"
           molecule test --all

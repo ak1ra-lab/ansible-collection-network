@@ -43,6 +43,5 @@ Bugfixes
 
 - CI action pins were refreshed to ``actions/setup-python`` 7.1.0, ``astral-sh/setup-uv`` 10.3.1 and ``actions/upload-pages-artifact`` 5.0.0.
 - Molecule filters the container's loopback resolver stub and reads the systemd-resolved uplink view before configuring the test resolver, so the resolver scenarios no longer break package downloads in later scenarios. The ``tproxy`` prepare also retries a transient package-download failure.
-- The Docs workflow installs ``distlib`` through the docs dependency group, so ``ansible-galaxy`` can read the ``galaxy.yml`` manifest when installing the collection from source. The ``just`` collection recipes use the uv environment for the same reason.
 - The ``netplan_static`` role no longer fails when a TUN client such as ``mihomo_client`` owns ``ansible_facts.default_ipv4`` through policy routing. The TUN (``mihomo0``) is never rendered; the role selects the captured ethernet interface and gateway from the kernel main table instead.
 - The ``netplan_static`` role treats an empty ``ansible_facts.default_ipv6`` mapping as "no IPv6 default route" instead of failing the IPv6-loss gate on hosts with IPv6 disabled.

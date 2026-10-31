@@ -13,10 +13,6 @@ releases:
         uplink view before configuring the test resolver, so the resolver scenarios
         no longer break package downloads in later scenarios. The ``tproxy`` prepare
         also retries a transient package-download failure.
-      - The Docs workflow installs ``distlib`` through the docs dependency group,
-        so ``ansible-galaxy`` can read the ``galaxy.yml`` manifest when installing
-        the collection from source. The ``just`` collection recipes use the uv environment
-        for the same reason.
       - The ``netplan_static`` role no longer fails when a TUN client such as ``mihomo_client``
         owns ``ansible_facts.default_ipv4`` through policy routing. The TUN (``mihomo0``)
         is never rendered; the role selects the captured ethernet interface and gateway

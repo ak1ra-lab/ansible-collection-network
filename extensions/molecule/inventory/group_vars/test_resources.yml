@@ -8,7 +8,7 @@
 #
 #   MOLECULE_CONTAINER_RUNTIME=docker just molecule-test-one systemd_bridge
 #
-# Docker needs the community.docker collection (tests/molecule/requirements.yml)
+# Docker needs the community.docker collection (tests/requirements.yml)
 # and its Python SDK on the control node.  Both runtimes run the containers
 # privileged: systemd needs the capabilities anyway, and a privileged
 # container also gets a writable /sys, which the shared prepare needs for its

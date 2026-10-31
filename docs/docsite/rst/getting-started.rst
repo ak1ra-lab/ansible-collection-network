@@ -36,8 +36,11 @@ install that repository separately when you need ready-made deployment entry
 points.
 
 For development in this repository, ``just ansible-collection-install``
-installs the collection under test and its Galaxy dependencies into
-``.ansible/collections`` for lint, mypy, and docs.
+installs the collection under test, its Galaxy dependencies, and the shared
+test-only collections into ``.ansible/collections`` for lint, mypy, and docs.
+When developing against an unpublished sibling general checkout, run
+``just collections-install-local`` first; tox-ansible and CI resolve the
+published general from Galaxy.
 
 Control-node requirements
 -------------------------
@@ -62,9 +65,9 @@ Control-node requirements
   part of this collection; the consumer supplies the TLS material.
 
 The development environment uses ``uv``; ``just ansible-collection-install``
-installs the collection under test and its Galaxy dependencies for
-lint/mypy/docs. Molecule installs the collection under test and the test
-collections from ``tests/molecule/requirements.yml`` itself.
+installs the collection under test, its Galaxy dependencies, and the shared
+test-only collections for lint/mypy/docs. Molecule installs the collection
+under test and the test collections from ``tests/requirements.yml`` itself.
 
 Managed-node requirements
 -------------------------
