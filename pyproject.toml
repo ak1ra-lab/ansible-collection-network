@@ -9,11 +9,11 @@ dependencies = []
 package = false
 
 [dependency-groups]
-# Shared Ansible runtime: ansible-galaxy reads the galaxy.yml manifest through
-# distlib when installing the collection from source.
+# Shared Ansible runtime for ansible-galaxy, ansible-lint, Molecule and the
+# ansible.* imports checked by mypy. galaxy.yml uses build_ignore, so the
+# legacy distlib-backed manifest builder is not required.
 ansible = [
     "ansible-core>=2.19.12",
-    "distlib>=0.4.4",
 ]
 lint = [
     { include-group = "ansible" },
