@@ -326,44 +326,38 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# ---------------------------------------------------------------------------
-# Project-specific rules (shared by the ak1ra_lab collection repositories)
-
-# Ansible controller state and test scratch space
+# The default root path for Ansible config files on the controller
 .ansible/
-.molecule/
-.cache/
+
+# Retry files generated for failed Ansible playbook runs
 *.retry
 
-# ADE scratch collection root and adjacent collection symlink farm
-collections/
+# Ansible Molecule
+.molecule/
 
 # antsibull-changelog plugin cache
 changelogs/.plugin-cache.yaml
 
 # Galaxy build/import artifacts
 importer_result.json
-*.tar.gz
 
-# Ansible host_vars and group_vars
-**/host_vars/**/*.yml
-**/host_vars/**/*.yaml
-**/group_vars/**/*.yml
-**/group_vars/**/*.yaml
+# Ansible playbook project collections
+collections/*
+!collections/requirements.yml
 
-# Local inventory variables
-inventory/*.yml
-inventory/*.yaml
-!inventory/hosts.example.yml
-!inventory/hosts.example.yaml
-extensions/molecule/**/host_vars/
+# Ansible inventory
+inventory/*
+!inventory/hosts.yml
 
-# Local configuration, credentials, and examples
+# Ansible host_vars / group_vars
+host_vars/
+group_vars/
+
+# General configuration file and examples folder
 config/
 credentials/
-credentials.yaml
 examples/
 
-# LLM session records
+## LLM
 .agents/plans/
 .agents/sessions/
