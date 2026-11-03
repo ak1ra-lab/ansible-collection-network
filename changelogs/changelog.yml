@@ -18,12 +18,19 @@ releases:
       - Removed the unused ``distlib`` development dependency. It is only required
         by the legacy ``manifest`` key in ``galaxy.yml``, which this collection does
         not use.
+      - The Molecule job authenticates its GitHub release lookups with the workflow
+        ``GITHUB_TOKEN``, so the ``mihomo_install`` and ``mihomo_client`` scenarios
+        no longer fail when the shared runner IP reaches the unauthenticated ``api.github.com``
+        rate limit.
       - The ``flow_offload`` role now asserts a non-empty interface list before rendering
         the flowtable when the master switch is on, instead of writing a drop-in with
         an empty ``devices`` set.
       - The ``flow_offload`` role resolves an empty ``flow_offload_interfaces`` default
         when facts are not gathered, so the ``absent`` state (and the Molecule cleanup
         play) works on hosts that disable fact gathering.
+      - The ``mihomo_client`` Molecule verify play checks the controller-local profile
+        mirrors only for the scenario's own images, so it no longer expects a mirror
+        for an image the limited converge never touched.
       - The ``netplan_static`` role no longer fails when a TUN client such as ``mihomo_client``
         owns ``ansible_facts.default_ipv4`` through policy routing. The TUN (``mihomo0``)
         is never rendered; the role selects the captured ethernet interface and gateway
@@ -103,7 +110,9 @@ releases:
     - artifact-build-ignore.yml
     - artifact-gate.yml
     - ci-docs.yml
+    - ci-mihomo-github-token.yml
     - flow-offload-facts-default.yml
+    - molecule-mihomo-client-mirrors.yml
     - netplan-static-default-route.yml
     - packaging-galaxy.yml
     - playbooks-moved.yml
@@ -111,4 +120,4 @@ releases:
     - test-harness.yml
     - tooling-local-requirements.yml
     - tproxy-experimental.yml
-    release_date: '2026-11-03'
+    release_date: '2026-11-04'

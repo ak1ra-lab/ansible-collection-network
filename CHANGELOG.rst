@@ -51,7 +51,9 @@ Bugfixes
 - Excluded ``AGENTS.md`` and the generated ``dist`` directory from the Galaxy artifact.
 - Molecule filters the container's loopback resolver stub and reads the systemd-resolved uplink view before configuring the test resolver, so the resolver scenarios no longer break package downloads in later scenarios. The ``tproxy`` prepare also retries a transient package-download failure.
 - Removed the unused ``distlib`` development dependency. It is only required by the legacy ``manifest`` key in ``galaxy.yml``, which this collection does not use.
+- The Molecule job authenticates its GitHub release lookups with the workflow ``GITHUB_TOKEN``, so the ``mihomo_install`` and ``mihomo_client`` scenarios no longer fail when the shared runner IP reaches the unauthenticated ``api.github.com`` rate limit.
 - The ``flow_offload`` role now asserts a non-empty interface list before rendering the flowtable when the master switch is on, instead of writing a drop-in with an empty ``devices`` set.
 - The ``flow_offload`` role resolves an empty ``flow_offload_interfaces`` default when facts are not gathered, so the ``absent`` state (and the Molecule cleanup play) works on hosts that disable fact gathering.
+- The ``mihomo_client`` Molecule verify play checks the controller-local profile mirrors only for the scenario's own images, so it no longer expects a mirror for an image the limited converge never touched.
 - The ``netplan_static`` role no longer fails when a TUN client such as ``mihomo_client`` owns ``ansible_facts.default_ipv4`` through policy routing. The TUN (``mihomo0``) is never rendered; the role selects the captured ethernet interface and gateway from the kernel main table instead.
 - The ``netplan_static`` role treats an empty ``ansible_facts.default_ipv6`` mapping as "no IPv6 default route" instead of failing the IPv6-loss gate on hosts with IPv6 disabled.
