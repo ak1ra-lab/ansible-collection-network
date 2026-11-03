@@ -1,0 +1,8 @@
+---
+bugfixes:
+  - The ``flow_offload`` role resolves an empty ``flow_offload_interfaces``
+    default when facts are not gathered, so the ``absent`` state (and the
+    Molecule cleanup play) works on hosts that disable fact gathering.
+  - The ``flow_offload`` role now asserts a non-empty interface list before
+    rendering the flowtable when the master switch is on, instead of writing a
+    drop-in with an empty ``devices`` set.

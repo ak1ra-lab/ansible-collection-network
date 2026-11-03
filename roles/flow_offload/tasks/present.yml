@@ -3,6 +3,15 @@
 # present) while flow_offload_enabled is the master switch: the disabled path
 # only removes a drop-in left behind by a previous run.
 
+- name: require a flowtable device list when the master switch is on
+  when: flow_offload_enabled | ansible.builtin.bool
+  ansible.builtin.assert:
+    that:
+      - flow_offload_interfaces | length > 0
+    fail_msg: >-
+      flow_offload_interfaces is empty; gather facts or pin an explicit list.
+    quiet: true
+
 - name: ensure nftables package is installed
   when: flow_offload_enabled | ansible.builtin.bool
   ansible.builtin.package:

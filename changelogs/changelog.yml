@@ -18,6 +18,12 @@ releases:
       - Removed the unused ``distlib`` development dependency. It is only required
         by the legacy ``manifest`` key in ``galaxy.yml``, which this collection does
         not use.
+      - The ``flow_offload`` role now asserts a non-empty interface list before rendering
+        the flowtable when the master switch is on, instead of writing a drop-in with
+        an empty ``devices`` set.
+      - The ``flow_offload`` role resolves an empty ``flow_offload_interfaces`` default
+        when facts are not gathered, so the ``absent`` state (and the Molecule cleanup
+        play) works on hosts that disable fact gathering.
       - The ``netplan_static`` role no longer fails when a TUN client such as ``mihomo_client``
         owns ``ansible_facts.default_ipv4`` through policy routing. The TUN (``mihomo0``)
         is never rendered; the role selects the captured ethernet interface and gateway
@@ -97,6 +103,7 @@ releases:
     - artifact-build-ignore.yml
     - artifact-gate.yml
     - ci-docs.yml
+    - flow-offload-facts-default.yml
     - netplan-static-default-route.yml
     - packaging-galaxy.yml
     - playbooks-moved.yml

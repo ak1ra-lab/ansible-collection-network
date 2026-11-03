@@ -13,9 +13,11 @@ flow_offload_enabled: false
 
 # Interfaces bound to the flowtable.  Defaults to auto-detection of common
 # exit/bridge interfaces (eth*, enp*, ens*, enx*, br*); override to pin.
+# Without gathered facts the default is empty so the absent state still works
+# on hosts running with gather_facts: false.
 flow_offload_interfaces: >-
   {{
-    ansible_facts.interfaces
+    ansible_facts.interfaces | default([])
     | select('ansible.builtin.match', '^(eth|en[psx]|br)')
     | sort | unique | list
   }}
