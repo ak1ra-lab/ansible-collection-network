@@ -235,7 +235,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y podman
       - name: Run the Molecule scenarios
+        env:
+          # Authenticate the mihomo_install/mihomo_client GitHub release
+          # lookups; unauthenticated api.github.com calls from shared runner
+          # IPs hit the 60-request hourly rate limit.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >-
           sudo env "PATH=${GITHUB_WORKSPACE}/.venv/bin:${PATH}"
           "ANSIBLE_HOME=${GITHUB_WORKSPACE}/.ansible"
+          "GITHUB_TOKEN=${GITHUB_TOKEN}"
           molecule test --all

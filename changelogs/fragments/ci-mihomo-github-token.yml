@@ -1,0 +1,6 @@
+---
+bugfixes:
+  - The Molecule job authenticates its GitHub release lookups with the
+    workflow ``GITHUB_TOKEN``, so the ``mihomo_install`` and
+    ``mihomo_client`` scenarios no longer fail when the shared runner IP
+    reaches the unauthenticated ``api.github.com`` rate limit.
