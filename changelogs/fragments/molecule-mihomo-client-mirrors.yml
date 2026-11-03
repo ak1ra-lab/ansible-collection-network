@@ -1,0 +1,5 @@
+---
+bugfixes:
+  - The ``mihomo_client`` Molecule verify play checks the controller-local
+    profile mirrors only for the scenario's own images, so it no longer
+    expects a mirror for an image the limited converge never touched.

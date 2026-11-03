@@ -338,7 +338,7 @@
       ansible.builtin.stat:
         path: "/tmp/molecule-mihomo-client/artifacts/{{ item }}.config.yaml"
       register: _mihomo_client_local_artifacts
-      loop: "{{ groups['test_resources'] }}"
+      loop: "{{ groups['mihomo_client'] }}"
       loop_control:
         label: "{{ item }}"
 
