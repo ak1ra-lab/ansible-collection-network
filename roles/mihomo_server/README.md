@@ -164,6 +164,14 @@ of its own.  The role:
   generated client node.  `servername` becomes the first accepted server
   name (or the dest host when the list is empty), and `client-fingerprint`
   defaults to `chrome`.
+- sets `reality-opts.support-x25519mlkem768: true` when
+  `mihomo_server_vless_reality_support_x25519mlkem768` is enabled (default
+  `false`), so the client advertises the post-quantum hybrid key exchange.
+  Enable it when the REALITY server requires the key share (for example
+  Xray-Core 26.9.8+); only the `chrome` fingerprint currently carries it,
+  and old servers expect the classic X25519 handshake.  This is a
+  client-side option only: the mihomo listener accepts both X25519 and
+  X25519MLKEM768 without extra `reality-config` settings.
 
 `xtls-rprx-vision` is the recommended flow value with REALITY.  Certificate
 paths are still required when any other certificate-using protocol

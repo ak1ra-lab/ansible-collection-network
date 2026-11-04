@@ -76,6 +76,7 @@ _mihomo_server_spec: >-
       'vless_reality_short_id': mihomo_server_vless_reality_short_id,
       'vless_reality_server_names': mihomo_server_vless_reality_server_names,
       'vless_reality_client_fingerprint': mihomo_server_vless_reality_client_fingerprint,
+      'vless_reality_support_x25519mlkem768': mihomo_server_vless_reality_support_x25519mlkem768,
       'enable_tuic': mihomo_server_enable_tuic,
       'tuic_port': mihomo_server_tuic_port,
       'tuic_users': mihomo_server_tuic_users,

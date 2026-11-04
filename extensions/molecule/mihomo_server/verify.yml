@@ -188,6 +188,18 @@
           {{ _mihomo_server_proxies_data['proxies'][7] | ansible.builtin.to_json }}
         quiet: true
 
+    - name: assert the vless REALITY node advertises the post-quantum key exchange
+      ansible.builtin.assert:
+        that:
+          - >-
+            _mihomo_server_proxies_data['proxies'][5]['reality-opts']['support-x25519mlkem768']
+            is true
+        fail_msg: >-
+          mihomo_server_vless_reality_support_x25519mlkem768 must emit
+          reality-opts.support-x25519mlkem768 on the generated vless node, got:
+          {{ _mihomo_server_proxies_data['proxies'][5]['reality-opts'] | ansible.builtin.to_json }}
+        quiet: true
+
     - name: collect the generated credentials artifact on the controller
       delegate_to: localhost
       become: false

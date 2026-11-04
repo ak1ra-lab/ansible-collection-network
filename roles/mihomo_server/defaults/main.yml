@@ -102,6 +102,14 @@ mihomo_server_vless_reality_public_key: ""
 mihomo_server_vless_reality_short_id: ""
 mihomo_server_vless_reality_server_names: []
 mihomo_server_vless_reality_client_fingerprint: "chrome"
+# Advertise the X25519MLKEM768 hybrid post-quantum key exchange in the
+# generated client node's reality-opts.  mihomo defaults to false because old
+# REALITY servers cannot negotiate it; enable it when the server requires the
+# hybrid key share (e.g. Xray-Core 26.9.8+).  Only the chrome client
+# fingerprint currently carries the key exchange.  This is a client-side
+# option only: the role's mihomo listener accepts both X25519 and
+# X25519MLKEM768 without extra server configuration.
+mihomo_server_vless_reality_support_x25519mlkem768: false
 
 mihomo_server_enable_tuic: false
 mihomo_server_tuic_port: 9446

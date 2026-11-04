@@ -628,7 +628,20 @@ def test_vless_reality_client_node() -> None:
         "public-key": "public-key",
         "short-id": "0123456789abcdef",
     }
+    assert "support-x25519mlkem768" not in vless["reality-opts"]
     assert "skip-cert-verify" not in vless
+
+
+def test_vless_reality_client_can_advertise_x25519mlkem768() -> None:
+    proxies = mihomo_server_client_proxies(
+        reality_protocols(
+            hostname="node01.example.com",
+            region="US",
+            vless_reality_support_x25519mlkem768=True,
+        )
+    )["proxies"]
+    vless = next(proxy for proxy in proxies if proxy["name"].endswith("-vless"))
+    assert vless["reality-opts"]["support-x25519mlkem768"] is True
 
 
 def test_vless_reality_client_derives_the_server_name_from_dest() -> None:

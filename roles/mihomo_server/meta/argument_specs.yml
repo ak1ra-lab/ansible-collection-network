@@ -190,6 +190,16 @@ argument_specs:
         type: str
         default: chrome
         required: false
+      mihomo_server_vless_reality_support_x25519mlkem768:
+        description: >-
+          Advertise X25519MLKEM768 hybrid key exchange in the generated client
+          reality-opts. Enable when the REALITY server requires the post-quantum
+          key share; only the chrome fingerprint currently carries it. This is
+          client-side only: the mihomo listener accepts both key shares without
+          extra server configuration.
+        type: bool
+        default: false
+        required: false
       mihomo_server_enable_tuic:
         description: Enable the tuic listener.
         type: bool

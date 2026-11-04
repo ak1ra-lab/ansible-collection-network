@@ -1,0 +1,7 @@
+---
+minor_changes:
+  - The ``mihomo_server`` role adds the
+    ``mihomo_server_vless_reality_support_x25519mlkem768`` option (default
+    ``false``) that emits ``reality-opts.support-x25519mlkem768`` on the
+    generated VLESS REALITY client nodes. Enable it when the REALITY server
+    requires the X25519MLKEM768 hybrid key exchange.

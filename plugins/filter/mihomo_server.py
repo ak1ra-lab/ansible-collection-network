@@ -728,6 +728,9 @@ def mihomo_server_client_proxies(
             ``vless_reality_enabled``, the vless node carries
             ``reality-opts`` and uses the first
             ``vless_reality_server_names`` entry as its ``servername``.
+            ``vless_reality_support_x25519mlkem768`` adds
+            ``reality-opts.support-x25519mlkem768: true`` so the client
+            advertises the post-quantum hybrid key exchange.
 
     Returns:
         ``{"proxies": [...]}`` - the ``providers/selfhost.yaml`` artifact.
@@ -759,6 +762,7 @@ def mihomo_server_client_proxies(
         vless_reality_short_id="",
         vless_reality_server_names=[],
         vless_reality_client_fingerprint="chrome",
+        vless_reality_support_x25519mlkem768=False,
         enable_tuic=False,
         tuic_port=9446,
         tuic_users=[],
@@ -881,6 +885,8 @@ def mihomo_server_client_proxies(
                     "public-key": public_key,
                     "short-id": short_id,
                 }
+                if _truthy(c["vless_reality_support_x25519mlkem768"]):
+                    proxy["reality-opts"]["support-x25519mlkem768"] = True
             else:
                 proxy["servername"] = hostname
                 proxy["skip-cert-verify"] = False
