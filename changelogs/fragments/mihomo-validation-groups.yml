@@ -1,0 +1,6 @@
+---
+minor_changes:
+  - The ``mihomo_server``, ``mihomo_install``, and ``mihomo_client`` roles
+    split their monolithic contract assertion into semantically grouped
+    tasks, so a validation failure names the variable family that violates
+    the contract.
