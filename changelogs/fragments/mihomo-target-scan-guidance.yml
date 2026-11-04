@@ -1,0 +1,6 @@
+---
+minor_changes:
+  - The ``mihomo_server`` target-selection documentation now warns against
+    running full ``/24`` or ASN scans from the production VPS. Scan locally or
+    from a disposable host, then verify a shortlisted target from the VPS with
+    a single TLS handshake.

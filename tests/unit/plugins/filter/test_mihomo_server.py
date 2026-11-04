@@ -175,6 +175,9 @@ def test_default_protocol_profile() -> None:
         "anytls-in",
     ]
     assert [listener["port"] for listener in listeners] == [9442, 9444, 9445, 9447]
+    vless = next(listener for listener in listeners if listener["name"] == "vless-in")
+    assert vless["reality-config"]["dest"] == "www.debian.org:443"
+    assert vless["reality-config"]["server-names"] == ["www.debian.org"]
 
 
 def test_vless_reality_listener_uses_reality_config() -> None:

@@ -130,9 +130,9 @@
           - _mihomo_server_config_data['listeners'][3]['users'] | length == 2
           - _mihomo_server_config_data['listeners'][3]['users'][0]['flow'] == 'xtls-rprx-vision'
           - "'certificate' not in _mihomo_server_config_data['listeners'][3]"
-          - _mihomo_server_config_data['listeners'][3]['reality-config']['dest'] == 'www.microsoft.com:443'
+          - _mihomo_server_config_data['listeners'][3]['reality-config']['dest'] == 'www.debian.org:443'
           - _mihomo_server_config_data['listeners'][3]['reality-config']['short-id'] | length == 1
-          - _mihomo_server_config_data['listeners'][3]['reality-config']['server-names'] == ['www.microsoft.com']
+          - _mihomo_server_config_data['listeners'][3]['reality-config']['server-names'] == ['www.debian.org']
           - _mihomo_server_config_data['listeners'][4]['users'] | length == 2
           - _mihomo_server_config_data['listeners'][4]['users'] is mapping
         fail_msg: >-
@@ -254,7 +254,7 @@
             _mihomo_server_config_data['listeners'][3]['reality-config']['private-key']
             == _mihomo_server_host_vars_data['mihomo_server_vless_reality_private_key']
           - >-
-            _mihomo_server_proxies_data['proxies'][5]['servername'] == 'www.microsoft.com'
+            _mihomo_server_proxies_data['proxies'][5]['servername'] == 'www.debian.org'
           - >-
             _mihomo_server_proxies_data['proxies'][5]['flow'] == 'xtls-rprx-vision'
         fail_msg: >-

@@ -93,10 +93,33 @@ mihomo_server_vless_flow: "xtls-rprx-vision"
 # reality-config instead of certificate/private-key; clients use reality-opts.
 # The X25519 keypair is generated on the target with
 # `mihomo generate reality-keypair` when both keys are empty and persisted to
-# host_vars.  dest must be a reachable TLS 1.3 site; server_names defaults to
-# the dest host when the list is empty.  short_id is generated when empty.
+# host_vars.  server_names defaults to the dest host when the list is empty;
+# short_id is generated when empty.
+#
+# dest selection (host:port):
+#   - required: a real site outside mainland China that supports TLS 1.3 and
+#     HTTP/2, does not redirect the exact hostname, and is reachable from the
+#     VPS;
+#   - best: a site in the same ASN/region/network as the VPS.  Scan the VPS
+#     /24 or ASN from a local machine or a disposable host, not from the
+#     production VPS (XTLS/RealiTLScanner warns that cloud scans may get the
+#     VPS flagged), then verify the shortlisted candidate from the VPS with a
+#     single TLS handshake; borrowing a neighbour's certificate is the
+#     recommended REALITY practice;
+#   - avoid Cloudflare and other shared CDNs (Fastly/Akamai/CloudFront) when
+#     possible: unauthenticated probes are forwarded to dest, so a shared CDN
+#     can turn the VPS into a free relay or expose it to origin-discovery
+#     probes;
+#   - avoid overused big domains, sites with mainland-China CDN nodes, and
+#     hostnames that redirect (an apex that redirects to www is a poor target).
+#
+# The default is a neutral non-CDN placeholder (www.debian.org typically
+# resolves to university/research networks, not a commercial CDN); override it
+# per VPS.  Changing dest also changes the derived SNI: keep server_names
+# consistent with the target certificate's SAN, or set server_names explicitly
+# when the target accepts a different name.
 mihomo_server_vless_reality_enabled: true
-mihomo_server_vless_reality_dest: "www.microsoft.com:443"
+mihomo_server_vless_reality_dest: "www.debian.org:443"
 mihomo_server_vless_reality_private_key: ""
 mihomo_server_vless_reality_public_key: ""
 mihomo_server_vless_reality_short_id: ""
@@ -129,10 +152,15 @@ mihomo_server_anytls_users: []
 #                 roles/mihomo_client are mihomo, but other clients cannot use
 #                 the resulting node.  Requires mihomo >= 1.19.29.
 mihomo_server_anytls_security_mode: certificate
-# JLS fallback destination (a real TLS site with a certificate the clients
-# trust and a SAN matching anytls_jls_sni).  Authenticated traffic does not
-# use it; it only serves probes and failed-authentication fallbacks.
-mihomo_server_anytls_jls_dest: "www.microsoft.com:443"
+# JLS fallback destination (host:port).  It must be a real TLS site with a
+# certificate the clients trust, a SAN matching anytls_jls_sni (or the derived
+# dest host), and ALPN covering anytls_jls_alpn.  It must not redirect.
+# Authenticated traffic does not use it, but unauthenticated probes do, so the
+# same selection rules as the VLESS REALITY target apply: prefer a same-ASN /
+# region site, and avoid Cloudflare/shared CDNs, overused big domains, hosts
+# with mainland-China CDN nodes, and redirecting hostnames.  The default is
+# the same neutral non-CDN placeholder; override it per VPS.
+mihomo_server_anytls_jls_dest: "www.debian.org:443"
 # JLS SNI.  Empty derives it from the jls_dest host.  Must be a DNS name
 # (not an IP) and must match the destination certificate; the generated client
 # node uses this value instead of mihomo_server_hostname.

@@ -152,8 +152,9 @@ so the destination files always exist before the service starts or restarts.
 
 Both the vless listener and REALITY are enabled in the default profile.
 REALITY borrows the TLS handshake of `mihomo_server_vless_reality_dest`
-(default `www.microsoft.com:443`), so the VLESS listener needs no certificate
-of its own.  The role:
+(default `www.debian.org:443`; see
+[Choosing the REALITY / JLS target](#choosing-the-reality--jls-target)), so
+the VLESS listener needs no certificate of its own.  The role:
 
 - generates the X25519 keypair on the target with
   `mihomo generate reality-keypair` when both key variables are empty;
@@ -176,6 +177,46 @@ of its own.  The role:
 `xtls-rprx-vision` is the recommended flow value with REALITY.  Certificate
 paths are still required when any other certificate-using protocol
 (trojan/hysteria2/tuic, or anytls in `certificate` mode) is enabled.
+
+### Choosing the REALITY / JLS target
+
+`mihomo_server_vless_reality_dest` and `mihomo_server_anytls_jls_dest` default
+to `www.debian.org:443`, a neutral non-CDN placeholder rather than a
+recommendation for every VPS.  The target determines the SNI the client
+presents and the site unauthenticated probes are relayed to, so choose it per
+deployment:
+
+- Required: a real site outside mainland China that supports TLS 1.3 and
+  HTTP/2, does not redirect the exact hostname, and is reachable from the VPS.
+- Best: a site in the VPS's ASN/region/network.  Scan the VPS `/24` or ASN
+  from a local machine or a disposable host, not from the production VPS:
+  the `XTLS/RealiTLScanner` README warns that cloud scans may get the VPS
+  flagged.  Verify the shortlisted candidate from the VPS itself with a
+  single TLS handshake; borrowing a neighbour's certificate is the
+  recommended REALITY practice.
+- Avoid Cloudflare and other shared CDNs (Fastly/Akamai/CloudFront) when
+  possible: probes are forwarded to the target, so a shared CDN can turn the
+  VPS into a free relay or expose it to origin-discovery probes.
+- Avoid overused big domains, sites with mainland-China CDN nodes, and
+  hostnames that redirect (an apex redirecting to `www` is a poor target).
+- Keep `mihomo_server_vless_reality_server_names` consistent with the target
+  certificate's SAN; leaving it empty derives the SNI from the dest host.
+- For JLS, the target must also present a certificate the clients trust with a
+  SAN matching `mihomo_server_anytls_jls_sni` (or the derived dest host) and
+  ALPN covering `mihomo_server_anytls_jls_alpn`.
+
+Useful checks on the VPS:
+
+```bash
+curl -sSI --tlsv1.3 --http2 https://<dest>/
+openssl s_client -connect <dest>:443 -servername <dest> -tls1_3 \
+  -groups X25519MLKEM768:X25519 </dev/null 2>/dev/null \
+  | grep 'Negotiated TLS1.3 group'
+```
+
+If a shared-CDN target is unavoidable, cap fallback traffic with mihomo's
+`limit-fallback-upload` / `limit-fallback-download` (not exposed by this role
+yet).
 
 ### AnyTLS
 

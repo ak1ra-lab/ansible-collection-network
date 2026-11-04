@@ -160,9 +160,14 @@ argument_specs:
         default: true
         required: false
       mihomo_server_vless_reality_dest:
-        description: Borrowed TLS 1.3 destination as host:port.
+        description: >-
+          Borrowed TLS 1.3 destination as host:port. Prefer a real site in the
+          VPS's ASN/region that supports TLS 1.3 and HTTP/2, does not redirect,
+          and is not behind a shared CDN; avoid overused domains and sites with
+          mainland-China CDN nodes. The default is a neutral non-CDN
+          placeholder; override it per VPS. server_names defaults to its host.
         type: str
-        default: www.microsoft.com:443
+        default: www.debian.org:443
         required: false
       mihomo_server_vless_reality_private_key:
         description: REALITY X25519 private key. Generated on the target when both keys are empty.
@@ -246,9 +251,15 @@ argument_specs:
         default: certificate
         required: false
       mihomo_server_anytls_jls_dest:
-        description: JLS fallback TLS destination as host:port.
+        description: >-
+          JLS fallback TLS destination as host:port. It must present a
+          certificate the clients trust with a SAN matching
+          mihomo_server_anytls_jls_sni (or the derived dest host) and ALPN
+          covering mihomo_server_anytls_jls_alpn. Use the same selection rules
+          as the VLESS REALITY target; the default is a neutral non-CDN
+          placeholder.
         type: str
-        default: www.microsoft.com:443
+        default: www.debian.org:443
         required: false
       mihomo_server_anytls_jls_sni:
         description: JLS SNI. Empty derives it from the dest host.

@@ -1,0 +1,8 @@
+---
+minor_changes:
+  - The ``mihomo_server`` role now defaults
+    ``mihomo_server_vless_reality_dest`` and
+    ``mihomo_server_anytls_jls_dest`` to ``www.debian.org:443`` instead of
+    ``www.microsoft.com:443``. The new default is a neutral non-CDN
+    placeholder; the role README documents how to choose a target for the
+    VPS's ASN and region.
