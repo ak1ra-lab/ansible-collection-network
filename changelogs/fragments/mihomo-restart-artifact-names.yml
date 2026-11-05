@@ -1,0 +1,30 @@
+---
+bugfixes:
+  - The ``mihomo_client`` role now restarts ``mihomo.service`` when
+    ``providers/selfhost.yaml`` changes instead of relying on the provider
+    hot reload, which can leave stale nodes in memory (for example after a
+    REALITY or JLS target change).
+  - The ``mihomo_server`` TLS renewal hook now restarts ``mihomo.service``
+    instead of asking systemd to reload it, so renewed certificate material
+    is loaded reliably.
+  - A supplied non-empty ``mihomo_client_api_secret`` is no longer written to
+    the generated host_vars file; only a generated secret is persisted, so a
+    value in group_vars or host_vars stays in its original file.
+  - Documentation linting now passes ``docs/docsite/antsibull-docs.cfg`` to
+    antsibull-docs, which disables the default ``~/antsibull.log`` file
+    emitter while keeping warnings on stderr.
+minor_changes:
+  - The CI, docs, release and Dependabot workflows, the ``just`` recipes,
+    pre-commit hooks, and the editor/YAML formatter scaffolding are aligned
+    with the sibling ``general`` and ``certificate`` collections.
+  - Controller-generated artifacts now use the ``.yml`` extension. The
+    affected paths are ``host_vars/<host>/mihomo_client.yml``,
+    ``host_vars/<host>/mihomo_server.yml``,
+    ``config/client_outbounds/<host>.proxies.yml`` and ``<host>.config.yml``.
+    Target-host files (``/etc/mihomo/config.yaml`` and
+    ``/etc/mihomo/providers/selfhost.yaml``) keep their names.
+breaking_changes:
+  - Consumers that reference the generated client nodes must update
+    ``mihomo_client_selfhost_files`` from ``<host>.proxies.yaml`` to
+    ``<host>.proxies.yml``. Existing generated ``.yaml`` files are left in
+    place.
