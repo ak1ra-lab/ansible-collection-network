@@ -34,26 +34,29 @@ build_ignore:
   - .ansible
   - .ansible-lint
   - .cache
+  - .editorconfig
   - .github
   - .gitignore
   - .molecule
   - .mypy_cache
+  - .pre-commit-config.yaml
   - .pytest_cache
   - .ruff_cache
   - .tox
   - .venv
+  - .yamlfmt.yml
   - AGENTS.md
   - ansible.cfg
+  - changelogs/.plugin-cache.yaml
   - collections
   - config
   - dist
+  - docs/docsite/_build
   - importer_result.json
   - justfile
   - pyproject.toml
   - ruff.toml
   - site
-  - docs/docsite/_build
   - tests/output
   - uv.lock
-  - yamlfmt.yml
   - "*.tar.gz"

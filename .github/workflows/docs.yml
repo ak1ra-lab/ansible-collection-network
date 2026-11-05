@@ -58,8 +58,9 @@ jobs:
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
         run: >-
-          uv run --no-sync antsibull-docs lint-collection-docs
-          --plugin-docs --validate-collection-refs self .
+          uv run --no-sync antsibull-docs
+          --config-file docs/docsite/antsibull-docs.cfg
+          lint-collection-docs --plugin-docs --validate-collection-refs self .
       - name: Build the Sphinx documentation site
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections

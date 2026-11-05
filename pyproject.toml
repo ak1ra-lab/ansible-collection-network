@@ -47,6 +47,7 @@ dev = [
     { include-group = "test" },
     { include-group = "docs" },
     { include-group = "molecule" },
+    "pre-commit>=4.2.0",
 ]
 
 # Filter tests import the collection through the installed namespace

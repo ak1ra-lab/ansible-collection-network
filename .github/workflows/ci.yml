@@ -2,10 +2,14 @@
 # Collection CI: lint/typecheck/docs, the tox-ansible sanity and unit matrix,
 # the Galaxy build-import gate, and the Molecule scenarios.
 #
-# Python tooling comes from the uv-managed environment. The Molecule job stays
-# separate and does not use the full Python x ansible-core matrix. It runs
-# rootful Podman because systemd_netns and tproxy need host kernel facilities
-# that rootless containers cannot provide.
+# Python tooling comes from the uv-managed environment. Each job syncs the
+# dependency group it needs once and then runs tools through `uv run --no-sync`
+# or tox; do not add pip installs here.
+#
+# The Molecule job stays separate and deliberately does not use the full
+# Python x ansible-core matrix. It runs rootful Podman because systemd needs
+# the capabilities. Add repository-specific setup steps below when a scenario
+# needs extra controller tooling (for example Go for go_build).
 name: CI
 
 on:
@@ -54,19 +58,21 @@ jobs:
         env:
           ANSIBLE_HOME: ${{ github.workspace }}/.ansible
         run: uv run --no-sync ansible-lint
-      - name: Run ruff and mypy
+      - name: Run ruff
         run: |
           uv run --no-sync ruff check plugins/ tests/
           uv run --no-sync ruff format --check plugins/ tests/
-          uv run --no-sync mypy plugins/ tests/
+      - name: Run mypy
+        run: uv run --no-sync mypy plugins/ tests/
       - name: Lint the changelog fragments
         run: uv run --no-sync antsibull-changelog lint
       - name: Lint collection documentation
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
         run: >-
-          uv run --no-sync antsibull-docs lint-collection-docs
-          --plugin-docs --validate-collection-refs self .
+          uv run --no-sync antsibull-docs
+          --config-file docs/docsite/antsibull-docs.cfg
+          lint-collection-docs --plugin-docs --validate-collection-refs self .
       - name: Build the Sphinx documentation site
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
@@ -234,6 +240,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y podman
+      # Molecule installs the collection under test (ansible-compat prerun)
+      # and tests/requirements.yml (dependency action) itself.
       - name: Run the Molecule scenarios
         env:
           # Authenticate the mihomo_install/mihomo_client GitHub release

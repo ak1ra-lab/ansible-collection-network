@@ -5,22 +5,21 @@
 #   min → basic → moderate → safety → shared → production
 profile: production
 
-# Paths to exclude from linting.
+# Paths to exclude from linting. Generated changelog metadata, documentation
+# tooling, local state, controller-generated data, and consumer inventory are
+# not Ansible source.
 exclude_paths:
   - .git/
-  - .venv/
-  # Agent plans/sessions are documentation and reference snippets, not
-  # Ansible source.
   - .agents/
-  # Generated changelog metadata and Sphinx/antsibull-docs configuration are
-  # documentation tooling, not Ansible source.
+  - .ansible/
+  - .molecule/
+  - .tox/
+  - .venv/
   - changelogs/
   - docs/
-  # Controller-local generated data (mihomo_server client nodes, profile
-  # mirrors): not Ansible source.  The directory is gitignored (config/*),
-  # but ansible-lint does not read .gitignore.
   - config/
-  # An ansible-galaxy role requirements file, not a playbook.  Molecule's
+  - site/
+  # An ansible-galaxy role requirements file, not a playbook. Molecule's
   # dependency action reads it; the scenarios have no standalone role deps.
   - extensions/molecule/shared/roles-requirements.yml
 
@@ -28,9 +27,9 @@ exclude_paths:
 skip_list:
   - name[casing]
 
-# Do not add a `kinds:` mapping back.  The default kind detection already
+# Do not add a `kinds:` mapping back. The default kind detection already
 # covers every path in this repository, and remapping role `defaults/` or
 # `vars/` files to a custom kind silently disables
-# `var-naming[no-role-prefix]` for that role.  Remapping playbooks (e.g. the
+# `var-naming[no-role-prefix]` for that role. Remapping playbooks (e.g. the
 # Molecule scenarios) to the plain "yaml" kind also skips the rules that only
 # run for playbook files.
