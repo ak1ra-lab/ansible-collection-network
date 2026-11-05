@@ -40,9 +40,10 @@ Use `.yml` for Ansible and repository YAML files. Unavoidable exceptions:
 - `changelogs/config.yaml` is hardcoded by antsibull-changelog.
 - `.pre-commit-config.yaml` stays `.yaml` because pre-commit 4.7 discovers only
   that name.
-- Generated or upstream filenames such as `*.proxies.yaml`, `host_vars/*.yaml`,
+- Target-host, upstream, or tool-discovered filenames such as
   `50-cloud-init.yaml`, netplan files, and downloaded manifests keep their
-  existing names.
+  existing names. Controller-generated artifacts use `.yml`
+  (`host_vars/*.yml`, `*.proxies.yml`, `*.config.yml`).
 
 `roles/<role>/meta/argument_specs.yml` is the canonical role variable
 reference. Generated role docs come from argument specs; role READMEs are

@@ -3,8 +3,8 @@
 #
 # Deploys mihomo on a VPS as a proxy server (the `listeners:` schema) and
 # writes the matching client artifacts for ak1ra_lab.network.mihomo_client:
-#   - <local artifacts dir>/<host>.config.yaml   server config copy
-#   - <local artifacts dir>/<host>.proxies.yaml  clash-format client nodes
+#   - <local artifacts dir>/<host>.config.yml   server config copy
+#   - <local artifacts dir>/<host>.proxies.yml  clash-format client nodes
 #   - <host_vars file>                           generated credentials
 #
 # mihomo schema facts the contract is built on:
@@ -244,4 +244,4 @@ mihomo_server_client_node_prefix: selfhost
 mihomo_server_local_artifacts_dir: >-
   {{ playbook_dir | ansible.builtin.dirname }}/config/client_outbounds
 mihomo_server_host_vars_file: >-
-  {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yaml
+  {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yml

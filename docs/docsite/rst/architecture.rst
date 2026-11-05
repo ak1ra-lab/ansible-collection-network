@@ -44,11 +44,11 @@ and wires its restart hook to the service role's handler.
 ``mihomo_server`` generates the VPS-side listeners and two controller-local
 artifacts:
 
-- ``inventory/host_vars/<host>/mihomo_server.yaml`` (or the configured
+- ``inventory/host_vars/<host>/mihomo_server.yml`` (or the configured
   ``mihomo_server_host_vars_file``) - generated credentials, mode ``0600``,
   auto-loaded by Ansible on later runs when it lives in an inventory or
   playbook-adjacent ``host_vars`` location.
-- ``config/client_outbounds/<host>.proxies.yaml`` - clash-format client nodes
+- ``config/client_outbounds/<host>.proxies.yml`` - clash-format client nodes
   ready for the client's ``providers/selfhost.yaml`` through
   ``mihomo_client_selfhost_files``.
 

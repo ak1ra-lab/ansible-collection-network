@@ -378,5 +378,5 @@ argument_specs:
       mihomo_server_host_vars_file:
         description: Controller-local generated credentials file. Playbook-adjacent paths are auto-loaded on later runs.
         type: str
-        default: '{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yaml'
+        default: '{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yml'
         required: false

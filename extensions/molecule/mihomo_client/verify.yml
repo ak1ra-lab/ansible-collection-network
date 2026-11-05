@@ -163,7 +163,7 @@
       become: false
       ansible.builtin.slurp:
         src: >-
-          {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yaml
+          {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yml
       register: _mihomo_client_host_vars
 
     - name: parse the generated API secret artifact
@@ -336,7 +336,7 @@
   tasks:
     - name: check the controller-local profile mirror
       ansible.builtin.stat:
-        path: "/tmp/molecule-mihomo-client/artifacts/{{ item }}.config.yaml"
+        path: "/tmp/molecule-mihomo-client/artifacts/{{ item }}.config.yml"
       register: _mihomo_client_local_artifacts
       loop: "{{ groups['mihomo_client'] }}"
       loop_control:

@@ -146,7 +146,7 @@
       become: false
       ansible.builtin.slurp:
         src: >-
-          /tmp/molecule-mihomo-server/artifacts/{{ inventory_hostname }}.proxies.yaml
+          /tmp/molecule-mihomo-server/artifacts/{{ inventory_hostname }}.proxies.yml
       register: _mihomo_server_proxies
 
     - name: parse the generated client nodes
@@ -205,7 +205,7 @@
       become: false
       ansible.builtin.slurp:
         src: >-
-          {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yaml
+          {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yml
       register: _mihomo_server_host_vars
 
     - name: parse the generated credentials artifact

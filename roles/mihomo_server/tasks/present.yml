@@ -53,7 +53,7 @@
   no_log: true
   ansible.builtin.template:
     src: etc/mihomo/config.yaml.j2
-    dest: "{{ mihomo_server_local_artifacts_dir }}/{{ inventory_hostname }}.config.yaml"
+    dest: "{{ mihomo_server_local_artifacts_dir }}/{{ inventory_hostname }}.config.yml"
     mode: "0600"
 
 - name: template the mihomo server configuration

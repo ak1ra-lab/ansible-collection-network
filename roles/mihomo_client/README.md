@@ -73,16 +73,16 @@ group_vars).
 | `/etc/resolv.conf` | static `nameserver 127.0.0.1` while deployed (`mihomo_client_dns_manage_resolv_conf`); teardown restores the distro stub symlink |
 | `/etc/modules-load.d/ansible-mihomo-client.conf` | `tun` module at boot |
 | `/etc/sysctl.d/90-ansible-mihomo-client-gateway.conf` | `ip_forward` / `rp_filter` (gateway mode only) |
-| `<local artifacts dir>/<host>.config.yaml` | optional controller-local profile mirror (`mihomo_client_local_artifacts_dir`) |
-| `inventory/host_vars/<host>/mihomo_client.yaml` (or the configured `mihomo_client_host_vars_file`) | generated Clash API secret (0600, auto-loaded on later runs) |
+| `<local artifacts dir>/<host>.config.yml` | optional controller-local profile mirror (`mihomo_client_local_artifacts_dir`) |
+| `inventory/host_vars/<host>/mihomo_client.yml` (or the configured `mihomo_client_host_vars_file`) | generated Clash API secret (0600, auto-loaded on later runs; only written when the secret was generated) |
 
 ## How it works
 
 `tasks/present.yml` ensures the service identity, asserts the binary
 deployed by `mihomo_install`, fetches the data file, generates the Clash
-API secret (persisted to host_vars) when it was not provided, renders the
-profile and the selfhost provider, frees the resolver port
-(`systemd-resolved`) and takes over `/etc/resolv.conf` before the service
+API secret (persisted to host_vars only when generated) when it was not
+provided, renders the profile and the selfhost provider, frees the resolver
+port (`systemd-resolved`) and takes over `/etc/resolv.conf` before the service
 starts, persists the `tun` module, applies (or removes) the gateway sysctl
 drop-in, then validates the config with `mihomo -t -d /etc/mihomo` before
 enabling and starting the service.  The service unit runs the same config
@@ -307,7 +307,7 @@ Applying the roles directly (install first, as that composition does):
             proxy: DIRECT
             interval: 86400
         mihomo_client_selfhost_files:
-          - "{{ playbook_dir }}/../config/client_outbounds/node01.proxies.yaml"
+          - "{{ playbook_dir }}/../config/client_outbounds/node01.proxies.yml"
         mihomo_client_selfhost_proxies:
           - name: selfhost-US-molecule-node01-ss
             type: ss
@@ -335,7 +335,7 @@ Deliberately left in place: the binary, the subscription/provider data under
 `/etc/mihomo/providers/`, `cache.db`, the downloaded `BundleMRS.7z` /
 `rules/` extraction cache, the runtime ip rules/routes (mihomo removes
 those when it stops) and the controller-local credentials artifact
-(`host_vars/<host>/mihomo_client.yaml`) - remove it manually when the secret
+(`host_vars/<host>/mihomo_client.yml`) - remove it manually when the secret
 is no longer needed.
 
 ## Companion roles

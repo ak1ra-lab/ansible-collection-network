@@ -13,13 +13,13 @@ server and produces the client artifacts consumed by
 - inbound listeners (`listeners:` schema) for shadowsocks, trojan,
   hysteria2, vless, tuic and anytls, plus a raw extra-listeners escape hatch;
 - auto-generated credentials (user pool, cipher-aware base64 secrets, RFC
-  4122 UUIDs) persisted to `inventory/host_vars/<host>/mihomo_server.yaml`
+  4122 UUIDs) persisted to `inventory/host_vars/<host>/mihomo_server.yml`
   (mode 0600), where Ansible auto-loads them on later runs when the path is
   inventory- or playbook-adjacent; only empty variables are generated (with
   the `ak1ra_lab.general.random_*` lookups, control-node CSPRNG), and
   explicit non-empty variables always win;
 - clash-format client nodes written to
-  `config/client_outbounds/<host>.proxies.yaml`, ready to feed the client's
+  `config/client_outbounds/<host>.proxies.yml`, ready to feed the client's
   `providers/selfhost.yaml` through `mihomo_client_selfhost_files`.
 
 The role owns the service identity (`mihomo` user/group), the listeners
@@ -74,9 +74,9 @@ enabled listener ports yourself.
 | `/etc/systemd/system/mihomo.service` | service unit (`ExecStartPre` config test) |
 | `/etc/mihomo/tls/{fullchain,privkey}.pem` | role-managed copies when a source pair is configured (`0640 root:mihomo`) |
 | `/etc/letsencrypt/renewal-hooks/deploy/mihomo-server.sh` | optional TLS renewal deploy hook (role-managed) |
-| `<repo>/config/client_outbounds/<host>.proxies.yaml` | clash-format client nodes for `mihomo_client` |
-| `<repo>/config/client_outbounds/<host>.config.yaml` | exact copy of the deployed server config |
-| `inventory/host_vars/<host>/mihomo_server.yaml` (or the configured `mihomo_server_host_vars_file`) | generated credentials (0600) |
+| `<repo>/config/client_outbounds/<host>.proxies.yml` | clash-format client nodes for `mihomo_client` |
+| `<repo>/config/client_outbounds/<host>.config.yml` | exact copy of the deployed server config |
+| `inventory/host_vars/<host>/mihomo_server.yml` (or the configured `mihomo_server_host_vars_file`) | generated credentials (0600) |
 
 The two `config/client_outbounds/` files and the `host_vars` file are
 written on the controller; commit them only on a private branch (they carry
@@ -319,7 +319,7 @@ The client side then references the generated artifact:
 
 ```yaml
 mihomo_client_selfhost_files:
-  - "{{ playbook_dir }}/../config/client_outbounds/node01.proxies.yaml"
+  - "{{ playbook_dir }}/../config/client_outbounds/node01.proxies.yml"
 ```
 
 ## Declarative teardown: `mihomo_server_state: absent`

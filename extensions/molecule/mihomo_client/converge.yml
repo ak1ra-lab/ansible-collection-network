@@ -31,7 +31,7 @@
         content: |
           ---
           # Synthetic artifact (molecule); shape of a mihomo_server
-          # config/client_outbounds/<host>.proxies.yaml file.
+          # config/client_outbounds/<host>.proxies.yml file.
           proxies:
             - name: selfhost-JP-molecule-node03-vless
               type: vless
@@ -42,7 +42,7 @@
               udp: true
               servername: 192.0.2.12
               skip-cert-verify: true
-        dest: /tmp/molecule-mihomo-client/molecule-node03.proxies.yaml
+        dest: /tmp/molecule-mihomo-client/molecule-node03.proxies.yml
         mode: "0644"
 
 - name: "apply the mihomo client (mihomo_client_state: present)"
@@ -66,7 +66,7 @@
         sni: 192.0.2.11
         skip-cert-verify: true
     mihomo_client_selfhost_files:
-      - /tmp/molecule-mihomo-client/molecule-node03.proxies.yaml
+      - /tmp/molecule-mihomo-client/molecule-node03.proxies.yml
     # Exercise the conditional inline custom rule sets: the internal set
     # (with its nameservers) and the direct set (provider, rule and DNS
     # policy entry) must appear; the other custom sets must stay out.
