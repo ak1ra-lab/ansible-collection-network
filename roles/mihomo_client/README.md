@@ -298,7 +298,8 @@ Applying the roles directly (install first, as that composition does):
         mihomo_client_mode: gateway
         # The Clash API secret is generated and persisted to host_vars when
         # omitted; set it explicitly (vault / uncommitted group_vars) to pin
-        # a value. Secrets stay out of the repository.
+        # a value. A supplied value is not copied into host_vars. Secrets
+        # stay out of the repository.
         mihomo_client_proxy_providers:
           airport-a:
             type: http

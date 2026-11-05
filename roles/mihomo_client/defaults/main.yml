@@ -61,8 +61,9 @@ mihomo_client_mixed_port: 7890
 
 # Clash API secret.  Generated with the ak1ra_lab.general.random_password
 # lookup (control-node CSPRNG) when empty and persisted to
-# `mihomo_client_host_vars_file`, so repeated runs reuse the stored value; an
-# explicit non-empty value always wins.  The controller listens on
+# `mihomo_client_host_vars_file`, so repeated runs reuse the stored value; a
+# non-empty value from host_vars, group_vars, a play var or -e always wins and
+# is not copied into the generated file.  The controller listens on
 # 0.0.0.0:9090, so keep a secret for anything beyond a trusted LAN.
 mihomo_client_api_secret: ""
 
@@ -167,18 +168,19 @@ mihomo_client_bundle_force: false
 
 # Optional controller-local mirror of the rendered profile: when set (a
 # directory path), the role also writes
-# <dir>/<inventory_hostname>.config.yaml on the controller for backup/diff
+# <dir>/<inventory_hostname>.config.yml on the controller for backup/diff
 # purposes.  Empty disables the local render.
 mihomo_client_local_artifacts_dir: ""
 
-# Controller-local credentials file (mode 0600): the Clash API secret
-# (generated or explicitly set) is written here, keeping credentials out of
-# the repository.  As with mihomo_server, a file next to the playbook in
-# host_vars/ is auto-loaded by Ansible on later runs (the default), so the
-# stored secret wins; a file outside the auto-load locations is rewritten -
-# and the secret regenerated when it was not provided - on every run.
+# Controller-local credentials file (mode 0600): only a generated Clash API
+# secret is written here, keeping credentials out of the repository.  A
+# supplied non-empty value (host_vars, group_vars, play var or -e) is never
+# persisted.  As with mihomo_server, a file next to the playbook in host_vars/
+# is auto-loaded by Ansible on later runs (the default), so the stored secret
+# wins.  A file outside the auto-load locations is not reused: the secret is
+# regenerated (and the file rewritten) when it was not provided.
 mihomo_client_host_vars_file: >-
-  {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yaml
+  {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yml
 
 # ── LAN-gateway sysctl (mihomo_client_mode: gateway) ─────────────────────────
 

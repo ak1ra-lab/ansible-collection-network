@@ -42,7 +42,8 @@ argument_specs:
         default: 7890
         required: false
       mihomo_client_api_secret:
-        description: Clash API secret. Generated when empty and persisted to mihomo_client_host_vars_file.
+        description: Clash API secret. Generated when empty and persisted to mihomo_client_host_vars_file; a
+          supplied non-empty value is not persisted.
         type: str
         default: ''
         required: false
@@ -146,9 +147,10 @@ argument_specs:
         default: ''
         required: false
       mihomo_client_host_vars_file:
-        description: Controller-local generated credentials file. Playbook-adjacent paths are auto-loaded on later runs.
+        description: Controller-local generated credentials file (only written when the secret was generated).
+          Playbook-adjacent paths are auto-loaded on later runs.
         type: str
-        default: '{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yaml'
+        default: '{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yml'
         required: false
       mihomo_client_sysctl_ip_forward:
         description: Gateway-mode net.ipv4.ip_forward value.
