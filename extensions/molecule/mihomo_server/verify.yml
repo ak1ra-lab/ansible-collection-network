@@ -59,7 +59,7 @@
         src: /tmp/molecule-mihomo-server-hook/mihomo-server.sh
       register: _mihomo_server_hook
 
-    - name: assert the renewal hook copies the source pair and reloads mihomo
+    - name: assert the renewal hook copies the source pair and restarts mihomo
       ansible.builtin.assert:
         that:
           - >-
@@ -69,10 +69,10 @@
             '/tmp/molecule-mihomo-server-source/privkey.pem'
             in (_mihomo_server_hook.content | ansible.builtin.b64decode)
           - >-
-            'systemctl try-reload-or-restart mihomo.service'
+            'systemctl restart mihomo.service'
             in (_mihomo_server_hook.content | ansible.builtin.b64decode)
         fail_msg: >-
-          the renewal hook must re-copy the source pair and reload mihomo,
+          the renewal hook must re-copy the source pair and restart mihomo,
           got: {{ _mihomo_server_hook.content | ansible.builtin.b64decode }}
         quiet: true
 

@@ -144,9 +144,11 @@ mihomo_server_tls_renewal_hook_enabled: true
 
 The hook is installed at `mihomo_server_tls_renewal_hook_path`; the external
 certificate renewal tool runs every executable in its deploy-hook directory
-after a successful renewal.  The role does not issue certificates.  The copy
-task remains responsible for the initial material and for any manual re-run,
-so the destination files always exist before the service starts or restarts.
+after a successful renewal.  The hook re-copies the pair and restarts mihomo
+so the listeners load the new material.  The role does not issue certificates.
+The copy task remains responsible for the initial material and for any manual
+re-run, so the destination files always exist before the service starts or
+restarts.
 
 ### VLESS REALITY
 

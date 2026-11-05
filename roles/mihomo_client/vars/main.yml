@@ -28,7 +28,8 @@ _mihomo_client_sysctl_file: /etc/sysctl.d/90-ansible-mihomo-client-gateway.conf
 _mihomo_client_modules_file: /etc/modules-load.d/ansible-mihomo-client.conf
 
 # The selfhost provider file is written by the role from the inline list and
-# the mihomo_server artifacts; mihomo hot-reloads it (fswatch), no restart.
+# the mihomo_server artifacts.  A change notifies the restart handler because
+# mihomo's provider hot reload can leave stale nodes in memory.
 _mihomo_client_selfhost_provider: "{{ mihomo_client_etc_dir }}/providers/selfhost.yaml"
 
 # Naming contract of the self-hosted nodes: the tag is what the selfhost-tier

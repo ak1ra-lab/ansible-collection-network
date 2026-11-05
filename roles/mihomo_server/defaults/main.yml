@@ -217,7 +217,7 @@ mihomo_server_tls_key_path: >-
 mihomo_server_tls_source_certificate_path: ""
 mihomo_server_tls_source_key_path: ""
 
-# Install a deploy hook that re-copies the source pair and reloads mihomo
+# Install a deploy hook that re-copies the source pair and restarts mihomo
 # after the external certificate renewal tool refreshes it.  Requires the
 # source pair.
 mihomo_server_tls_renewal_hook_enabled: false

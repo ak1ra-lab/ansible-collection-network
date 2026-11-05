@@ -3,7 +3,8 @@
 #
 # The external certificate renewal tool runs every executable in its deploy
 # hook directory after a successful renewal.  This hook refreshes the
-# service-readable copies and reloads mihomo.
+# service-readable copies and restarts mihomo so the listeners load the new
+# certificate material (the in-process reload is not reliable for this).
 set -eu
 
 install -d -m 0750 -o root -g {{ mihomo_server_group | ansible.builtin.quote }} \
@@ -14,4 +15,4 @@ install -m 0640 -o root -g {{ mihomo_server_group | ansible.builtin.quote }} \
 install -m 0640 -o root -g {{ mihomo_server_group | ansible.builtin.quote }} \
   {{ mihomo_server_tls_source_key_path | ansible.builtin.quote }} \
   {{ mihomo_server_tls_key_path | ansible.builtin.quote }}
-systemctl try-reload-or-restart mihomo.service
+systemctl restart mihomo.service

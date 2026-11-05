@@ -3,9 +3,10 @@
 # service identity, data files, profile, tun persistence, gateway sysctl and
 # the service.  The binary itself is deployed by
 # ak1ra_lab.network.mihomo_install, which the consumer composition in
-# ansible-playbooks-services applies before this role.  Changing
-# providers/selfhost.yaml alone is hot-reloaded by mihomo (fswatch);
-# config.yaml changes restart the service via handlers.
+# ansible-playbooks-services applies before this role.  Profile and provider
+# changes both restart the service via handlers: mihomo's provider hot reload
+# is not reliable for every change (for example REALITY/JLS target updates can
+# leave stale nodes in memory), so the role does not depend on it.
 
 - name: ensure the mihomo system group exists
   ansible.builtin.group:
@@ -97,6 +98,8 @@
     owner: "{{ mihomo_client_user }}"
     group: "{{ mihomo_client_group }}"
     mode: "0640"
+  notify:
+    - systemctl restart mihomo.service
 
 - name: ensure the controller-local artifacts directory exists
   when: mihomo_client_local_artifacts_dir | length > 0

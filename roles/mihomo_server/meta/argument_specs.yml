@@ -348,7 +348,7 @@ argument_specs:
         default: ''
         required: false
       mihomo_server_tls_renewal_hook_enabled:
-        description: Install a deploy hook that re-copies the source pair and reloads mihomo after an external certificate
+        description: Install a deploy hook that re-copies the source pair and restarts mihomo after an external certificate
           renewal.
         type: bool
         default: false

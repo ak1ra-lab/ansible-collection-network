@@ -25,8 +25,9 @@ transparent-proxy client, based on the hand-written
   the custom internal set to its own resolvers, and everything else leaves
   through the foreign DoH `#RULES` pair - no `fallback`/`fallback-filter`,
   no GeoIP/GeoSite data file;
-- providers are hot-reloaded: overwriting `providers/*.yaml` does not
-  restart the service; only `config.yaml` changes do.
+- profile and provider changes restart the service.  mihomo's provider hot
+  reload is not reliable for every change (REALITY/JLS target updates can
+  leave stale nodes in memory), so the role does not depend on it.
 
 The role owns the service identity (`mihomo` user/group), the profile, the
 systemd unit and the service.  It does **not** install the binary: the
@@ -161,11 +162,12 @@ the domestic DoH pair, mirroring its route.  Arbitrary rule syntax
 `mihomo_client_proxy_providers` holds the airport subscriptions keyed by
 name; a `type: http` provider without an explicit `path` gets
 `./providers/<name>.yaml`.  The reserved `selfhost` file provider
-(`./providers/selfhost.yaml`, hot-reloaded by mihomo) is always injected
-last; its node list is the concatenation of `mihomo_client_selfhost_proxies`
+(`./providers/selfhost.yaml`) is always injected last; its node list is the
+concatenation of `mihomo_client_selfhost_proxies`
 (inline clash mappings) and the artifacts named by
 `mihomo_client_selfhost_files` (the `mihomo_server` role writes
-`config/client_outbounds/<host>.proxies.yaml`).
+`config/client_outbounds/<host>.proxies.yml`).  A change to the provider
+restarts mihomo instead of relying on the in-process hot reload.
 
 The artifact entries go through Ansible's file lookup, so a relative path
 resolves against the role/playbook directories, not the working directory:
