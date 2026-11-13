@@ -376,7 +376,8 @@ argument_specs:
         default: '{{ playbook_dir | ansible.builtin.dirname }}/config/client_outbounds'
         required: false
       mihomo_server_host_vars_file:
-        description: Controller-local generated credentials file. Playbook-adjacent paths are auto-loaded on later runs.
+        description: Controller-local generated credentials file. Playbook-adjacent paths are auto-loaded on later
+          runs. An existing `.yaml` file from an earlier release remains a fallback; `.yml` wins when both exist.
         type: str
         default: '{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_server.yml'
         required: false

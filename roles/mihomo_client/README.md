@@ -76,6 +76,11 @@ group_vars).
 | `<local artifacts dir>/<host>.config.yml` | optional controller-local profile mirror (`mihomo_client_local_artifacts_dir`) |
 | `inventory/host_vars/<host>/mihomo_client.yml` (or the configured `mihomo_client_host_vars_file`) | generated Clash API secret (0600, auto-loaded on later runs; only written when the secret was generated) |
 
+The generated host_vars file was renamed from `.yaml` to `.yml`. An existing
+`mihomo_client.yaml` remains a valid fallback; the `.yml` file wins when both
+exist. The legacy file is not renamed or deleted automatically, and `.yml` is
+written when the role generates the secret.
+
 ## How it works
 
 `tasks/present.yml` ensures the service identity, asserts the binary

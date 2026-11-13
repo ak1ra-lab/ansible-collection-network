@@ -148,7 +148,8 @@ argument_specs:
         required: false
       mihomo_client_host_vars_file:
         description: Controller-local generated credentials file (only written when the secret was generated).
-          Playbook-adjacent paths are auto-loaded on later runs.
+          Playbook-adjacent paths are auto-loaded on later runs. An existing `.yaml` file from an earlier
+          release remains a fallback; `.yml` wins when both exist.
         type: str
         default: '{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yml'
         required: false

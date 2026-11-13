@@ -240,7 +240,9 @@ mihomo_server_client_node_prefix: selfhost
 # live in a playbook-adjacent or inventory host_vars location (the default
 # does) so Ansible auto-loads the generated credentials on later runs - a file
 # outside the auto-load locations is treated as absent and regenerated every
-# run.
+# run.  An existing legacy `mihomo_server.yaml` remains a valid fallback;
+# `.yml` wins when both files exist.  The legacy file is not renamed or
+# deleted automatically.
 mihomo_server_local_artifacts_dir: >-
   {{ playbook_dir | ansible.builtin.dirname }}/config/client_outbounds
 mihomo_server_host_vars_file: >-

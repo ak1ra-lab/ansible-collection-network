@@ -7,6 +7,9 @@
 - name: verify the converged mihomo client state
   hosts: all
   gather_facts: false
+  vars:
+    _mihomo_client_legacy_host: "{{ groups['mihomo_client'] | first }}"
+    _mihomo_client_legacy_secret: molecule-legacy-client-secret
   tasks:
     - name: collect the mihomo service activity state
       ansible.builtin.command:
@@ -158,20 +161,22 @@
           {{ _mihomo_client_profile_data | ansible.builtin.to_json }}
         quiet: true
 
-    - name: collect the generated API secret artifact on the controller
+    - name: collect the API secret artifact on the controller
       delegate_to: localhost
       become: false
       ansible.builtin.slurp:
         src: >-
-          {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yml
+          {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/
+          {{- 'mihomo_client.yaml' if inventory_hostname == _mihomo_client_legacy_host
+              else 'mihomo_client.yml' }}
       register: _mihomo_client_host_vars
 
-    - name: parse the generated API secret artifact
+    - name: parse the API secret artifact
       ansible.builtin.set_fact:
         _mihomo_client_host_vars_data: >-
           {{ _mihomo_client_host_vars.content | ansible.builtin.b64decode | ansible.builtin.from_yaml }}
 
-    - name: assert the API secret is generated and persisted to host_vars
+    - name: assert the API secret is persisted to host_vars
       ansible.builtin.assert:
         that:
           - _mihomo_client_host_vars_data['mihomo_client_api_secret'] | length > 0
@@ -179,9 +184,20 @@
             _mihomo_client_profile_data['secret']
             == _mihomo_client_host_vars_data['mihomo_client_api_secret']
         fail_msg: >-
-          the generated Clash API secret must be persisted to host_vars and
-          match the deployed profile, got:
+          the Clash API secret must be persisted to host_vars and match the
+          deployed profile, got:
           {{ _mihomo_client_host_vars_data | ansible.builtin.to_json }}
+        quiet: true
+
+    - name: assert the legacy .yaml Clash API secret was reused
+      when: inventory_hostname == _mihomo_client_legacy_host
+      ansible.builtin.assert:
+        that:
+          - _mihomo_client_host_vars_data['mihomo_client_api_secret'] == _mihomo_client_legacy_secret
+          - _mihomo_client_profile_data['secret'] == _mihomo_client_legacy_secret
+        fail_msg: >-
+          the legacy .yaml host_vars secret must be reused instead of
+          regenerating a new Clash API secret.
         quiet: true
 
     - name: query the mihomo API for the loaded selfhost provider nodes

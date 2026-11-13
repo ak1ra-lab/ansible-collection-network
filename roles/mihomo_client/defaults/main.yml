@@ -178,7 +178,9 @@ mihomo_client_local_artifacts_dir: ""
 # persisted.  As with mihomo_server, a file next to the playbook in host_vars/
 # is auto-loaded by Ansible on later runs (the default), so the stored secret
 # wins.  A file outside the auto-load locations is not reused: the secret is
-# regenerated (and the file rewritten) when it was not provided.
+# regenerated (and the file rewritten) when it was not provided.  An existing
+# legacy `mihomo_client.yaml` remains a valid fallback; `.yml` wins when both
+# files exist.  The legacy file is not renamed or deleted automatically.
 mihomo_client_host_vars_file: >-
   {{ playbook_dir }}/host_vars/{{ inventory_hostname }}/mihomo_client.yml
 

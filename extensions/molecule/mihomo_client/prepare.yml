@@ -66,3 +66,31 @@
           /dev/net/tun is not available in the container; the shared
           containers must run privileged (see the inventory).
         quiet: true
+
+- name: seed a legacy .yaml Clash API secret for one managed node
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  vars:
+    _mihomo_client_legacy_host: "{{ groups['mihomo_client'] | first }}"
+    _mihomo_client_legacy_secret: molecule-legacy-client-secret
+  tasks:
+    - name: remove stale scenario host_vars
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/host_vars"
+        state: absent
+
+    - name: ensure the legacy host_vars directory exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/host_vars/{{ _mihomo_client_legacy_host }}"
+        state: directory
+        mode: "0700"
+
+    - name: write the legacy .yaml Clash API secret
+      ansible.builtin.copy:
+        content: |
+          ---
+          mihomo_client_api_secret: {{ _mihomo_client_legacy_secret }}
+        dest: >-
+          {{ playbook_dir }}/host_vars/{{ _mihomo_client_legacy_host }}/mihomo_client.yaml
+        mode: "0600"

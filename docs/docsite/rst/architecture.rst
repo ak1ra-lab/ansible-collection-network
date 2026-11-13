@@ -47,7 +47,9 @@ artifacts:
 - ``inventory/host_vars/<host>/mihomo_server.yml`` (or the configured
   ``mihomo_server_host_vars_file``) - generated credentials, mode ``0600``,
   auto-loaded by Ansible on later runs when it lives in an inventory or
-  playbook-adjacent ``host_vars`` location.
+  playbook-adjacent ``host_vars`` location. An existing ``.yaml`` file from
+  an earlier release remains a fallback; the ``.yml`` file wins when both
+  exist.
 - ``config/client_outbounds/<host>.proxies.yml`` - clash-format client nodes
   ready for the client's ``providers/selfhost.yaml`` through
   ``mihomo_client_selfhost_files``.

@@ -22,9 +22,12 @@ minor_changes:
     ``host_vars/<host>/mihomo_server.yml``,
     ``config/client_outbounds/<host>.proxies.yml`` and ``<host>.config.yml``.
     Target-host files (``/etc/mihomo/config.yaml`` and
-    ``/etc/mihomo/providers/selfhost.yaml``) keep their names.
+    ``/etc/mihomo/providers/selfhost.yaml``) keep their names. An existing
+    ``host_vars/<host>/mihomo_{client,server}.yaml`` file remains a fallback,
+    so its credentials are reused instead of regenerated; the legacy file is
+    not renamed or deleted automatically, and ``.yml`` wins when both exist.
 breaking_changes:
   - Consumers that reference the generated client nodes must update
     ``mihomo_client_selfhost_files`` from ``<host>.proxies.yaml`` to
-    ``<host>.proxies.yml``. Existing generated ``.yaml`` files are left in
-    place.
+    ``<host>.proxies.yml``. Existing generated client-node ``.yaml``
+    artifacts are left in place.

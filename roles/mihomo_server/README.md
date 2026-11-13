@@ -78,6 +78,11 @@ enabled listener ports yourself.
 | `<repo>/config/client_outbounds/<host>.config.yml` | exact copy of the deployed server config |
 | `inventory/host_vars/<host>/mihomo_server.yml` (or the configured `mihomo_server_host_vars_file`) | generated credentials (0600) |
 
+The generated host_vars file was renamed from `.yaml` to `.yml`. An existing
+`mihomo_server.yaml` remains a valid fallback; the `.yml` file wins when both
+exist. The legacy file is not renamed or deleted automatically; the next
+`present` run writes the canonical `.yml` file.
+
 The two `config/client_outbounds/` files and the `host_vars` file are
 written on the controller; commit them only on a private branch (they carry
 credentials) or keep them uncommitted.
