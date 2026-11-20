@@ -1,0 +1,5 @@
+---
+minor_changes:
+  - The weekly ansible-core devel/milestone sanity jobs now recognize the
+    intentional nftables template shebang on ansible-core 2.22 and 2.23,
+    matching the existing 2.19-2.21 sanity ignore entries.

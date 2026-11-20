@@ -46,7 +46,10 @@ container runtime.
 
 Tox-ansible defines the ansible-core 2.19/2.20/2.21 plus weekly
 devel/milestone matrix in `[tool.tox]`/`[tool.tox-ansible]`; run one entry with
-`just tox sanity-py3.13-2.21`. Test-only collections come from
+`just tox sanity-py3.13-2.21`. `ansible-test` selects
+`tests/sanity/ignore-<major>.<minor>.txt` by the ansible-core version under
+test, so when the devel/milestone job moves to a new minor, copy the current
+ignore file to the new version. Test-only collections come from
 `tests/requirements.yml` and are installed by `ade`; tox does not use the
 project-local `.ansible/collections`. The tox environments install the
 `galaxy.yml` dependencies, including `ak1ra_lab.general`, from Galaxy. To test
